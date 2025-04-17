@@ -277,7 +277,7 @@ const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, co
   // Different character sets for more variety
   const primaryChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const symbolChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/';
-  const pixelChars = '■□▢▣▤▥▦▧▨▩▪▫▬▭▮▯▰▱▲△▴▵▶▷▸▹►▻▼▽▾▿◀◁◂◃◄◅◆◇◈◉◊○●◌◍◎●◐◑◒◓◔◕◖◗◘◙◚◛◜◝◞◟◠◡◢◣◤◥◦◧◨◩◪◫◬◭◮◯◰◱◲◳◴◵◶◷';
+  const pixelChars = '■□▢▣▤▥▦▧▨▩▪▫▬▲△▴▵▸▹►▻▼▾▿◂◃◄◅◆◇◈◉◊○●◌●◙◚◛◦◬◭◮◰◱◲◳◴◵◶◷';
   
   // Clean up text by trimming and preventing null
   const cleanText = text?.trim() || '';
@@ -672,7 +672,7 @@ const QuirkiestAppTab = () => {
         <p>Download now and transform how you experience time!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclock.apk" download className="pixel-button">
+        <a href="/downloads/smartclockbeta.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
       </div>
