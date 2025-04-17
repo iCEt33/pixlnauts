@@ -30,15 +30,15 @@ const SystemCheck = ({ onComplete }) => {
     "CPU Type    : PIXL-CORE 1024 @ 3800 MHz",
     "Memory      : 8192 MB OK",
     "Storage     : 1024 TB OK",
-    "",
+    "\u00A0", // Non-breaking space for empty line
     "Boot Sequence Initialized - Application v0.0.1",
     "Copyright (C) 2025 PIXLNAUTS",
     "   Detecting Core Components",
     "   Initializing Plant Monitoring Modules",
     "   Activating Environmental Sensors OK",
-    "",
+    "\u00A0", // Non-breaking space for empty line
     "PIXL Device Detection...",
-    "",
+    "\u00A0", // Non-breaking space for empty line
     "Zone    ID      Status      Class",
     "--------------------------------------------",
     "1       PL01    Active      PX512",
@@ -73,43 +73,57 @@ const SystemCheck = ({ onComplete }) => {
   useEffect(() => {
     if (!showInitialInfo) return;
     
-    // Clear any previous content first
+    // Reset previous state and clear any previous content
     setDisplayedInitialInfo([]);
     
-    // Short delay to ensure clean start
+    // Start with a clean slate
+    let mounted = true;
+    
+    // Show the header (first 3 lines) immediately
+    setDisplayedInitialInfo([
+      initialSystemInfo[0],
+      initialSystemInfo[1],
+      initialSystemInfo[2]
+    ]);
+    
+    // Start after a delay to ensure header is displayed
     setTimeout(() => {
-      // Removed setReady(true) since ready isn't used
+      if (!mounted) return;
       
-      let lineIndex = 0;
+      // Current line index (start after header)
+      let lineIndex = 3;
+      
+      // Function to display the next line
       const displayNextLine = () => {
+        if (!mounted) return;
+        
         if (lineIndex < initialSystemInfo.length) {
-          setTimeout(() => {
-            // Important: use a function that doesn't depend on previous state
-            setDisplayedInitialInfo(current => {
-              // Make sure we don't add duplicates
-              if (current.includes(initialSystemInfo[lineIndex])) {
-                return current;
-              }
-              return [...current, initialSystemInfo[lineIndex]];
-            });
-            lineIndex++;
-            displayNextLine();
-          }, 100); // 100ms between each line
+          // Add the current line to display
+          setDisplayedInitialInfo(prevLines => [...prevLines, initialSystemInfo[lineIndex]]);
+          
+          // Move to next line
+          lineIndex++;
+          
+          // Schedule next line display
+          setTimeout(displayNextLine, 100);
         } else {
-          // After all initial info is displayed, wait for 1.5 seconds and start the main sequence
+          // All lines displayed, proceed to next phase
           setTimeout(() => {
+            if (!mounted) return;
             setShowInitialInfo(false);
             setStartMainSequence(true);
-            setDisplayedLines([]); // Clear the display for the main sequence
-          }, 1500);
+            setDisplayedLines([]);
+          }, 1000);
         }
       };
       
+      // Start displaying lines
       displayNextLine();
-    }, 100);
+    }, 500);
     
+    // Cleanup function
     return () => {
-      // Nothing to return for cleanup
+      mounted = false;
     };
   }, [showInitialInfo, initialSystemInfo]);
   
@@ -423,36 +437,82 @@ const LoadingAnimation = ({ onComplete }) => {
   );
 };
 
-// Logo component
+// Updated Logo component with toggle functionality
 const Logo = () => {
+  const [showText, setShowText] = useState(false); // Initially show the image
+  const [scrambleKey, setScrambleKey] = useState(0); // To trigger scramble effect on each toggle
+  
+  const toggleLogoDisplay = () => {
+    if (!showText) {
+      // When switching to text, increment scramble key to restart animation
+      setScrambleKey(prev => prev + 1);
+    }
+    setShowText(!showText);
+  };
+  
   return (
     <div className="logo-container">
-      <div className="logo">
-        <ScrambleText text="PIXLNAUTS" speed={30} />
-      </div>
-      <div className="logo-image">
-        {/* Bigger pixel art logo */}
-        <img src="/images/pixlnauts-logo.png" alt="PIXLNAUTS Logo" className="png-logo" />
+      <div className="logo-toggle-area" onClick={toggleLogoDisplay}>
+        {/* Text logo with scramble effect - initially hidden */}
+        <div className={`logo ${showText ? 'visible' : 'hidden'}`}>
+          <ScrambleText 
+            text="PIXLNAUTS" 
+            speed={30} 
+            intensity={1.5}
+            key={`scramble-${scrambleKey}`} // Key changes force remount and restart animation
+          />
+        </div>
+        
+        {/* Image logo - initially visible */}
+        <div className={`logo-image ${showText ? 'hidden' : 'visible'}`}>
+          <img src="/images/pixlnauts-logo.png" alt="PIXLNAUTS Logo" className="png-logo" />
+        </div>
       </div>
     </div>
   );
 };
 
-// Tab component
+// Tab component with auto-scroll functionality
 const Tab = ({ title, children, isOpen, toggleTab }) => {
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
+  const tabRef = useRef(null);
   
   useEffect(() => {
     if (isOpen && contentRef.current) {
       setHeight(contentRef.current.scrollHeight);
+      
+      // Add auto-scroll functionality
+      // Use setTimeout to allow the height transition to start
+      setTimeout(() => {
+        if (tabRef.current) {
+          const tabPosition = tabRef.current.getBoundingClientRect();
+          const isPartiallyVisible = 
+            tabPosition.bottom > 0 && 
+            tabPosition.top < window.innerHeight;
+          
+          if (!isPartiallyVisible || tabPosition.bottom > window.innerHeight) {
+            // If tab is not fully visible in viewport, scroll it into view
+            tabRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (tabPosition.bottom + contentRef.current.scrollHeight > window.innerHeight) {
+            // If content will extend beyond viewport, scroll to show as much as possible
+            window.scrollBy({
+              top: Math.min(
+                contentRef.current.scrollHeight,
+                tabPosition.bottom + contentRef.current.scrollHeight - window.innerHeight
+              ),
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 50); // Small delay to allow for DOM updates
     } else {
       setHeight(0);
     }
   }, [isOpen]);
   
   return (
-    <div className={`tab ${isOpen ? 'open' : 'closed'}`}>
+    <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
       <div className="tab-header" onClick={toggleTab}>
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
         <ScrambleText text={title} speed={30} intensity={0.8} />
@@ -600,6 +660,26 @@ const SupportUsTab = () => {
   );
 };
 
+// The Quirkiest App tab content
+const QuirkiestAppTab = () => {
+  return (
+    <div className="quirkiest-app">
+      <div className="app-description">
+        <p>Need a reliable way to track your thoughts, schedule reminders, and stay in sync across global time zones?</p>
+        <p>Want precise, up-to-the-minute lunar phase information at your fingertips?</p>
+        <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
+        <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
+        <p>Download now and transform how you experience time!</p>
+      </div>
+      <div className="app-download">
+        <a href="/downloads/smartclock.apk" download className="pixel-button">
+          <span className="whitepaper-button-text">DOWNLOAD APK</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
 // TabsManager to control which tab is open
 const TabsManager = () => {
   const [openTab, setOpenTab] = useState(0);
@@ -643,12 +723,37 @@ const TabsManager = () => {
         <BeeboCustomizerTab />
       </Tab>
       <Tab 
-        title="SUPPORT US" 
+        title="THE QUIRKIEST USELESS APP" 
         isOpen={openTab === 4} 
         toggleTab={() => toggleTab(4)}
       >
+        <QuirkiestAppTab />
+      </Tab>
+      <Tab 
+        title="SUPPORT US" 
+        isOpen={openTab === 5} 
+        toggleTab={() => toggleTab(5)}
+      >
         <SupportUsTab />
       </Tab>
+    </div>
+  );
+};
+
+// Footer component
+const Footer = () => {
+  return (
+    <div className="footer">
+      <div className="footer-logo">
+        <img src="/images/logo.png" alt="PIXLNAUTS Secondary Logo" className="secondary-logo" />
+      </div>
+      <div className="authentication-text">
+        <ScrambleText 
+          text="This is the one and only authentic website of PIXLNAUTS project" 
+          speed={20}
+          intensity={1.0}
+        />
+      </div>
     </div>
   );
 };
@@ -690,6 +795,7 @@ const App = () => {
       <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
         <TabsManager />
       </div>
+      <Footer />
     </div>
   );
 };
@@ -706,6 +812,11 @@ const styles = `
     box-sizing: border-box;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+  }
+
+  /* Add smooth scrolling to the entire page */
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
@@ -754,6 +865,8 @@ const styles = `
     font-size: 16px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
     font-family: monospace;
+    display: block; /* Ensure block display for proper line breaks */
+    min-height: 1.2em; /* Minimum height to ensure empty lines render */
   }
   
   .terminal-prompt {
@@ -785,42 +898,63 @@ const styles = `
     position: relative; /* Added for absolute positioning of logo */
   }
 
+  /* Logo container and toggle styling */
   .logo-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 50px; /* Increased for better spacing */
+    margin-bottom: 50px;
     position: relative;
     width: 100%;
   }
 
+  .logo-toggle-area {
+    position: relative;
+    min-height: 120px; /* Set minimum height to prevent layout shift */
+    min-width: 300px; /* Ensure sufficient width */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .logo, .logo-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.5s ease;
+  }
+
   .logo {
-    font-size: 64px; /* Reduced from 77px to make it smaller */
+    font-size: 64px;
     letter-spacing: 4px;
     text-align: center;
     padding: 15px 30px;
     border: 4px solid #444;
     background-color: #000;
     box-shadow: 0 0 0 2px #000;
-    position: relative;
+    z-index: 1;
   }
 
   .logo-image {
-    position: absolute;
-    right: -140px; /* Positioned further to the right */
-    top: 50%;
-    transform: translateY(-50%);
+    z-index: 2;
+  }
+
+  .visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .hidden {
+    opacity: 0;
+    visibility: hidden;
   }
 
   .png-logo {
-    max-width: 180px; /* Increased from 150px to make it even bigger */
+    max-width: 180px;
     max-height: 180px;
     image-rendering: pixelated;
-  }
-
-  .seedling {
-    image-rendering: pixelated;
-    margin-left: 15px;
   }
 
   .tabs-container {
@@ -829,6 +963,7 @@ const styles = `
 
   .tab {
     margin-bottom: 15px;
+    scroll-margin-top: 20px; /* Add scroll margin for better positioning when scrolled into view */
   }
 
   .tab-header {
@@ -1103,6 +1238,92 @@ const styles = `
     gap: 20px;
     margin-top: 30px;
   }
+  
+  /* Quirkiest App tab styles */
+  .quirkiest-app p {
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+    color: #0f0;
+  }
+  
+  .app-description {
+    margin-bottom: 20px;
+  }
+  
+  .app-download {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+  }
+  
+  .app-download .pixel-button {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .app-download .pixel-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg, 
+      rgba(0, 255, 0, 0) 0%,
+      rgba(0, 255, 0, 0.2) 50%,
+      rgba(0, 255, 0, 0) 100%
+    );
+    animation: shimmer 3s infinite linear;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+      transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+  }
+  
+  /* Footer styles */
+  .footer {
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 4px solid #0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .footer-logo {
+    margin-bottom: 20px;
+  }
+  
+  .secondary-logo {
+    max-width: 240px;
+    max-height: 240px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 0, 0.5));
+  }
+  
+  .authentication-text {
+    font-size: 18px;
+    text-align: center;
+    color: #0f0;
+    padding: 10px 20px;
+    border: 2px solid #0f0;
+    background-color: rgba(0, 20, 0, 0.3);
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    margin-bottom: 30px;
+  }
 
   @media (max-width: 600px) {
     .social-links {
@@ -1153,13 +1374,13 @@ const styles = `
       padding: 10px 15px;
     }
     
-    .logo-image {
-      right: -80px;
+    .logo-toggle-area {
+      min-height: 100px;
     }
     
     .png-logo {
-      max-width: 100px;
-      max-height: 100px;
+      max-width: 120px;
+      max-height: 120px;
     }
     
     .tab-header, .tab-content {
@@ -1182,6 +1403,41 @@ const styles = `
     
     .terminal-line {
       font-size: 14px;
+    }
+    
+    /* Mobile quirkiest app styles */
+    .quirkiest-app p {
+      font-size: 14px;
+    }
+    
+    .app-download .pixel-button {
+      width: 80%;
+    }
+    
+    /* Mobile footer styles */
+    .footer {
+      margin-top: 50px;
+      padding-top: 30px;
+    }
+    
+    .secondary-logo {
+      max-width: 200px;
+      max-height: 200px;
+    }
+    
+    .authentication-text {
+      font-size: 14px;
+      padding: 8px 16px;
+    }
+    
+    /* Improve tab transition on mobile */
+    .tab-content-wrapper {
+      transition: height 0.4s ease-in-out;
+    }
+    
+    /* Add some extra space at the bottom of tab content on mobile */
+    .tab-content {
+      padding-bottom: 20px;
     }
   }
 `;
