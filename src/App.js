@@ -1,0 +1,1204 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
+// System Check Component
+const SystemCheck = ({ onComplete }) => {
+  // Removed 'ready' since it's not being used
+  const [displayedInitialInfo, setDisplayedInitialInfo] = useState([]);
+  const [currentLine, setCurrentLine] = useState(0);
+  const [currentChar, setCurrentChar] = useState(0);
+  const [showContinue, setShowContinue] = useState(false);
+  const [blinkContinue, setBlinkContinue] = useState(true);
+  const [waitingForInput, setWaitingForInput] = useState(false);
+  const [showInitialInfo, setShowInitialInfo] = useState(true);
+  const [startMainSequence, setStartMainSequence] = useState(false);
+  
+  // Added to enable skipping the initial system check
+  const skipToEnd = useCallback(() => {
+    if (showInitialInfo) {
+      setShowInitialInfo(false);
+      setStartMainSequence(true);
+      setDisplayedLines([]);
+    } else if (startMainSequence) {
+      onComplete(); // Skip directly to the next screen
+    }
+  }, [showInitialInfo, startMainSequence, onComplete]);
+  
+  const initialSystemInfo = useMemo(() => [
+    "PIXL-OS v2.5.7 - Environmental Monitoring System",
+    "Copyright (C) 2021-2025, PIXLNAUTS Foundation",
+    "--------------------------------------------",
+    "CPU Type    : PIXL-CORE 1024 @ 3800 MHz",
+    "Memory      : 8192 MB OK",
+    "Storage     : 1024 TB OK",
+    "",
+    "Boot Sequence Initialized - Application v0.0.1",
+    "Copyright (C) 2025 PIXLNAUTS",
+    "   Detecting Core Components",
+    "   Initializing Plant Monitoring Modules",
+    "   Activating Environmental Sensors OK",
+    "",
+    "PIXL Device Detection...",
+    "",
+    "Zone    ID      Status      Class",
+    "--------------------------------------------",
+    "1       PL01    Active      PX512",
+    "1       PL02    Active      PX512",
+    "2       TR01    Active      PX350",
+    "2       TR02    Active      PX350",
+    "3       FL01    Standby     PX128",
+    "0       SYS     Master      PX999"
+  ], []);
+  
+  // System check messages with status separated
+  const systemLines = useMemo(() => [
+    { text: "INITIALIZING PIXLNAUTS SYSTEM v0.0.1...", status: "" },
+    { text: "CHECKING MEMORY ALLOCATION...", status: "[OK]" },
+    { text: "LOADING CORE MODULES...", status: "[OK]" },
+    { text: "ESTABLISHING CONNECTIONS...", status: "[OK]" },
+    { text: "CALIBRATING DISPLAY PARAMETERS...", status: "[OK]" },
+    { text: "OPTIMIZING PERFORMANCE METRICS...", status: "[OK]" },
+    { text: "VERIFYING PIXEL INTEGRITY...", status: "[OK]" },
+    { text: "SCANNING FOR UPDATES...", status: "[COMPLETE]" }
+  ], []);
+  
+  const secondSetLines = useMemo(() => [
+    { text: "COMPILING INTERFACE MODULES...", status: "[OK]" },
+    { text: "INITIALIZING DATABASE CONNECTIONS...", status: "[OK]" },
+    { text: "ALL SYSTEMS NOMINAL. LAUNCHING INTERFACE...", status: "" }
+  ], []);
+    
+  const [lines, setLines] = useState(systemLines);
+  const [displayedLines, setDisplayedLines] = useState([]);
+  
+  useEffect(() => {
+    if (!showInitialInfo) return;
+    
+    // Clear any previous content first
+    setDisplayedInitialInfo([]);
+    
+    // Short delay to ensure clean start
+    setTimeout(() => {
+      // Removed setReady(true) since ready isn't used
+      
+      let lineIndex = 0;
+      const displayNextLine = () => {
+        if (lineIndex < initialSystemInfo.length) {
+          setTimeout(() => {
+            // Important: use a function that doesn't depend on previous state
+            setDisplayedInitialInfo(current => {
+              // Make sure we don't add duplicates
+              if (current.includes(initialSystemInfo[lineIndex])) {
+                return current;
+              }
+              return [...current, initialSystemInfo[lineIndex]];
+            });
+            lineIndex++;
+            displayNextLine();
+          }, 100); // 100ms between each line
+        } else {
+          // After all initial info is displayed, wait for 1.5 seconds and start the main sequence
+          setTimeout(() => {
+            setShowInitialInfo(false);
+            setStartMainSequence(true);
+            setDisplayedLines([]); // Clear the display for the main sequence
+          }, 1500);
+        }
+      };
+      
+      displayNextLine();
+    }, 100);
+    
+    return () => {
+      // Nothing to return for cleanup
+    };
+  }, [showInitialInfo, initialSystemInfo]);
+  
+  // Handle keyboard/mouse input to continue or skip
+  useEffect(() => {
+    const handleInput = (e) => {
+      // If waiting for specific input to continue
+      if (waitingForInput) {
+        setWaitingForInput(false);
+        setShowContinue(false);
+        setCurrentLine(0);
+        setCurrentChar(0);
+        setLines(secondSetLines);
+        setDisplayedLines([]);
+      } else {
+        // Allow skipping with any key or click
+        if (e.key === 'Escape' || e.key === ' ' || e.type === 'click') {
+          skipToEnd();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleInput);
+    window.addEventListener('click', handleInput);
+    
+    return () => {
+      window.removeEventListener('keydown', handleInput);
+      window.removeEventListener('click', handleInput);
+    };
+  }, [waitingForInput, secondSetLines, skipToEnd]);
+  
+  // Main sequence - Typewriter effect for system messages
+  useEffect(() => {
+    if (!startMainSequence || !lines.length) return;
+    
+    if (currentLine < lines.length) {
+      // First display just the message part (without status)
+      const timer = setTimeout(() => {
+        if (currentChar < lines[currentLine].text.length) {
+          setCurrentChar(currentChar + 1);
+          setDisplayedLines(prev => {
+            const newLines = [...prev];
+            newLines[currentLine] = lines[currentLine].text.substring(0, currentChar + 1);
+            return newLines;
+          });
+        } else {
+          // Message part is complete, now show status after a delay if it exists
+          if (lines[currentLine].status) {
+            const statusDelay = Math.random() * 500 + 100; // Random delay between 0.2 and 1 second
+            setTimeout(() => {
+              setDisplayedLines(prev => {
+                const newLines = [...prev];
+                newLines[currentLine] = lines[currentLine].text + lines[currentLine].status;
+                return newLines;
+              });
+              
+              // Wait a bit after status appears before moving to next line
+              setTimeout(() => {
+                setCurrentChar(0);
+                
+                // Check for completion conditions
+                if (currentLine === lines.length - 1) {
+                  if (lines[0].text === systemLines[0].text) {
+                    setTimeout(() => {
+                      setWaitingForInput(true);
+                      setShowContinue(true);
+                    }, 1000);
+                  } else if (lines[0].text === secondSetLines[0].text) {
+                    setTimeout(() => {
+                      onComplete();
+                    }, 1000);
+                  }
+                }
+                setCurrentLine(currentLine + 1);
+              }, 300);
+              
+            }, statusDelay);
+          } else {
+            // No status, just move to next line
+            setCurrentChar(0);
+            
+            // Check for completion conditions
+            if (currentLine === lines.length - 1) {
+              if (lines[0].text === systemLines[0].text) {
+                setTimeout(() => {
+                  setWaitingForInput(true);
+                  setShowContinue(true);
+                }, 1000);
+              } else if (lines[0].text === secondSetLines[0].text) {
+                setTimeout(() => {
+                  onComplete();
+                }, 1000);
+              }
+            }
+            setCurrentLine(currentLine + 1);
+          }
+        }
+      }, Math.random() * 10 + 2); // Random typing speed for more realistic effect
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentLine, currentChar, lines, onComplete, systemLines, startMainSequence, secondSetLines]);
+  
+  // Blinking "Press any key to continue" effect
+  useEffect(() => {
+    if (!showContinue) return;
+    
+    const blinkTimer = setInterval(() => {
+      setBlinkContinue(prev => !prev);
+    }, 500);
+    
+    return () => clearInterval(blinkTimer);
+  }, [showContinue]);
+  
+  return (
+    <div className="system-check">
+      <div className="terminal">
+        {showInitialInfo ? (
+          // For initial info, use the dedicated state variable
+          displayedInitialInfo.map((line, index) => (
+            <div key={`initial-${index}`} className="terminal-line">
+              <span className="pre-formatted">{line}</span>
+            </div>
+          ))
+        ) : (
+          // For main sequence lines
+          displayedLines.map((line, index) => (
+            <div key={`main-${index}`} className="terminal-line">
+              <span className="terminal-prompt">&gt;</span> {line}
+            </div>
+          ))
+        )}
+        {showContinue && blinkContinue && (
+          <div className="continue-prompt">PRESS ANY KEY TO CONTINUE...</div>
+        )}
+        {showContinue && !blinkContinue && (
+          <div className="continue-prompt-empty">&nbsp;</div>
+        )}
+        <div className="skip-prompt"></div>
+      </div>
+    </div>
+  );
+};
+
+// Component for the text scrambling animation
+const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, color }) => {
+  const [displayText, setDisplayText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+  const [progress, setProgress] = useState(0);
+  
+  // Different character sets for more variety
+  const primaryChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const symbolChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/';
+  const pixelChars = '■□▢▣▤▥▦▧▨▩▪▫▬▭▮▯▰▱▲△▴▵▶▷▸▹►▻▼▽▾▿◀◁◂◃◄◅◆◇◈◉◊○●◌◍◎●◐◑◒◓◔◕◖◗◘◙◚◛◜◝◞◟◠◡◢◣◤◥◦◧◨◩◪◫◬◭◮◯◰◱◲◳◴◵◶◷';
+  
+  // Clean up text by trimming and preventing null
+  const cleanText = text?.trim() || '';
+  
+  // Memoize the character selection function
+  const getRandomChar = useCallback(() => {
+    const r = Math.random();
+    if (r < 0.6) return primaryChars.charAt(Math.floor(Math.random() * primaryChars.length));
+    if (r < 0.8) return symbolChars.charAt(Math.floor(Math.random() * symbolChars.length));
+    return pixelChars.charAt(Math.floor(Math.random() * pixelChars.length));
+  }, []);
+
+  useEffect(() => {
+    if (!cleanText) return;
+    
+    let textArray = Array(cleanText.length).fill('');
+    let completedIndices = new Set();
+    // Removed unused 'iteration' variable
+    let startTime = Date.now();
+    let duration = cleanText.length * speed * 2; // Total animation duration
+    
+    // Initial fill with random characters
+    for (let i = 0; i < cleanText.length; i++) {
+      if (cleanText[i] === ' ') {
+        textArray[i] = ' ';
+        completedIndices.add(i);
+      } else {
+        textArray[i] = getRandomChar();
+      }
+    }
+    setDisplayText(textArray.join(''));
+    
+    const interval = setInterval(() => {
+      // Calculate progress for transition effects
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min(1, elapsed / duration);
+      setProgress(newProgress);
+      
+      // If all characters are complete, clear interval
+      if (completedIndices.size === cleanText.length) {
+        clearInterval(interval);
+        setTimeout(() => setIsComplete(true), finalDelay);
+        return;
+      }
+      
+      // Pick a random index to update if not already complete
+      let availableIndices = Array.from(Array(cleanText.length).keys())
+        .filter(index => !completedIndices.has(index) && cleanText[index] !== ' ');
+        
+      if (availableIndices.length === 0) return;
+      
+      // Determine how many characters to update this iteration (increases over time)
+      const charsToUpdate = Math.max(1, Math.floor(availableIndices.length * (newProgress * 0.3)));
+      
+      // Update multiple characters per iteration
+      for (let i = 0; i < charsToUpdate; i++) {
+        if (availableIndices.length === 0) break;
+        
+        const randomIdx = Math.floor(Math.random() * availableIndices.length);
+        const randomIndex = availableIndices[randomIdx];
+        availableIndices.splice(randomIdx, 1);
+        
+        // After certain progress threshold, start finalizing characters
+        if (newProgress > 0.4 && Math.random() < 0.3 * newProgress * intensity) {
+          textArray[randomIndex] = cleanText[randomIndex];
+          completedIndices.add(randomIndex);
+        } else {
+          // Otherwise show random character with increasing probability of matching final char
+          const matchProb = newProgress * 0.5;
+          if (Math.random() < matchProb) {
+            textArray[randomIndex] = cleanText[randomIndex];
+          } else {
+            textArray[randomIndex] = getRandomChar();
+          }
+        }
+      }
+      
+      setDisplayText(textArray.join(''));
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [cleanText, speed, finalDelay, getRandomChar, intensity]);
+
+  // If text is empty, don't render anything
+  if (!cleanText) return null;
+
+  return (
+    <span 
+      className={`scramble-text ${isComplete ? 'completed' : ''}`} 
+      style={{
+        filter: isComplete ? 'none' : `blur(${(1 - progress) * 0.5}px)`,
+        opacity: 0.5 + progress * 0.5,
+        color: color // Use custom color if provided
+      }}
+    >
+      {displayText || cleanText}
+    </span>
+  );
+};
+
+// Loading animation component
+const LoadingAnimation = ({ onComplete }) => {
+  const [progress, setProgress] = useState(0);
+  
+  // Add option to skip loading animation
+  const skipLoading = useCallback(() => {
+    onComplete();
+  }, [onComplete]);
+  
+  useEffect(() => {
+    // Handle key presses and clicks to skip
+    const handleSkip = (e) => {
+      if (e.key === 'Escape' || e.key === ' ' || e.type === 'click') {
+        skipLoading();
+      }
+    };
+    
+    window.addEventListener('keydown', handleSkip);
+    window.addEventListener('click', handleSkip);
+    
+    return () => {
+      window.removeEventListener('keydown', handleSkip);
+      window.removeEventListener('click', handleSkip);
+    };
+  }, [skipLoading]);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            onComplete();
+          }, 500);
+          return 100;
+        }
+        return prev + Math.floor(Math.random() * 5) + 1;
+      });
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [onComplete]);
+  
+  return (
+    <div className="loading-screen">
+      <div className="loading-logo">
+        <ScrambleText text="PIXLNAUTS" speed={20} intensity={2.0} />
+      </div>
+      <div className="progress-container">
+        <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+      </div>
+      <div className="loading-text">
+        <ScrambleText text={`LOADING: ${progress}%`} speed={10} />
+      </div>
+      <div className="skip-prompt"></div>
+    </div>
+  );
+};
+
+// Logo component
+const Logo = () => {
+  return (
+    <div className="logo-container">
+      <div className="logo">
+        <ScrambleText text="PIXLNAUTS" speed={30} />
+      </div>
+      <div className="logo-image">
+        {/* Bigger pixel art logo */}
+        <img src="/images/pixlnauts-logo.png" alt="PIXLNAUTS Logo" className="png-logo" />
+      </div>
+    </div>
+  );
+};
+
+// Tab component
+const Tab = ({ title, children, isOpen, toggleTab }) => {
+  const [height, setHeight] = useState(0);
+  const contentRef = useRef(null);
+  
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      setHeight(contentRef.current.scrollHeight);
+    } else {
+      setHeight(0);
+    }
+  }, [isOpen]);
+  
+  return (
+    <div className={`tab ${isOpen ? 'open' : 'closed'}`}>
+      <div className="tab-header" onClick={toggleTab}>
+        <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
+        <ScrambleText text={title} speed={30} intensity={0.8} />
+      </div>
+      <div 
+        className="tab-content-wrapper" 
+        style={{ height: `${height}px` }}
+      >
+        <div className="tab-content" ref={contentRef}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Introduction tab content
+const IntroductionTab = () => {
+  return (
+    <div className="introduction">
+      <p>
+        <ScrambleText 
+          text="Welcome to PIXLNAUTS, an innovative non-profit environmental project that uses blockchain technology to drive positive change." 
+          speed={10} 
+        />
+      </p>
+      <p>
+        <ScrambleText 
+          text="Check out our whitepaper for more details on our vision and roadmap." 
+          speed={10} 
+        />
+      </p>
+      <div className="whitepaper-link">
+        <a href="https://pixelnauts.gitbook.io/pixel-cryptonauts-whitepaper" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          {/* Using direct span with black color, not using ScrambleText for button text */}
+          <span className="whitepaper-button-text">READ WHITEPAPER</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// Socials tab content
+const SocialsTab = () => {
+  return (
+    <div className="socials">
+      <div className="video-container">
+        <iframe 
+          width="100%" 
+          height="315" 
+          src="https://www.youtube.com/embed/KSz8VG1Tzm0" 
+          title="Pixelnauts Introduction Video"
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowFullScreen
+        ></iframe>
+      </div>
+      <p>
+        <ScrambleText 
+          text="Join our community! Follow PIXLNAUTS on social media to stay up to date with our environmental initiatives." 
+          speed={10} 
+        />
+      </p>
+      <div className="social-links">
+        <a href="https://discord.gg/W73cvPDcgK" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">DISCORD</span>
+        </a>
+        <a href="https://twitter.com/PixlCryptonauts" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">TWITTER</span>
+        </a>
+        <a href="https://t.me/projectcosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">TELEGRAM</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// Games tab content
+const GamesTab = () => {
+  return (
+    <div className="games">
+      <p>
+        <ScrambleText 
+          text="Try our concept beta games! Experience these exciting PIXLNAUTS titles:" 
+          speed={10} 
+        />
+      </p>
+      <div className="games-links">
+        <a href="https://icet33.itch.io/project-cosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">PROJECT: COSMOS - SPACESHIP SHOOTER</span>
+        </a>
+        <a href="https://icet33.itch.io/pixelnaut" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">PIXELNAUT AIM TRAINER</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// B-b0 Customizer tab content
+const BeeboCustomizerTab = () => {
+  return (
+    <div className="beebo-customizer">
+      <p>
+        <ScrambleText 
+          text="Coming soon! In the meantime, you can:" 
+          speed={10} 
+        />
+      </p>
+      <div className="beebo-links">
+        <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">INVITE BEEBO TO YOUR DISCORD SERVER! :O</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// Support Us tab content
+const SupportUsTab = () => {
+  return (
+    <div className="support-us">
+      <p>
+        <ScrambleText 
+          text="Support PIXLNAUTS environmental initiatives through these platforms:" 
+          speed={10} 
+        />
+      </p>
+      <div className="support-links">
+        <a href="https://teamtrees.org/search?q=project%20cosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">TEAM TREES</span>
+        </a>
+        <a href="https://teamseas.org/search-donors/?team_name=Project%20Cosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">TEAM SEAS</span>
+        </a>
+        <a href="https://paypal.me/pixelcryptonauts" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">PAYPAL</span>
+        </a>
+        <a href="http://www.patreon.com/pixelcryptonauts" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">PATREON</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// TabsManager to control which tab is open
+const TabsManager = () => {
+  const [openTab, setOpenTab] = useState(0);
+  
+  const toggleTab = (index) => {
+    if (openTab === index) {
+      setOpenTab(null);
+    } else {
+      setOpenTab(index);
+    }
+  };
+  
+  return (
+    <div className="tabs-container">
+      <Tab 
+        title="INTRODUCTION" 
+        isOpen={openTab === 0} 
+        toggleTab={() => toggleTab(0)}
+      >
+        <IntroductionTab />
+      </Tab>
+      <Tab 
+        title="SOCIALS" 
+        isOpen={openTab === 1} 
+        toggleTab={() => toggleTab(1)}
+      >
+        <SocialsTab />
+      </Tab>
+      <Tab 
+        title="GAMES" 
+        isOpen={openTab === 2} 
+        toggleTab={() => toggleTab(2)}
+      >
+        <GamesTab />
+      </Tab>
+      <Tab 
+        title="B-b0 CUSTOMIZER" 
+        isOpen={openTab === 3} 
+        toggleTab={() => toggleTab(3)}
+      >
+        <BeeboCustomizerTab />
+      </Tab>
+      <Tab 
+        title="SUPPORT US" 
+        isOpen={openTab === 4} 
+        toggleTab={() => toggleTab(4)}
+      >
+        <SupportUsTab />
+      </Tab>
+    </div>
+  );
+};
+
+// Main component
+const App = () => {
+  const [currentState, setCurrentState] = useState('systemCheck'); // systemCheck, loading, content
+  const [tabsVisible] = useState(true); // Removed the setter since it's not used
+  const [showContent, setShowContent] = useState(false);
+  
+  useEffect(() => {
+    // Transition from loading to content
+    if (currentState === 'content' && !showContent) {
+      setTimeout(() => {
+        setShowContent(true);
+      }, 300);
+    }
+  }, [currentState, showContent]);
+  
+  const handleSystemCheckComplete = () => {
+    setCurrentState('loading');
+  };
+  
+  const handleLoadingComplete = () => {
+    setCurrentState('content');
+  };
+  
+  if (currentState === 'systemCheck') {
+    return <SystemCheck onComplete={handleSystemCheckComplete} />;
+  }
+  
+  if (currentState === 'loading') {
+    return <LoadingAnimation onComplete={handleLoadingComplete} />;
+  }
+  
+  return (
+    <div className={`pixlnauts-app ${showContent ? 'show' : 'hide'}`}>
+      <Logo />
+      <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
+        <TabsManager />
+      </div>
+    </div>
+  );
+};
+
+// CSS for the whole application
+const styles = `
+  @font-face {
+    font-family: 'PixelFont';
+    /* We'd load the custom font here */
+    font-display: swap;
+  }
+
+  * {
+    box-sizing: border-box;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  body {
+    background-color: #000;
+    color: #0f0;
+    font-family: 'PixelFont', monospace;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    line-height: 1.4;
+    font-smooth: never;
+    -webkit-font-smoothing: none;
+  }
+  
+  /* System Check Terminal Styling */
+  .system-check {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+  }
+  
+  .terminal {
+    width: 90%;
+    max-width: 700px;
+    height: 80vh;
+    background-color: #000;
+    border: 2px solid #0f0;
+    padding: 20px;
+    overflow: hidden;
+    font-family: monospace;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  }
+  
+  .pre-formatted {
+    white-space: pre;
+    font-family: monospace;
+  } 
+
+  .terminal-line {
+    color: #0f0;
+    margin-bottom: 10px;
+    white-space: pre;
+    font-size: 16px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    font-family: monospace;
+  }
+  
+  .terminal-prompt {
+    color: #0f0;
+    margin-right: 10px;
+  }
+  
+  .continue-prompt, .continue-prompt-empty, .skip-prompt {
+    margin-top: 30px;
+    color: #0f0;
+    text-align: center;
+    font-size: 18px;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+  }
+  
+  .skip-prompt {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    font-size: 14px;
+    opacity: 0.7;
+  }
+
+  .pixlnauts-app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px 20px 20px; /* Increased top padding */
+    position: relative; /* Added for absolute positioning of logo */
+  }
+
+  .logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 50px; /* Increased for better spacing */
+    position: relative;
+    width: 100%;
+  }
+
+  .logo {
+    font-size: 64px; /* Reduced from 77px to make it smaller */
+    letter-spacing: 4px;
+    text-align: center;
+    padding: 15px 30px;
+    border: 4px solid #444;
+    background-color: #000;
+    box-shadow: 0 0 0 2px #000;
+    position: relative;
+  }
+
+  .logo-image {
+    position: absolute;
+    right: -140px; /* Positioned further to the right */
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .png-logo {
+    max-width: 180px; /* Increased from 150px to make it even bigger */
+    max-height: 180px;
+    image-rendering: pixelated;
+  }
+
+  .seedling {
+    image-rendering: pixelated;
+    margin-left: 15px;
+  }
+
+  .tabs-container {
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    margin-bottom: 15px;
+  }
+
+  .tab-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #111;
+    border: 4px solid #555;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px #000;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    font-size: 24px; /* Doubled from default of 12px */
+  }
+
+  .tab-header:hover {
+    border-color: #666;
+    background-color: #151515;
+  }
+  
+  .tab.open .tab-header {
+    border-color: #0f0;
+  }
+
+  .play-icon {
+    color: #0f0;
+    margin-right: 15px;
+    font-size: 24px; /* Increased to match the larger tab header text */
+    transition: transform 0.3s ease, color 0.2s ease;
+  }
+  
+  .play-icon.playing {
+    transform: rotate(90deg);
+    color: #5f5;
+  }
+  
+  .tab-content-wrapper {
+    overflow: hidden;
+    transition: height 0.3s ease-in-out;
+    background-color: #111;
+    border-left: 4px solid #555;
+    border-right: 4px solid #555;
+    border-bottom: 4px solid #555;
+  }
+  
+  .tab.open .tab-content-wrapper {
+    border-color: #0f0;
+  }
+
+  .tab-content {
+    padding: 20px;
+    background-color: #111;
+  }
+
+  .whitepaper-button-text {
+    color: #000;
+    font-family: 'PixelFont', monospace;
+    font-weight: bold;
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .pixel-button {
+    display: inline-block;
+    padding: 15px 30px;
+    background-color: #0f0;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0 #086;
+    image-rendering: pixelated;
+    clip-path: polygon(
+      0 0, 
+      100% 0, 
+      100% calc(100% - 4px), 
+      calc(100% - 4px) 100%, 
+      0 100%
+    );
+  }
+
+  .pixel-button:hover {
+    background-color: #0c0;
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #086;
+  }
+
+  .pixel-button:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
+
+  .scramble-text {
+    transition: color 0.3s ease;
+    letter-spacing: 1px;
+  }
+
+  .scramble-text.completed {
+    color: #0f0;
+    text-shadow: 0 0 5px #0f05;
+  }
+
+  .introduction p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .whitepaper-link {
+    text-align: center;
+    margin-top: 30px;
+  }
+
+  /* Loading screen */
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
+    background-color: #000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+  }
+  
+  .loading-logo {
+    font-size: 36px;
+    letter-spacing: 3px;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px #0f0;
+  }
+  
+  .progress-container {
+    width: 80%;
+    max-width: 400px;
+    height: 20px;
+    background-color: #111;
+    border: 2px solid #0f0;
+    margin-bottom: 15px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background-color: #0f0;
+    transition: width 0.2s ease;
+    box-shadow: 0 0 10px #0f0;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+    margin-bottom: 30px;
+  }
+  
+  .loading-screen .skip-prompt {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.7;
+  }
+  
+  /* App show/hide animations */
+  .pixlnauts-app {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  
+  .pixlnauts-app.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Tabs section animations */
+  .tabs-section {
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out;
+  }
+  
+  .tabs-section.closed {
+    max-height: 0;
+  }
+  
+  .socials p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .video-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    margin-bottom: 30px;
+    border: 4px solid #0f0;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    overflow: hidden;
+  }
+
+  .video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .social-links {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+  }
+
+  .beebo-customizer p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .beebo-links {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+  }
+
+  .support-us p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .support-links {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+  }
+
+  .games p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .games-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+  }
+
+  @media (max-width: 600px) {
+    .social-links {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .social-links .pixel-button {
+      width: 80%;
+    }
+    
+    .beebo-links {
+      width: 100%;
+    }
+    
+    .beebo-links .pixel-button {
+      width: 80%;
+    }
+
+    .games-links {
+      width: 100%;
+    }
+    
+    .games-links .pixel-button {
+      width: 80%;
+    }
+
+    .support-links {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .support-links .pixel-button {
+      width: 80%;
+    }
+    
+    .video-container {
+      margin-bottom: 20px;
+      border-width: 2px;
+    }
+    
+    .pixlnauts-app {
+      padding: 20px 10px 10px 10px;
+    }
+    
+    .logo {
+      font-size: 40px; /* Smaller on mobile but still readable */
+      padding: 10px 15px;
+    }
+    
+    .logo-image {
+      right: -80px;
+    }
+    
+    .png-logo {
+      max-width: 100px;
+      max-height: 100px;
+    }
+    
+    .tab-header, .tab-content {
+      padding: 12px;
+    }
+    
+    .introduction p {
+      font-size: 14px;
+    }
+    
+    .loading-logo {
+      font-size: 28px;
+    }
+    
+    .terminal {
+      width: 95%;
+      height: 90vh;
+      padding: 10px;
+    }
+    
+    .terminal-line {
+      font-size: 14px;
+    }
+  }
+`;
+
+// Add the styles to the document
+const StyleSheet = () => {
+  return <style>{styles}</style>;
+};
+
+// Wrap everything together
+const PixlnautsWebsite = () => {
+  return (
+    <>
+      <StyleSheet />
+      <App />
+    </>
+  );
+};
+
+export default PixlnautsWebsite;
