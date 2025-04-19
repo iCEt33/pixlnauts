@@ -952,12 +952,16 @@ const styles = `
   .terminal-line {
     color: #0f0;
     margin-bottom: 10px;
-    white-space: pre;
+    white-space: pre-wrap; /* CHANGED: From 'pre' to 'pre-wrap' to allow wrapping */
+    word-break: break-word; /* ADDED: Ensures words break properly */
+    overflow-wrap: break-word; /* ADDED: Additional word wrapping support */
+    max-width: 100%; /* ADDED: Ensure content fits within container */
     font-size: 16px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
     font-family: monospace;
     display: block; /* Ensure block display for proper line breaks */
     min-height: 1.2em; /* Minimum height to ensure empty lines render */
+    position: relative; /* For positioning the status */
   }
   
   .terminal-prompt {
@@ -1137,10 +1141,6 @@ const styles = `
       calc(100% - 4px) 100%, 
       0 100%
     );
-  }
-
-  .terminal-line {
-  position: relative; /* For positioning the status */
   }
 
   .spinning-status {
@@ -1523,10 +1523,23 @@ const styles = `
     .terminal {
       width: 95%;
       height: 90vh;
-      padding: 10px;
+      padding: 10px 8px; /* CHANGED: Adjusted padding for mobile */
+      font-size: 12px; /* ADDED: Smaller font size on mobile */
     }
     
     .terminal-line {
+      font-size: 12px; /* CHANGED: Smaller font on mobile */
+      margin-bottom: 8px; /* ADDED: Slightly reduced margin */
+    }
+    
+    /* ADDED: Better mobile status indicators */
+    .spinning-status, .status-text {
+      margin-left: 5px;
+    }
+    
+    /* ADDED: Better spacing for continue prompt */
+    .continue-prompt, .continue-prompt-empty {
+      margin-top: 20px;
       font-size: 14px;
     }
     
