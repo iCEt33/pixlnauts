@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 // System Check Component
 const SystemCheck = ({ onComplete }) => {
-  // Removed 'ready' since it's not being used
   const [displayedInitialInfo, setDisplayedInitialInfo] = useState([]);
   const [currentLine, setCurrentLine] = useState(0);
   const [currentChar, setCurrentChar] = useState(0);
@@ -11,6 +10,17 @@ const SystemCheck = ({ onComplete }) => {
   const [waitingForInput, setWaitingForInput] = useState(false);
   const [showInitialInfo, setShowInitialInfo] = useState(true);
   const [startMainSequence, setStartMainSequence] = useState(false);
+  
+  // For spinning indicator
+  const spinChars = useMemo(() => ['|', '/', '-', '\\'], []);
+  const [spinIndex, setSpinIndex] = useState(0);
+  
+  // Track which lines are completely typed
+  const [lineCompletionStates, setLineCompletionStates] = useState([]);
+  // Track which lines are in "processing" mode (showing spinner)
+  const [lineProcessingStates, setLineProcessingStates] = useState([]);
+  // Track which lines are finished and showing final status
+  const [lineFinishedStates, setLineFinishedStates] = useState([]);
   
   // Added to enable skipping the initial system check
   const skipToEnd = useCallback(() => {
@@ -49,26 +59,46 @@ const SystemCheck = ({ onComplete }) => {
     "0       SYS     Master      PX999"
   ], []);
   
-  // System check messages with status separated
+  // Modified system check messages with just processing indicators
   const systemLines = useMemo(() => [
-    { text: "INITIALIZING PIXLNAUTS SYSTEM v0.0.1...", status: "" },
-    { text: "CHECKING MEMORY ALLOCATION...", status: "[OK]" },
-    { text: "LOADING CORE MODULES...", status: "[OK]" },
-    { text: "ESTABLISHING CONNECTIONS...", status: "[OK]" },
-    { text: "CALIBRATING DISPLAY PARAMETERS...", status: "[OK]" },
-    { text: "OPTIMIZING PERFORMANCE METRICS...", status: "[OK]" },
-    { text: "VERIFYING PIXEL INTEGRITY...", status: "[OK]" },
-    { text: "SCANNING FOR UPDATES...", status: "[COMPLETE]" }
+    { text: "INITIALIZING PIXLNAUTS SYSTEM v0.0.1", processing: false, status: "" },
+    { text: "CHECKING MEMORY ALLOCATION", processing: true, status: "[OK]" },
+    { text: "LOADING CORE MODULES", processing: true, status: "[OK]" },
+    { text: "ESTABLISHING CONNECTIONS", processing: true, status: "[OK]" },
+    { text: "CALIBRATING DISPLAY PARAMETERS", processing: true, status: "[OK]" },
+    { text: "OPTIMIZING PERFORMANCE METRICS", processing: true, status: "[OK]" },
+    { text: "VERIFYING PIXEL INTEGRITY", processing: true, status: "[OK]" },
+    { text: "SCANNING FOR UPDATES", processing: true, status: "[COMPLETE]" }
   ], []);
   
   const secondSetLines = useMemo(() => [
-    { text: "COMPILING INTERFACE MODULES...", status: "[OK]" },
-    { text: "INITIALIZING DATABASE CONNECTIONS...", status: "[OK]" },
-    { text: "ALL SYSTEMS NOMINAL. LAUNCHING INTERFACE...", status: "" }
+    { text: "ALMOST", processing: true, status: "[THERE]" },
+    { text: "INITIALIZING DATABASE CONNECTIONS", processing: true, status: "[OK]" },
+    { text: "ALL SYSTEMS NOMINAL. LAUNCHING INTERFACE", processing: false, status: "" }
   ], []);
     
   const [lines, setLines] = useState(systemLines);
   const [displayedLines, setDisplayedLines] = useState([]);
+  
+  // Initialize state arrays for tracking line status
+  useEffect(() => {
+    if (startMainSequence && lines.length > 0) {
+      setLineCompletionStates(Array(lines.length).fill(false));
+      setLineProcessingStates(Array(lines.length).fill(false));
+      setLineFinishedStates(Array(lines.length).fill(false));
+    }
+  }, [startMainSequence, lines.length]);
+  
+  // Animate the spinning indicator
+  useEffect(() => {
+    if (!startMainSequence) return;
+    
+    const spinTimer = setInterval(() => {
+      setSpinIndex((prev) => (prev + 1) % spinChars.length);
+    }, 150);
+    
+    return () => clearInterval(spinTimer);
+  }, [startMainSequence, spinChars]);
   
   useEffect(() => {
     if (!showInitialInfo) return;
@@ -138,6 +168,9 @@ const SystemCheck = ({ onComplete }) => {
         setCurrentChar(0);
         setLines(secondSetLines);
         setDisplayedLines([]);
+        setLineCompletionStates(Array(secondSetLines.length).fill(false));
+        setLineProcessingStates(Array(secondSetLines.length).fill(false));
+        setLineFinishedStates(Array(secondSetLines.length).fill(false));
       } else {
         // Allow skipping with any key or click
         if (e.key === 'Escape' || e.key === ' ' || e.type === 'click') {
@@ -155,77 +188,118 @@ const SystemCheck = ({ onComplete }) => {
     };
   }, [waitingForInput, secondSetLines, skipToEnd]);
   
-  // Main sequence - Typewriter effect for system messages
+  // Main typewriter effect
   useEffect(() => {
     if (!startMainSequence || !lines.length) return;
     
     if (currentLine < lines.length) {
-      // First display just the message part (without status)
-      const timer = setTimeout(() => {
+      // First, check if this line is already being processed or completed
+      if (lineCompletionStates[currentLine]) return;
+      
+      // Type out the current line character by character
+      const typeTimer = setTimeout(() => {
         if (currentChar < lines[currentLine].text.length) {
-          setCurrentChar(currentChar + 1);
+          setCurrentChar(prevChar => prevChar + 1);
+          
           setDisplayedLines(prev => {
             const newLines = [...prev];
+            while (newLines.length <= currentLine) newLines.push('');
             newLines[currentLine] = lines[currentLine].text.substring(0, currentChar + 1);
             return newLines;
           });
         } else {
-          // Message part is complete, now show status after a delay if it exists
-          if (lines[currentLine].status) {
-            const statusDelay = Math.random() * 500 + 100; // Random delay between 0.2 and 1 second
+          // Mark this line as completely typed
+          setLineCompletionStates(prev => {
+            const newStates = [...prev];
+            newStates[currentLine] = true;
+            return newStates;
+          });
+          
+          // If this line should show processing animation
+          if (lines[currentLine].processing) {
+            // Start processing animation for this line
+            setLineProcessingStates(prev => {
+              const newStates = [...prev];
+              newStates[currentLine] = true;
+              return newStates;
+            });
+            
+            // After a random delay, finish this line and move to the next
+            const processingTime = Math.random() * 1000 + 350;
             setTimeout(() => {
-              setDisplayedLines(prev => {
-                const newLines = [...prev];
-                newLines[currentLine] = lines[currentLine].text + lines[currentLine].status;
-                return newLines;
+              // Mark processing as done
+              setLineProcessingStates(prev => {
+                const newStates = [...prev];
+                newStates[currentLine] = false;
+                return newStates;
               });
               
-              // Wait a bit after status appears before moving to next line
+              // Mark as finished with final status
+              setLineFinishedStates(prev => {
+                const newStates = [...prev];
+                newStates[currentLine] = true;
+                return newStates;
+              });
+              
+              // Move to next line or finish sequence
               setTimeout(() => {
+                // Reset for next line
                 setCurrentChar(0);
                 
-                // Check for completion conditions
+                // Check for completion
                 if (currentLine === lines.length - 1) {
-                  if (lines[0].text === systemLines[0].text) {
+                  if (lines === systemLines) {
                     setTimeout(() => {
                       setWaitingForInput(true);
                       setShowContinue(true);
                     }, 1000);
-                  } else if (lines[0].text === secondSetLines[0].text) {
+                  } else {
                     setTimeout(() => {
                       onComplete();
                     }, 1000);
                   }
+                } else {
+                  // Move to next line
+                  setCurrentLine(prev => prev + 1);
                 }
-                setCurrentLine(currentLine + 1);
               }, 300);
-              
-            }, statusDelay);
+            }, processingTime);
           } else {
-            // No status, just move to next line
-            setCurrentChar(0);
+            // For lines without processing, just mark as finished and move on
+            setLineFinishedStates(prev => {
+              const newStates = [...prev];
+              newStates[currentLine] = true;
+              return newStates;
+            });
             
-            // Check for completion conditions
-            if (currentLine === lines.length - 1) {
-              if (lines[0].text === systemLines[0].text) {
-                setTimeout(() => {
-                  setWaitingForInput(true);
-                  setShowContinue(true);
-                }, 1000);
-              } else if (lines[0].text === secondSetLines[0].text) {
-                setTimeout(() => {
-                  onComplete();
-                }, 1000);
+            // Move to next line after a short delay
+            setTimeout(() => {
+              setCurrentChar(0);
+              
+              // Check for completion
+              if (currentLine === lines.length - 1) {
+                if (lines === systemLines) {
+                  setTimeout(() => {
+                    setWaitingForInput(true);
+                    setShowContinue(true);
+                  }, 1000);
+                } else {
+                  setTimeout(() => {
+                    onComplete();
+                  }, 1000);
+                }
+              } else {
+                // Move to next line
+                setCurrentLine(prev => prev + 1);
               }
-            }
-            setCurrentLine(currentLine + 1);
+            }, 500);
           }
         }
-      }, Math.random() * 10 + 2); // Random typing speed for more realistic effect
+      }, Math.random() * 10 + 5); // Random typing speed
       
-      return () => clearTimeout(timer);
+      return () => clearTimeout(typeTimer);
     }
-  }, [currentLine, currentChar, lines, onComplete, systemLines, startMainSequence, secondSetLines]);
+  }, [currentLine, currentChar, lines, onComplete, startMainSequence, systemLines, spinChars, lineCompletionStates]);
   
   // Blinking "Press any key to continue" effect
   useEffect(() => {
@@ -249,10 +323,20 @@ const SystemCheck = ({ onComplete }) => {
             </div>
           ))
         ) : (
-          // For main sequence lines
+          // For main sequence lines with animated status
           displayedLines.map((line, index) => (
             <div key={`main-${index}`} className="terminal-line">
               <span className="terminal-prompt">&gt;</span> {line}
+              
+              {/* Show spinning indicator for lines in processing state */}
+              {lineProcessingStates[index] && (
+                <span className="spinning-status">{spinChars[spinIndex]}</span>
+              )}
+              
+              {/* Show final status for completed lines */}
+              {lineFinishedStates[index] && lines[index]?.status && (
+                <span className="status-text">{lines[index].status}</span>
+              )}
             </div>
           ))
         )}
@@ -533,6 +617,17 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
 const IntroductionTab = () => {
   return (
     <div className="introduction">
+      <div className="video-container">
+        <iframe 
+          width="100%" 
+          height="315" 
+          src="https://www.youtube.com/embed/KSz8VG1Tzm0" 
+          title="Pixelnauts Introduction Video"
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowFullScreen
+        ></iframe>
+      </div>
       <p>
         <ScrambleText 
           text="Welcome to PIXLNAUTS, an innovative non-profit environmental project that uses blockchain technology to drive positive change." 
@@ -559,17 +654,6 @@ const IntroductionTab = () => {
 const SocialsTab = () => {
   return (
     <div className="socials">
-      <div className="video-container">
-        <iframe 
-          width="100%" 
-          height="315" 
-          src="https://www.youtube.com/embed/KSz8VG1Tzm0" 
-          title="Pixelnauts Introduction Video"
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          allowFullScreen
-        ></iframe>
-      </div>
       <p>
         <ScrambleText 
           text="Join our community! Follow PIXLNAUTS on social media to stay up to date with our environmental initiatives." 
@@ -752,6 +836,13 @@ const Footer = () => {
           text="This is the one and only authentic website of PIXLNAUTS project" 
           speed={20}
           intensity={1.0}
+        />
+      </div>
+      <div className="secret-message">
+        <ScrambleText 
+          text="If you found the loading screens to be too long, they are completely skippable. Just press any button it doesn't matter. I just wanted you to experience it at least one time before letting you know this :D" 
+          speed={200}
+          intensity={0.5}
         />
       </div>
     </div>
@@ -1046,6 +1137,40 @@ const styles = `
       calc(100% - 4px) 100%, 
       0 100%
     );
+  }
+
+  .terminal-line {
+  position: relative; /* For positioning the status */
+  }
+
+  .spinning-status {
+    display: inline-block;
+    color: #ff0;
+    font-weight: bold;
+    margin-left: 10px;
+    animation: pulse 1s infinite;
+    min-width: 15px;
+    text-align: center;
+  }
+
+  .status-text {
+    display: inline-block;
+    color: #0f0;
+    font-weight: bold;
+    margin-left: 10px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
+    animation: statusAppear 0.5s ease-in;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.5; text-shadow: 0 0 5px rgba(255, 255, 0, 0.3); }
+    50% { opacity: 1; text-shadow: 0 0 10px rgba(255, 255, 0, 0.7); }
+    100% { opacity: 0.5; text-shadow: 0 0 5px rgba(255, 255, 0, 0.3); }
+  }
+
+  @keyframes statusAppear {
+    from { opacity: 0; transform: translateX(-5px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 
   .pixel-button:hover {
