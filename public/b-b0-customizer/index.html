@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B-b0 Model Assembler</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Additional styles for iframe integration */
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    .container {
+      height: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    
+    .model-container {
+      position: relative;
+    }
+    
+    /* Ensure responsive model viewer */
+    .model-viewer {
+      width: 100%;
+      aspect-ratio: 1/1;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    /* Better positioning for buttons */
+    .buttons-side {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: auto;
+      padding: 5px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 4px;
+      border: 1px solid #0f0;
+    }
+    
+    /* Custom messages for iframe context */
+    .iframe-notice {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      color: #0f0;
+      font-size: 12px;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid #0f0;
+      padding: 5px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    /* Better tab navigation in iframe */
+    .controls-panel:focus-within {
+      outline: 2px solid #0f0;
+    }
+    
+    /* Hide debug panel in iframe context */
+    .debug-panel {
+      display: none;
+    }
+    
+    /* Fix z-index for notifications */
+    .snapshot-message {
+      z-index: 1000;
+    }
+    
+    .collision-warning {
+      z-index: 900;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="model-container">
+      <div class="model-viewer" id="model-viewer">
+        <div class="loading-overlay" id="loading-overlay">
+          <div class="loading-text">Loading B-b0...</div>
+        </div>
+        <!-- Collision warning - OUTSIDE the loading overlay -->
+        <div class="collision-warning" id="collision-warning">
+          <div class="warning-message">
+            <span id="collision-message">Item is colliding with other accessories</span>
+          </div>
+        </div>
+      </div>
+      <div class="controls-section">
+        <div class="buttons-group">
+          <button class="toggle-button active" id="auto-rotate-toggle">Auto Rotate: ON</button>
+          <button class="toggle-button" id="performance-toggle">Performance Mode: OFF</button>
+          <!-- Collision toggle button will be added dynamically -->
+        </div>
+        <div class="camera-controls">
+          <button class="toggle-button" id="camera-reset">Reset Camera</button>
+        </div>
+      </div>
+      
+      <!-- Price Panel - Below the model -->
+      <div class="price-panel" id="price-panel">
+        <div class="price-title">B-b0 Pricing</div>
+        
+        <!-- Simple pricing list -->
+        <div class="price-list">
+          <div class="price-item">
+            <span class="price-label">Body:</span>
+            <span class="price-value" id="body-price">5.00 POL</span>
+          </div>
+          
+          <div class="price-item">
+            <span class="price-label">Face:</span>
+            <span class="price-value" id="face-price">1.00 POL</span>
+          </div>
+          
+          <div class="price-item">
+            <span class="price-label">Screen:</span>
+            <span class="price-value" id="screen-price">2.00 POL</span>
+          </div>
+          
+          <div class="price-item">
+            <span class="price-label">Specs:</span>
+            <span class="price-value" id="specs-price">1.00 POL</span>
+          </div>
+          
+          <div class="price-item">
+            <span class="price-label">Accessories:</span>
+            <span class="price-value" id="accessories-total-price"></span>
+          </div>
+        </div>
+        
+        <!-- Total Price -->
+        <div class="price-total">
+          <span class="price-label">TOTAL:</span>
+          <span class="price-total-value" id="total-price">9.00 POL</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="controls-panel">
+      <div class="controls-header">
+        <h2>B-b0 Assembler</h2>
+        <button class="reset-button" id="reset-button">Reset All</button>
+      </div>
+      <p>Use arrows to select components:</p>
+      
+      <!-- Body Category -->
+      <div class="carousel-selector" data-category="body">
+        <h3 class="carousel-title">Body</h3>
+        <div class="carousel-container">
+          <div class="carousel-arrow prev-arrow" data-category="body">◀</div>
+          <div class="carousel-current" data-category="body">Loading...</div>
+          <div class="carousel-arrow next-arrow" data-category="body">▶</div>
+        </div>
+        <div class="carousel-labels">
+          <div class="carousel-prev-label" data-category="body"></div>
+          <div class="carousel-next-label" data-category="body"></div>
+        </div>
+      </div>
+      
+      <!-- Face Category -->
+      <div class="carousel-selector" data-category="face">
+        <h3 class="carousel-title">Face</h3>
+        <div class="carousel-container">
+          <div class="carousel-arrow prev-arrow" data-category="face">◀</div>
+          <div class="carousel-current" data-category="face">Loading...</div>
+          <div class="carousel-arrow next-arrow" data-category="face">▶</div>
+        </div>
+        <div class="carousel-labels">
+          <div class="carousel-prev-label" data-category="face"></div>
+          <div class="carousel-next-label" data-category="face"></div>
+        </div>
+      </div>
+      
+      <!-- Screen Category -->
+      <div class="carousel-selector" data-category="screen">
+        <h3 class="carousel-title">Screen</h3>
+        <div class="carousel-container">
+          <div class="carousel-arrow prev-arrow" data-category="screen">◀</div>
+          <div class="carousel-current" data-category="screen">Loading...</div>
+          <div class="carousel-arrow next-arrow" data-category="screen">▶</div>
+        </div>
+        <div class="carousel-labels">
+          <div class="carousel-prev-label" data-category="screen"></div>
+          <div class="carousel-next-label" data-category="screen"></div>
+        </div>
+      </div>
+      
+      <!-- Specs Category -->
+      <div class="carousel-selector" data-category="specs">
+        <h3 class="carousel-title">Specs</h3>
+        <div class="carousel-container">
+          <div class="carousel-arrow prev-arrow" data-category="specs">◀</div>
+          <div class="carousel-current" data-category="specs">Loading...</div>
+          <div class="carousel-arrow next-arrow" data-category="specs">▶</div>
+        </div>
+        <div class="carousel-labels">
+          <div class="carousel-prev-label" data-category="specs"></div>
+          <div class="carousel-next-label" data-category="specs"></div>
+        </div>
+      </div>
+      
+      <!-- Accessories Category with Subcategories -->
+      <div class="carousel-selector" data-category="accessories">
+        <h3 class="carousel-title">Accessories</h3>
+        
+        <!-- Clothes Subcategory -->
+        <div class="subcategory-selector" data-subcategory="clothes">
+          <h4 class="subcategory-title">Clothes Type</h4>
+          <div class="carousel-container">
+            <div class="carousel-arrow prev-arrow" data-category="accessories-clothes">◀</div>
+            <div class="carousel-current" data-category="accessories-clothes">Loading...</div>
+            <div class="carousel-arrow next-arrow" data-category="accessories-clothes">▶</div>
+          </div>
+          <div class="carousel-labels">
+            <div class="carousel-prev-label" data-category="accessories-clothes"></div>
+            <div class="carousel-next-label" data-category="accessories-clothes"></div>
+          </div>
+        </div>
+        
+        <!-- Face Accessories Subcategory -->
+        <div class="subcategory-selector" data-subcategory="face">
+          <h4 class="subcategory-title">Face Accessory</h4>
+          <div class="carousel-container">
+            <div class="carousel-arrow prev-arrow" data-category="accessories-face">◀</div>
+            <div class="carousel-current" data-category="accessories-face">Loading...</div>
+            <div class="carousel-arrow next-arrow" data-category="accessories-face">▶</div>
+          </div>
+          <div class="carousel-labels">
+            <div class="carousel-prev-label" data-category="accessories-face"></div>
+            <div class="carousel-next-label" data-category="accessories-face"></div>
+          </div>
+        </div>
+        
+        <!-- Head Subcategory -->
+        <div class="subcategory-selector" data-subcategory="head">
+          <h4 class="subcategory-title">Head</h4>
+          <div class="carousel-container">
+            <div class="carousel-arrow prev-arrow" data-category="accessories-head">◀</div>
+            <div class="carousel-current" data-category="accessories-head">Loading...</div>
+            <div class="carousel-arrow next-arrow" data-category="accessories-head">▶</div>
+          </div>
+          <div class="carousel-labels">
+            <div class="carousel-prev-label" data-category="accessories-head"></div>
+            <div class="carousel-next-label" data-category="accessories-head"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="debug-panel" id="debug-panel">
+        <div>Debug messages will appear here...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Three.js and related libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/cameras/CubeCamera.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/Frustum.js"></script>
+  
+  <!-- Import our custom JavaScript modules -->
+  <script src="js/utils.js"></script>
+  <script src="js/models.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/bloom.js"></script>
+  <script src="js/reflection.js"></script>
+  <script src="js/collisions.js"></script>
+  <script src="js/loader.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/snapshot.js"></script>
+  
+  <script>
+    // Custom script for iframe integration
+    window.addEventListener('DOMContentLoaded', () => {
+      // Ensure the parent window knows when the iframe is loaded
+      setTimeout(() => {
+        if (window.parent && window !== window.parent) {
+          window.parent.postMessage({ type: 'customizer-loaded' }, '*');
+        }
+      }, 1000);
+      
+      // Create a custom element to show iframe status
+      const noticeElement = document.createElement('div');
+      noticeElement.className = 'iframe-notice';
+      noticeElement.textContent = 'B-b0 Customizer Active';
+      document.body.appendChild(noticeElement);
+      
+      // Set timeout to hide the notice after a few seconds
+      setTimeout(() => {
+        noticeElement.style.opacity = '0';
+        setTimeout(() => noticeElement.remove(), 1000);
+      }, 5000);
+      
+      // Listen for resize messages from parent
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'resize') {
+          // Handle resize request from parent
+          const container = document.querySelector('.container');
+          if (container && event.data.height) {
+            container.style.height = `${event.data.height}px`;
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
