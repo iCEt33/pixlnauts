@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
+const isMobileDevice = () => {
+  return (
+    window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  );
+};
+
 // System Check Component
 const SystemCheck = ({ onComplete }) => {
   const [displayedInitialInfo, setDisplayedInitialInfo] = useState([]);
@@ -698,18 +705,49 @@ const GamesTab = () => {
 };
 
 // B-b0 Customizer tab content
-const BeeboCustomizerTab = () => {
+const BeeboCustomizerTab = ({ onLaunch }) => {
+  // Check if user is on mobile
+  const isMobile = isMobileDevice();
+  
   return (
     <div className="beebo-customizer">
-      <p>
-        <ScrambleText 
-          text="Coming soon! In the meantime, you can:" 
-          speed={10} 
-        />
-      </p>
-      <div className="beebo-links">
+      {isMobile ? (
+        // Mobile version - show unavailable message
+        <>
+          <p>
+            <ScrambleText 
+              text="The B-b0 Customizer requires a desktop computer." 
+              speed={10} 
+            />
+          </p>
+          <p className="mobile-notice">
+            <ScrambleText 
+              text="This feature is not available on mobile devices. Please use a computer to access the full 3D customizer experience." 
+              speed={10}
+              color="#ff5" 
+            />
+          </p>
+        </>
+      ) : (
+        // Desktop version - show launch button
+        <>
+          <p>
+            <ScrambleText 
+              text="Customize your own B-b0 robot companion in our interactive 3D model viewer!" 
+              speed={10} 
+            />
+          </p>
+          <div className="beebo-links">
+            <button onClick={onLaunch} className="pixel-button">
+              <span className="whitepaper-button-text">LAUNCH B-b0 CUSTOMIZER</span>
+            </button>
+          </div>
+        </>
+      )}
+      {/* Keep the Discord invite button for all devices */}
+      <div className={`beebo-links ${isMobile ? 'mobile-only-links' : 'secondary-links'}`}>
         <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">INVITE BEEBO TO YOUR DISCORD SERVER! :O</span>
+          <span className="whitepaper-button-text">INVITE BEEBO TO YOUR DISCORD SERVER!</span>
         </a>
       </div>
     </div>
@@ -766,7 +804,7 @@ const QuirkiestAppTab = () => {
 };
 
 // TabsManager to control which tab is open
-const TabsManager = () => {
+const TabsManager = ({ openCustomizer }) => {
   const [openTab, setOpenTab] = useState(0);
   
   const toggleTab = (index) => {
@@ -805,7 +843,7 @@ const TabsManager = () => {
         isOpen={openTab === 3} 
         toggleTab={() => toggleTab(3)}
       >
-        <BeeboCustomizerTab />
+        <BeeboCustomizerTab onLaunch={openCustomizer} />
       </Tab>
       <Tab 
         title="THE QUIRKIEST USELESS APP" 
@@ -850,11 +888,95 @@ const Footer = () => {
   );
 };
 
+// Enhanced CustomizerView with animation sequence
+// Enhanced CustomizerView with animation sequence - modified
+const CustomizerView = ({ onClose }) => {
+  const [animationStage, setAnimationStage] = useState('fadeIn');
+  const [showIframe, setShowIframe] = useState(false);
+  const timerRef = useRef([]);
+  const iframeRef = useRef(null);
+  
+  // Set up animation sequence when component mounts
+  useEffect(() => {
+    // Clear any existing timers
+    timerRef.current.forEach(timer => clearTimeout(timer));
+    timerRef.current = [];
+    
+    // Opening animation sequence
+    const timer1 = setTimeout(() => setAnimationStage('horizontalLine'), 800);
+    const timer2 = setTimeout(() => setAnimationStage('verticalExpand'), 1600);
+    const timer3 = setTimeout(() => {
+      setAnimationStage('ready');
+      setShowIframe(true);
+    }, 2400);
+    
+    timerRef.current = [timer1, timer2, timer3];
+    
+    // Clean up timers when component unmounts
+    return () => {
+      timerRef.current.forEach(timer => clearTimeout(timer));
+    };
+  }, []);
+  
+  // Handle closing animation sequence
+  const handleClose = () => {
+    // Clear any existing timers
+    timerRef.current.forEach(timer => clearTimeout(timer));
+    timerRef.current = [];
+    
+    // Hide iframe first for smoother animation
+    setShowIframe(false);
+    
+    // Closing animation sequence
+    setAnimationStage('verticalCollapse');
+    
+    const timer1 = setTimeout(() => setAnimationStage('horizontalCollapse'), 800);
+    const timer2 = setTimeout(() => setAnimationStage('fadeOut'), 1600);
+    const timer3 = setTimeout(() => {
+      onClose();
+    }, 2400);
+    
+    timerRef.current = [timer1, timer2, timer3];
+  };
+  
+  return (
+    <div className={`customizer-overlay ${animationStage}`}>
+      <div className="customizer-container">
+        <div className="customizer-border">
+          <div className="customizer-content">
+            {showIframe ? (
+              <>
+                <div className="customizer-iframe-container">
+                  <iframe
+                    ref={iframeRef}
+                    src="/b-b0-customizer/index.html"
+                    title="B-b0 Customizer"
+                    className="customizer-iframe"
+                    frameBorder="0"
+                    allow="fullscreen"
+                  />
+                </div>
+                <button 
+                  onClick={handleClose}
+                  className="customizer-return-button pixel-button"
+                >
+                  <span className="whitepaper-button-text">RETURN TO PIXLNAUTS</span>
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 const App = () => {
   const [currentState, setCurrentState] = useState('systemCheck'); // systemCheck, loading, content
   const [tabsVisible] = useState(true); // Removed the setter since it's not used
   const [showContent, setShowContent] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
   
   useEffect(() => {
     // Transition from loading to content
@@ -873,6 +995,24 @@ const App = () => {
     setCurrentState('content');
   };
   
+  const handleOpenCustomizer = () => {
+    setShowCustomizer(true);
+  };
+  
+  const handleCloseCustomizer = () => {
+    setShowCustomizer(false);
+  };
+  
+  // Check if showing customizer
+  if (showCustomizer) {
+    // Extra check to prevent mobile devices from accessing
+    if (isMobileDevice()) {
+      setShowCustomizer(false);
+      return null;
+    }
+    return <CustomizerView onClose={handleCloseCustomizer} />;
+  }
+
   if (currentState === 'systemCheck') {
     return <SystemCheck onComplete={handleSystemCheckComplete} />;
   }
@@ -885,7 +1025,7 @@ const App = () => {
     <div className={`pixlnauts-app ${showContent ? 'show' : 'hide'}`}>
       <Logo />
       <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
-        <TabsManager />
+        <TabsManager openCustomizer={handleOpenCustomizer} />
       </div>
       <Footer />
     </div>
@@ -1449,6 +1589,181 @@ const styles = `
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
     margin-bottom: 30px;
+  }
+
+  /* ENHANCED B-b0 Customizer Styles */
+  .customizer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: background-color 0.8s ease-in-out;
+  }
+
+  /* Animation states */
+  .customizer-overlay.fadeIn {
+    background-color: rgba(0, 0, 0, 0.95);
+    animation: fadeIn 0.8s ease-in-out forwards;
+  }
+
+  .customizer-overlay.horizontalLine .customizer-container {
+    width: 0;
+    height: 4px;
+    background-color: #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.7);
+    animation: horizontalGrow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  @keyframes horizontalGrow {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  .customizer-overlay.verticalExpand .customizer-container {
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    border: 4px solid #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.7);
+    transition: height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .customizer-overlay.ready .customizer-container {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 10, 0, 0.8);
+    border: 4px solid #0f0;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.9);
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* Closing animations */
+  .customizer-overlay.verticalCollapse .customizer-container {
+    width: 100%;
+    height: 4px;
+    background-color: #0f0;
+    transition: height 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2);
+  }
+
+  .customizer-overlay.horizontalCollapse .customizer-container {
+    width: 0;
+    height: 4px;
+    background-color: #0f0;
+    transition: width 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2), margin-right 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2);
+  }
+
+  .customizer-overlay.fadeOut {
+    background-color: rgba(0, 0, 0, 0);
+  }
+
+  /* Container styling */
+  .customizer-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .customizer-border {
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+    clip-path: polygon(
+      0 0, 
+      100% 0, 
+      100% calc(100% - 8px), 
+      calc(100% - 8px) 100%, 
+      0 100%
+    );
+  }
+
+  .customizer-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background-color: #111;
+    color: #0f0;
+  }
+
+  /* Iframe container */
+  .customizer-iframe-container {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* iframe styling */
+  .customizer-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* Return button styling - using your preferred positioning */
+  .customizer-return-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10001;
+    border: 2px solid #000;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+  }
+
+  .customizer-return-button:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.9);
+    transform: translate(2px, -2px);
+  }
+
+  .customizer-return-button:active {
+    box-shadow: 0 0 25px rgba(0, 255, 0, 1);
+    transform: translate(4px, 0);
+  }
+
+  /* Animation keyframes */
+  @keyframes fadeIn {
+    from { background-color: rgba(0, 0, 0, 0); }
+    to { background-color: rgba(0, 0, 0, 0.95); }
+  }
+
+  /* Mobile notice styling */
+  .mobile-notice {
+    margin: 20px 0;
+    padding: 15px;
+    border: 2px dashed #ff5;
+    background-color: rgba(50, 50, 0, 0.2);
+    text-align: center;
+  }
+
+  .mobile-only-links {
+    margin-top: 20px;
+  }
+
+  .secondary-links {
+    margin-top: 15px;
+  }
+
+  /* Mobile responsiveness */
+  @media (max-width: 768px) {
+    .customizer-overlay.horizontalLine .customizer-container,
+    .customizer-overlay.verticalExpand .customizer-container,
+    .customizer-overlay.ready .customizer-container {
+      width: 95vw;
+    }
+    
+    .customizer-overlay.ready .customizer-container {
+      height: 95vh;
+    }
   }
 
   @media (max-width: 600px) {
