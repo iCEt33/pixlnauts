@@ -7,7 +7,7 @@ const isMobileDevice = () => {
   );
 };
 
-// System Check Component
+// SystemCheck Component with Fast Initial Boot
 const SystemCheck = ({ onComplete }) => {
   const [displayedInitialInfo, setDisplayedInitialInfo] = useState([]);
   const [currentLine, setCurrentLine] = useState(0);
@@ -195,9 +195,131 @@ const SystemCheck = ({ onComplete }) => {
     };
   }, [waitingForInput, secondSetLines, skipToEnd]);
   
-  // Main typewriter effect
+  // MODIFIED: Fast boot sequence for first screen (systemLines)
   useEffect(() => {
-    if (!startMainSequence || !lines.length) return;
+    if (!startMainSequence || !lines.length || lines !== systemLines) return;
+    
+    let mounted = true;
+    
+    // Function to type out a single line with its own timer
+    const typeOutLine = (lineIndex, delay) => {
+      if (!mounted) return;
+      
+      let lineText = lines[lineIndex].text;
+      let currentTypedChars = 0;
+      
+      // Start displaying this line after the specified delay
+      setTimeout(() => {
+        if (!mounted) return;
+        
+        // Create an initial empty line
+        setDisplayedLines(prev => {
+          const newLines = [...prev];
+          while (newLines.length <= lineIndex) newLines.push('');
+          return newLines;
+        });
+        
+        // Typing timer for this specific line
+        const typingInterval = setInterval(() => {
+          if (!mounted) {
+            clearInterval(typingInterval);
+            return;
+          }
+          
+          if (currentTypedChars < lineText.length) {
+            currentTypedChars++;
+            
+            // Update just this line in the display
+            setDisplayedLines(prev => {
+              const newLines = [...prev];
+              newLines[lineIndex] = lineText.substring(0, currentTypedChars);
+              return newLines;
+            });
+          } else {
+            clearInterval(typingInterval);
+            
+            // Mark this line as fully typed
+            setLineCompletionStates(prev => {
+              const newStates = [...prev];
+              newStates[lineIndex] = true;
+              return newStates;
+            });
+            
+            // If this line should show processing animation
+            if (lines[lineIndex].processing) {
+              // Start processing animation
+              setLineProcessingStates(prev => {
+                const newStates = [...prev];
+                newStates[lineIndex] = true;
+                return newStates;
+              });
+              
+              // Show processing for a short time
+              const processingTime = 300 + Math.random() * 700; // 300-1000ms
+              setTimeout(() => {
+                if (!mounted) return;
+                
+                // End processing
+                setLineProcessingStates(prev => {
+                  const newStates = [...prev];
+                  newStates[lineIndex] = false;
+                  return newStates;
+                });
+                
+                // Show final status
+                setLineFinishedStates(prev => {
+                  const newStates = [...prev];
+                  newStates[lineIndex] = true;
+                  return newStates;
+                });
+                
+                // If this is the last line, prepare for next phase
+                if (lineIndex === lines.length - 1) {
+                  setTimeout(() => {
+                    if (!mounted) return;
+                    setWaitingForInput(true);
+                    setShowContinue(true);
+                  }, 500);
+                }
+              }, processingTime);
+            } else {
+              // For lines without processing, just mark as finished
+              setLineFinishedStates(prev => {
+                const newStates = [...prev];
+                newStates[lineIndex] = true;
+                return newStates;
+              });
+              
+              // If this is the last line, prepare for next phase
+              if (lineIndex === lines.length - 1) {
+                setTimeout(() => {
+                  if (!mounted) return;
+                  setWaitingForInput(true);
+                  setShowContinue(true);
+                }, 500);
+              }
+            }
+          }
+        }, Math.random() * 20 + 10); // Slightly random typing speed
+      }, delay);
+    };
+    
+    // Start typing each line with staggered delays
+    // Each line starts after a fixed delay from the beginning
+    lines.forEach((line, index) => {
+      // First line appears immediately, subsequent lines appear with staggered delays
+      const baseDelay = index * 700; // Delay between starting each new line
+      typeOutLine(index, baseDelay);
+    });
+    
+    return () => {
+      mounted = false;
+    };
+  }, [startMainSequence, lines, systemLines]);
+  
+  // Original typewriter effect for second screen (not the systemLines)
+  useEffect(() => {
+    if (!startMainSequence || !lines.length || lines === systemLines) return;
     
     if (currentLine < lines.length) {
       // First, check if this line is already being processed or completed
@@ -306,7 +428,7 @@ const SystemCheck = ({ onComplete }) => {
       
       return () => clearTimeout(typeTimer);
     }
-  }, [currentLine, currentChar, lines, onComplete, startMainSequence, systemLines, spinChars, lineCompletionStates]);
+  }, [currentLine, currentChar, lines, onComplete, startMainSequence, systemLines, lineCompletionStates]);
   
   // Blinking "Press any key to continue" effect
   useEffect(() => {
@@ -563,7 +685,7 @@ const Logo = () => {
   );
 };
 
-// Tab component with auto-scroll functionality
+// Improved Tab component with better bottom scrolling
 const Tab = ({ title, children, isOpen, toggleTab }) => {
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
@@ -571,30 +693,50 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
   
   useEffect(() => {
     if (isOpen && contentRef.current) {
+      // Set the expanded height
       setHeight(contentRef.current.scrollHeight);
       
-      // Add auto-scroll functionality
-      // Use setTimeout to allow the height transition to start
+      // Improved scrolling that ensures content isn't cut off at bottom
       setTimeout(() => {
         if (tabRef.current) {
-          const tabPosition = tabRef.current.getBoundingClientRect();
-          const isPartiallyVisible = 
-            tabPosition.bottom > 0 && 
-            tabPosition.top < window.innerHeight;
+          const tabRect = tabRef.current.getBoundingClientRect();
+          const topOffset = 120; // Space for logo at top
+          const bottomPadding = 60; // Extra space at bottom of viewport
           
-          if (!isPartiallyVisible || tabPosition.bottom > window.innerHeight) {
-            // If tab is not fully visible in viewport, scroll it into view
-            tabRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else if (tabPosition.bottom + contentRef.current.scrollHeight > window.innerHeight) {
-            // If content will extend beyond viewport, scroll to show as much as possible
-            window.scrollBy({
-              top: Math.min(
-                contentRef.current.scrollHeight,
-                tabPosition.bottom + contentRef.current.scrollHeight - window.innerHeight
-              ),
+          // Calculate total content height (header + expanded content)
+          const totalContentHeight = tabRect.height + contentRef.current.scrollHeight;
+          
+          // Check if bottom of expanded content would be visible in viewport
+          const tabBottom = tabRect.bottom + contentRef.current.scrollHeight;
+          const bottomWouldBeCutOff = tabBottom > window.innerHeight - bottomPadding;
+          
+          // Check if tab header is visible
+          const headerIsVisible = tabRect.top >= topOffset && tabRect.top <= window.innerHeight - topOffset;
+          
+          // If content is too large to fit entirely in viewport, prioritize showing as much as possible
+          if (totalContentHeight > window.innerHeight - topOffset - bottomPadding) {
+            // Position tab as high as possible while respecting top offset
+            window.scrollTo({
+              top: window.scrollY + tabRect.top - topOffset,
+              behavior: 'smooth'
+            });
+          } 
+          // If header is visible but bottom would be cut off, scroll to show more of the bottom
+          else if (headerIsVisible && bottomWouldBeCutOff) {
+            // Scroll just enough to show bottom content with padding
+            window.scrollTo({
+              top: window.scrollY + (tabBottom - window.innerHeight + bottomPadding),
               behavior: 'smooth'
             });
           }
+          // If header is not visible, scroll to position it properly
+          else if (!headerIsVisible) {
+            window.scrollTo({
+              top: window.scrollY + tabRect.top - topOffset,
+              behavior: 'smooth'
+            });
+          }
+          // Otherwise, no scrolling needed - everything fits nicely
         }
       }, 50); // Small delay to allow for DOM updates
     } else {
@@ -888,11 +1030,12 @@ const Footer = () => {
   );
 };
 
-// Enhanced CustomizerView with animation sequence
-// Enhanced CustomizerView with animation sequence - modified
+// Enhanced CustomizerView with improved fade-in animations
 const CustomizerView = ({ onClose }) => {
   const [animationStage, setAnimationStage] = useState('fadeIn');
   const [showIframe, setShowIframe] = useState(false);
+  const [iframeOpacity, setIframeOpacity] = useState(0); // New state for iframe opacity
+  const [buttonOpacity, setButtonOpacity] = useState(0); // New state for button opacity
   const timerRef = useRef([]);
   const iframeRef = useRef(null);
   
@@ -908,6 +1051,11 @@ const CustomizerView = ({ onClose }) => {
     const timer3 = setTimeout(() => {
       setAnimationStage('ready');
       setShowIframe(true);
+      // Start fade-in for iframe and button after a small delay
+      setTimeout(() => {
+        setIframeOpacity(1);
+        setTimeout(() => setButtonOpacity(1), 500); // Stagger button fade-in
+      }, 100);
     }, 2400);
     
     timerRef.current = [timer1, timer2, timer3];
@@ -924,19 +1072,24 @@ const CustomizerView = ({ onClose }) => {
     timerRef.current.forEach(timer => clearTimeout(timer));
     timerRef.current = [];
     
-    // Hide iframe first for smoother animation
-    setShowIframe(false);
-    
-    // Closing animation sequence
-    setAnimationStage('verticalCollapse');
-    
-    const timer1 = setTimeout(() => setAnimationStage('horizontalCollapse'), 800);
-    const timer2 = setTimeout(() => setAnimationStage('fadeOut'), 1600);
-    const timer3 = setTimeout(() => {
-      onClose();
-    }, 2400);
-    
-    timerRef.current = [timer1, timer2, timer3];
+    // First fade out the iframe and button
+    setButtonOpacity(0);
+    setTimeout(() => {
+      setIframeOpacity(0);
+      // After brief delay, start the container animations
+      setTimeout(() => {
+        setShowIframe(false);
+        setAnimationStage('verticalCollapse');
+        
+        const timer1 = setTimeout(() => setAnimationStage('horizontalCollapse'), 800);
+        const timer2 = setTimeout(() => setAnimationStage('fadeOut'), 1600);
+        const timer3 = setTimeout(() => {
+          onClose();
+        }, 2400);
+        
+        timerRef.current = [timer1, timer2, timer3];
+      }, 300);
+    }, 200);
   };
   
   return (
@@ -946,7 +1099,13 @@ const CustomizerView = ({ onClose }) => {
           <div className="customizer-content">
             {showIframe ? (
               <>
-                <div className="customizer-iframe-container">
+                <div 
+                  className="customizer-iframe-container"
+                  style={{ 
+                    opacity: iframeOpacity,
+                    transition: 'opacity 0.6s ease-in-out'
+                  }}
+                >
                   <iframe
                     ref={iframeRef}
                     src="/b-b0-customizer/index.html"
@@ -959,6 +1118,10 @@ const CustomizerView = ({ onClose }) => {
                 <button 
                   onClick={handleClose}
                   className="customizer-return-button pixel-button"
+                  style={{ 
+                    opacity: buttonOpacity,
+                    transition: 'opacity 0.6s ease-in-out, transform 0.3s ease'
+                  }}
                 >
                   <span className="whitepaper-button-text">RETURN TO PIXLNAUTS</span>
                 </button>
@@ -974,18 +1137,35 @@ const CustomizerView = ({ onClose }) => {
 // Main component
 const App = () => {
   const [currentState, setCurrentState] = useState('systemCheck'); // systemCheck, loading, content
-  const [tabsVisible] = useState(true); // Removed the setter since it's not used
+  const [tabsVisible] = useState(true); 
   const [showContent, setShowContent] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
   
+  // Add simple scroll-to-top effect on initial load
   useEffect(() => {
-    // Transition from loading to content
+    // Force scroll to top whenever content is first shown
     if (currentState === 'content' && !showContent) {
       setTimeout(() => {
         setShowContent(true);
       }, 300);
     }
   }, [currentState, showContent]);
+  
+  // Add another effect specifically to handle page refresh
+  useEffect(() => {
+    // This will run on component mount (page load/refresh)
+    window.scrollTo(0, 0);
+    
+    // Add event listener for page visibility changes
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        window.scrollTo(0, 0);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
   
   const handleSystemCheckComplete = () => {
     setCurrentState('loading');
@@ -1047,8 +1227,9 @@ const styles = `
   }
 
   /* Add smooth scrolling to the entire page */
-  html {
+  html, body {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
@@ -1347,6 +1528,19 @@ const styles = `
     margin-top: 30px;
   }
 
+  .logo-text-wrapper {
+    white-space: nowrap !important; /* Force nowrap with !important */
+    overflow: visible;
+    display: inline-block;
+    width: auto;
+  }
+
+  /* Ensure ScrambleText inside logo never wraps */
+  .logo .scramble-text {
+    white-space: nowrap !important;
+    display: inline-block;
+  }
+
   /* Loading screen */
   .loading-screen {
     display: flex;
@@ -1437,7 +1631,7 @@ const styles = `
   .video-container {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    padding-bottom: 50%; /* 16:9 Aspect Ratio */
     margin-bottom: 30px;
     border: 4px solid #0f0;
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);

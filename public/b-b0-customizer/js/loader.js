@@ -1,5 +1,15 @@
 // Load model by category
 const loadModel = (model, category, subcategory = null) => {
+  // Create a unique request ID for this load operation
+  const requestId = Date.now() + Math.random();
+  
+  // Store this request as the latest for this category/subcategory
+  if (subcategory) {
+    loadedModels.latestRequests[`${category}-${subcategory}`] = requestId;
+  } else {
+    loadedModels.latestRequests[category] = requestId;
+  }
+
   // If it's a "None" selection or no filename, just remove the model and return
   if (!model || !model.filename) {
     if (subcategory) {
@@ -35,13 +45,27 @@ const loadModel = (model, category, subcategory = null) => {
   
   // Construct complete path
   const fullPath = `models/${model.filename}`;
-  log(`Loading ${category}${subcategory ? ' (' + subcategory + ')' : ''} model: ${fullPath}`);
+  log(`Loading ${category}${subcategory ? ' (' + subcategory + ')' : ''} model: ${fullPath} (Request ID: ${requestId})`);
   
   // Load new model
   gltfLoader.load(
     fullPath,
     (gltf) => {
       try {
+        // Get the category key for tracking the latest request
+        const categoryKey = subcategory ? `${category}-${subcategory}` : category;
+        
+        // Check if this is still the latest request for this category
+        if (loadedModels.latestRequests[categoryKey] !== requestId) {
+          log(`Ignoring outdated model load for ${model.filename} (Request ID: ${requestId})`);
+          loadingQueue--;
+          if (loadingQueue <= 0) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            loadingQueue = 0;
+          }
+          return; // Ignore this completion as it's outdated
+        }
+        
         const modelObj = gltf.scene;
         
         // Apply standard settings and scale down the model
@@ -125,7 +149,7 @@ const loadModel = (model, category, subcategory = null) => {
           loadingQueue = 0;
         }
         
-        log(`Model ${model.filename} loaded successfully`);
+        log(`Model ${model.filename} loaded successfully (Request ID: ${requestId})`);
       } catch (error) {
         loadingQueue--;
         if (loadingQueue <= 0) {

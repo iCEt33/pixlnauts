@@ -27,7 +27,9 @@ const loadedModels = {
     clothes: null,
     face: null,
     head: null
-  }
+  },
+  // Add a new object to track the latest load request for each category
+  latestRequests: {}
 };
 
 // Keep track of current selections
@@ -78,6 +80,9 @@ const resetAllModels = () => {
     log(`Removed head accessory during reset`);
   }
   
+  // Reset all latest request tracking
+  loadedModels.latestRequests = {};
+  
   // Load the default models
   loadDefaultModels();
   
@@ -85,6 +90,39 @@ const resetAllModels = () => {
   updatePrices();
   
   log("All models reset to defaults");
+};
+
+// Function to reset styling on selection UI elements
+const resetSelectionStyles = () => {
+  // Reset all carousel current elements to remove any special styling classes
+  document.querySelectorAll('.carousel-current').forEach(element => {
+    // Remove any collision or loading indicators
+    element.classList.remove('collision');
+    element.classList.remove('loading');
+    
+    // Reset active status based on whether item is 'none' or not
+    const category = element.getAttribute('data-category');
+    if (category) {
+      // For accessory categories, first item (index 0) is always 'none'
+      if (category.includes('accessories-')) {
+        // First item is 'none', so not active
+        element.classList.remove('active');
+      } else {
+        // For main categories, all items are valid so show as active
+        element.classList.add('active');
+      }
+    }
+  });
+  
+  // Reset collision tracking
+  for (const key in collidingAccessories) {
+    collidingAccessories[key] = false;
+  }
+  
+  // Hide any collision warnings
+  hideCollisionWarning();
+  
+  log("Selection styles reset to defaults");
 };
 
 // Keep track of accessory collisions

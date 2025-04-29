@@ -19,6 +19,12 @@ const checkAccessoryCollisions = (newModelData, newCategory) => {
   // If this is a "None" selection, there won't be a collision
   if (!newModelData || !newModelData.filename) return { hasCollision: false };
   
+  // Generate request ID for this collision check
+  const collisionCheckId = Date.now() + Math.random();
+  
+  // Store as latest collision check for this category
+  loadedModels.latestRequests[`collision-${newCategory}`] = collisionCheckId;
+  
   // Load the new model without displaying it to check for collisions
   return new Promise((resolve) => {
     // Construct path
@@ -32,6 +38,13 @@ const checkAccessoryCollisions = (newModelData, newCategory) => {
       fullPath,
       (gltf) => {
         try {
+          // Check if this is still the latest collision request for this category
+          if (loadedModels.latestRequests[`collision-${newCategory}`] !== collisionCheckId) {
+            log(`Ignoring outdated collision check for ${newModelData.displayName} (ID: ${collisionCheckId})`);
+            resolve({ hasCollision: false }); // Resolve with no collision to allow the latest request to determine
+            return;
+          }
+        
           const tempModel = gltf.scene.clone();
           tempModel.scale.set(0.1, 0.1, 0.1); // Match the same scale as the real model
           
@@ -277,21 +290,35 @@ const recheckAllAccessories = async () => {
   
   log("Rechecking all accessories for collisions");
   
-  // Get list of subcategories
+  // Track which accessories had their collision status changed
+  const collisionStatusChanged = {
+    clothes: false,
+    face: false, 
+    head: false
+  };
+  
+  // Track which accessories need to be loaded
+  const needsLoading = {
+    clothes: false,
+    face: false,
+    head: false
+  };
+  
+  // Step 1: First pass to identify which accessories had their collision status changed
   const subcategories = ['clothes', 'face', 'head'];
   
-  // Check each accessory one by one
   for (const subcategory of subcategories) {
     const categoryKey = `accessories-${subcategory}`;
     const selectedIndex = currentSelections[categoryKey];
     
-    // Skip "None" items
+    // Skip "None" items first
     if (selectedIndex === 0) {
-      // If this was previously marked as colliding, clear that status
+      // If this was previously marked as colliding, flag it as changed
       if (collidingAccessories[subcategory]) {
+        collisionStatusChanged[subcategory] = true;
         collidingAccessories[subcategory] = false;
         
-        // Update the UI
+        // Update the UI immediately
         const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
         if (currentElem) {
           currentElem.classList.remove('collision');
@@ -303,19 +330,21 @@ const recheckAllAccessories = async () => {
     // Get the model definition
     const model = modelDefinitions.accessories[subcategory][selectedIndex];
     
-    // Check for collisions with this model
-    const isCurrentlyLoaded = loadedModels.accessories[subcategory] !== null;
+    // Check if it's already loaded correctly
+    const isCurrentlyLoaded = loadedModels.accessories[subcategory] !== null && 
+                             loadedModels.accessories[subcategory].userData?.modelData?.id === model.id;
     
-    // If the model is already loaded, we don't need to check again
     if (isCurrentlyLoaded) {
-      // Make sure it's not marked as colliding
-      collidingAccessories[subcategory] = false;
+      // If previously marked as colliding but now loaded, flag as changed
+      if (collidingAccessories[subcategory]) {
+        collisionStatusChanged[subcategory] = true;
+        collidingAccessories[subcategory] = false;
+      }
       
-      // Update the UI to remove any collision styling
+      // Update UI regardless
       const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
       if (currentElem) {
         currentElem.classList.remove('collision');
-        // Make sure it has the 'active' class since it's loaded
         if (model.id !== 'none') {
           currentElem.classList.add('active');
         }
@@ -323,25 +352,42 @@ const recheckAllAccessories = async () => {
       continue;
     }
     
-    // If we get here, the item is selected but not loaded (possible collision)
-    // Let's check if it still collides with anything
+    // If not loaded, check if it's colliding
+    // Create a unique request ID for this recheck
+    const recheckId = Date.now() + Math.random();
+    loadedModels.latestRequests[`recheck-${subcategory}`] = recheckId;
     
-    // Check if this would collide with any other loaded accessories
+    // Check collisions
     const collisionResult = await checkAccessoryCollisions(model, subcategory);
     
-    if (collisionResult.hasCollision) {
-      // Still collides, mark it as such
+    // Check if this recheck is still valid
+    if (loadedModels.latestRequests[`recheck-${subcategory}`] !== recheckId) {
+      log(`Ignoring outdated recheck result for ${subcategory}`);
+      continue;
+    }
+    
+    // Did collision status change?
+    const wasColliding = collidingAccessories[subcategory];
+    const isColliding = collisionResult.hasCollision;
+    
+    if (wasColliding !== isColliding) {
+      collisionStatusChanged[subcategory] = true;
+    }
+    
+    if (isColliding) {
+      // Still collides
       collidingAccessories[subcategory] = true;
       
-      // Ensure UI shows collision
+      // Update UI
       const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
       if (currentElem) {
         currentElem.classList.remove('active');
         currentElem.classList.add('collision');
       }
     } else {
-      // No longer collides - we can load it!
+      // No longer collides
       collidingAccessories[subcategory] = false;
+      needsLoading[subcategory] = true;
       
       // Update UI
       const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
@@ -351,29 +397,58 @@ const recheckAllAccessories = async () => {
           currentElem.classList.add('active');
         }
       }
-      
-      // Load the model!
-      log(`Loading now-compatible accessory: ${model.displayName}`);
-      loadModel(model, 'accessories', subcategory);
     }
   }
   
-  // Hide any collision warnings that might be showing
-  hideCollisionWarning();
-};
-
-// Update the reset function to clear collision tracking
-const resetSelectionStyles = () => {
-  // Clear any collision styles
-  document.querySelectorAll('.carousel-current.collision').forEach(elem => {
-    elem.classList.remove('collision');
-  });
-  
-  // Reset collision tracking
-  for (const key in collidingAccessories) {
-    collidingAccessories[key] = false;
+  // Step 2: Second pass to load models that need loading
+  // This ensures all collision checks complete first before any loading starts
+  for (const subcategory of subcategories) {
+    if (!needsLoading[subcategory]) continue;
+    
+    const categoryKey = `accessories-${subcategory}`;
+    const selectedIndex = currentSelections[categoryKey];
+    
+    // Skip "None" items
+    if (selectedIndex === 0) continue;
+    
+    // Get the model definition
+    const model = modelDefinitions.accessories[subcategory][selectedIndex];
+    
+    // Add loading indicator
+    const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
+    if (currentElem) {
+      currentElem.classList.add('loading');
+    }
+    
+    // Create a unique loading ID for this previously blocked model
+    const unblockLoadId = Date.now() + Math.random();
+    loadedModels.latestRequests[`unblock-${subcategory}`] = unblockLoadId;
+    
+    // Force-remove any existing model first to ensure clean loading
+    if (loadedModels.accessories[subcategory]) {
+      modelContainer.remove(loadedModels.accessories[subcategory]);
+      loadedModels.accessories[subcategory] = null;
+    }
+    
+    // Load the model with a small delay to ensure UI updates first
+    setTimeout(() => {
+      log(`Loading now-compatible accessory: ${model.displayName} (Request ID: ${unblockLoadId})`);
+      loadModel(model, 'accessories', subcategory);
+      
+      // Remove loading indicator after a reasonable time
+      setTimeout(() => {
+        if (currentElem && loadedModels.latestRequests[`unblock-${subcategory}`] === unblockLoadId) {
+          currentElem.classList.remove('loading');
+        }
+      }, 1000);
+    }, 100);
   }
   
-  // Hide any collision warnings
+  // Step 3: If any collision status changed, update the pricing
+  if (Object.values(collisionStatusChanged).some(changed => changed)) {
+    updatePrices();
+  }
+  
+  // Hide any collision warnings that might be showing
   hideCollisionWarning();
 };

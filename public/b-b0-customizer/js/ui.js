@@ -160,6 +160,12 @@ const updateAllCarousels = () => {
 
 // Change selection for a category
 const changeSelection = async (category, direction) => {
+  // Create a unique ID for this selection change to track it
+  const selectionChangeId = Date.now() + Math.random();
+  
+  // Store this as the latest selection change for this category
+  loadedModels.latestRequests[`selection-${category}`] = selectionChangeId;
+  
   const isSubcategory = category.includes('-');
   let baseCategory, subcategory;
   
@@ -196,59 +202,101 @@ const changeSelection = async (category, direction) => {
   // Update the carousel display
   updateCarousel(category);
   
-  // Only check for collisions for accessory categories
-  if (isSubcategory && baseCategory === 'accessories') {
-    // Check if the new accessory would collide with existing ones
-    const collisionResult = await checkAccessoryCollisions(models[newIndex], subcategory);
-    
-    if (collisionResult.hasCollision) {
-      // Show warning but still allow selection visually
-      showCollisionWarning(collisionResult);
-      
-      // Mark this item as colliding in the UI with red styling
-      if (currentElem) {
-        // Remove the 'active' class which gives it a green color
-        currentElem.classList.remove('active');
-        
-        // Add a new 'collision' class
-        currentElem.classList.add('collision');
-      }
-      
-      // Mark this accessory as colliding
-      collidingAccessories[subcategory] = true;
-      
-      // Don't actually load the model
-      log(`Skipping loading of ${models[newIndex].displayName} due to collision`);
-    } else {
-      // No collision, hide any existing warning
-      hideCollisionWarning();
-      
-      // Remove collision styling if it exists
-      if (currentElem) {
-        currentElem.classList.remove('collision');
-      }
-      
-      // Mark as not colliding
-      collidingAccessories[subcategory] = false;
-      
-      // Load the accessory model
-      loadModel(models[newIndex], baseCategory, subcategory);
-      
-      // If we just loaded or removed an accessory, we need to recheck other accessories
-      // that might have been marked as colliding before
-      setTimeout(() => recheckAllAccessories(), 100);
-    }
-  } else {
-    // For main categories, just load the selected model
-    loadModel(models[newIndex], category);
-    
-    // If we changed a main category, recheck accessories in case
-    // the change resolved some collision
-    if (!isSubcategory) {
-      setTimeout(() => recheckAllAccessories(), 100);
-    }
+  // Add a loading indicator in the UI
+  if (currentElem) {
+    currentElem.classList.add('loading');
   }
   
-  // Update prices whenever a selection changes
-  updatePrices();
+  log(`Changing selection for ${category} to ${models[newIndex].displayName} (Change ID: ${selectionChangeId})`);
+  
+  try {
+    // Only check for collisions for accessory categories
+    if (isSubcategory && baseCategory === 'accessories') {
+      // Check if the new accessory would collide with existing ones
+      const collisionResult = await checkAccessoryCollisions(models[newIndex], subcategory);
+      
+      // Verify this is still the latest selection change for this category
+      if (loadedModels.latestRequests[`selection-${category}`] !== selectionChangeId) {
+        log(`Ignoring outdated selection change result for ${category}`);
+        // Remove loading class
+        if (currentElem) {
+          currentElem.classList.remove('loading');
+        }
+        return;
+      }
+      
+      if (collisionResult.hasCollision) {
+        // Show warning but still allow selection visually
+        showCollisionWarning(collisionResult);
+        
+        // Mark this item as colliding in the UI with red styling
+        if (currentElem) {
+          // Remove the 'active' class which gives it a green color
+          currentElem.classList.remove('active');
+          currentElem.classList.remove('loading');
+          
+          // Add a new 'collision' class
+          currentElem.classList.add('collision');
+        }
+        
+        // Mark this accessory as colliding
+        collidingAccessories[subcategory] = true;
+        
+        // Don't actually load the model
+        log(`Skipping loading of ${models[newIndex].displayName} due to collision`);
+      } else {
+        // No collision, hide any existing warning
+        hideCollisionWarning();
+        
+        // Remove collision styling if it exists
+        if (currentElem) {
+          currentElem.classList.remove('collision');
+        }
+        
+        // Mark as not colliding
+        collidingAccessories[subcategory] = false;
+        
+        // Load the accessory model
+        loadModel(models[newIndex], baseCategory, subcategory);
+        
+        // If we just loaded or removed an accessory, we need to recheck other accessories
+        // that might have been marked as colliding before
+        setTimeout(() => {
+          // Verify this is still the latest selection before rechecking
+          if (loadedModels.latestRequests[`selection-${category}`] === selectionChangeId) {
+            recheckAllAccessories();
+          }
+        }, 100);
+      }
+    } else {
+      // For main categories, just load the selected model
+      loadModel(models[newIndex], category);
+      
+      // If we changed a main category, recheck accessories in case
+      // the change resolved some collision
+      setTimeout(() => {
+        // Verify this is still the latest selection before rechecking
+        if (loadedModels.latestRequests[`selection-${category}`] === selectionChangeId) {
+          recheckAllAccessories();
+        }
+      }, 100);
+    }
+    
+    // Update prices whenever a selection changes
+    updatePrices();
+  } catch (error) {
+    log(`Error during selection change: ${error.message}`);
+    
+    // Remove loading indicator if there was an error
+    if (currentElem) {
+      currentElem.classList.remove('loading');
+    }
+  } finally {
+    // Add a CSS class to handle the loading indicator
+    setTimeout(() => {
+      if (currentElem && loadedModels.latestRequests[`selection-${category}`] === selectionChangeId) {
+        currentElem.classList.remove('loading');
+      }
+    }, 1000); // Fallback timeout to ensure loading indicator is removed
+  }
 };

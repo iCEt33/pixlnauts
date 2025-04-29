@@ -118,13 +118,7 @@ body {
 }
 
 .debug-panel {
-  margin-top: 20px;
-  padding: 10px;
-  border: 1px solid #0f0;
-  background-color: #111;
-  overflow-y: auto;
-  max-height: 200px;
-  font-size: 12px;
+  display: none !important; 
 }
 
 .controls-header {
@@ -197,11 +191,29 @@ body {
   justify-content: center;
 }
 
+.carousel-current.loading {
+  position: relative;
+  opacity: 0.7;
+}
+
+.carousel-current.loading::after {
+  content: "...";
+  display: inline-block;
+  animation: loading-dots 1.5s infinite;
+  margin-left: 2px;
+}
+
+@keyframes loading-dots {
+  0%, 20% { content: ""; }
+  40% { content: "."; }
+  60%, 100% { content: ".."; }
+}
+
 .carousel-current.active {
   background-color: #0c3;
   color: #000;
   font-weight: bold;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .carousel-current.none {
@@ -223,7 +235,7 @@ body {
 }
 
 .carousel-prev-label, .carousel-next-label {
-  max-width: 40%;
+  max-width: 50%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -235,6 +247,14 @@ body {
 
 .carousel-next-label {
   text-align: right;
+}
+
+.collision-warning {
+  background-color: rgba(255, 0, 0, 0.2);
+  border: 2px solid #ff3333;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
 }
 
 /* Snapshot button styling */
@@ -285,16 +305,20 @@ body {
 
 /* Subcategory style */
 .subcategory-selector {
-  margin-left: 10px;
-  margin-top: 8px;
+  margin-top: 2px !important; 
+  margin-left: 2px !important; 
+  padding-left: 3px !important; 
   border-left: 1px solid #0f0;
-  padding-left: 5px;
-  display: block;
 }
 
 .subcategory-title {
   margin-bottom: 5px;
   font-size: 16px;
+}
+
+.carousel-selector[data-category="accessories"] > div {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 /* Price panel styles */
