@@ -490,7 +490,7 @@ const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, co
   // Different character sets for more variety
   const primaryChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const symbolChars = '!@#$%^&*()_+-=[]{}|;:,.<>?/';
-  const pixelChars = '■□▢▣▤▥▦▧▨▩▪▫▬▲△▴▵▸▹►▻▼▾▿◂◃◄◅◆◇◈◉◊○●◌●◙◚◛◦◬◭◮◰◱◲◳◴◵◶◷';
+  const pixelChars = '■□▢▣▤▥▦▧▨▩▪▫▬▲△▴▵▸▹►▻▼▽▾▿◂◃◄◅◆◇◈◉◊○●◌●◙◚◛◦◬◭◮◰◱◲◳◴◵◶◷';
   
   // Clean up text by trimming and preventing null
   const cleanText = text?.trim() || '';
@@ -685,6 +685,322 @@ const Logo = () => {
   );
 };
 
+// Wallet connection component with real Web3 implementation
+const WalletDonation = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [polBalance, setPolBalance] = useState('0.0000');
+  const [donationAmount, setDonationAmount] = useState('0.00000');
+  const [isTransacting, setIsTransacting] = useState(false);
+  const [txHash, setTxHash] = useState('');
+  
+  const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
+  const POLYGON_CHAIN_ID = '0x89'; // 137 in hex
+  const POLYGON_RPC = 'https://polygon-rpc.com';
+  
+  // Update balance function
+  const updateBalance = useCallback(async (address) => {
+    try {
+      const balance = await window.ethereum.request({
+        method: 'eth_getBalance',
+        params: [address, 'latest'],
+      });
+      
+      // Convert from wei to POL (18 decimals)
+      const balanceInPol = parseInt(balance, 16) / Math.pow(10, 18);
+      setPolBalance(balanceInPol.toFixed(4));
+    } catch (error) {
+      console.error('Failed to get balance:', error);
+      setPolBalance('0.0000');
+    }
+  }, []);
+  
+  // Ensure Polygon network function
+  const ensurePolygonNetwork = useCallback(async () => {
+    try {
+      // Check current network
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      
+      if (chainId !== POLYGON_CHAIN_ID) {
+        try {
+          // Try to switch to Polygon
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: POLYGON_CHAIN_ID }],
+          });
+        } catch (switchError) {
+          // If the chain isn't added, add it
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: POLYGON_CHAIN_ID,
+                  chainName: 'Polygon Mainnet',
+                  nativeCurrency: {
+                    name: 'POL',
+                    symbol: 'POL',
+                    decimals: 18,
+                  },
+                  rpcUrls: [POLYGON_RPC],
+                  blockExplorerUrls: ['https://polygonscan.com/'],
+                },
+              ],
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to switch to Polygon network:', error);
+      alert('Please manually switch to Polygon network in your wallet.');
+    }
+  }, [POLYGON_CHAIN_ID, POLYGON_RPC]);
+  
+  // Check connection function
+  const checkConnection = useCallback(async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          setIsConnected(true);
+          setWalletAddress(accounts[0]);
+          await updateBalance(accounts[0]);
+          await ensurePolygonNetwork();
+        }
+      } catch (error) {
+        console.error('Error checking connection:', error);
+      }
+    }
+  }, [updateBalance, ensurePolygonNetwork]);
+  
+  // Handle account changes
+  const handleAccountsChanged = useCallback((accounts) => {
+    if (accounts.length === 0) {
+      setIsConnected(false);
+      setWalletAddress('');
+      setPolBalance('0.0000');
+      setDonationAmount('0.00000');
+      setTxHash('');
+    } else {
+      setWalletAddress(accounts[0]);
+      updateBalance(accounts[0]);
+    }
+  }, [updateBalance]);
+  
+  // Handle chain changes
+  const handleChainChanged = useCallback(() => {
+    // Reload the page when chain changes to avoid issues
+    window.location.reload();
+  }, []);
+  
+  // Setup wallet listeners on mount
+  useEffect(() => {
+    checkConnection();
+    
+    // Listen for account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+    }
+    
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      }
+    };
+  }, [checkConnection, handleAccountsChanged, handleChainChanged]);
+  
+  // Connect wallet function
+  const connectWallet = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setIsConnected(true);
+          const address = accounts[0];
+          setWalletAddress(address);
+          await updateBalance(address);
+          await ensurePolygonNetwork();
+        }
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        if (error.code === 4001) {
+          alert('Please accept the connection request in your wallet.');
+        } else {
+          alert('Failed to connect wallet. Please try again.');
+        }
+      }
+    } else {
+      alert('Please install MetaMask or another Web3 wallet to continue.\n\nYou can download MetaMask from: https://metamask.io');
+    }
+  };
+  
+  // Disconnect wallet function
+  const disconnect = () => {
+    setIsConnected(false);
+    setWalletAddress('');
+    setPolBalance('0.0000');
+    setDonationAmount('0.00000');
+    setTxHash('');
+  };
+  
+  // Set preset amount
+  const setAmount = (amount) => {
+    setDonationAmount(amount.toString());
+  };
+  
+  // Set max amount (minus gas)
+  const setMaxAmount = () => {
+    const maxAmount = Math.max(0, parseFloat(polBalance) - 0.01);
+    setDonationAmount(maxAmount.toFixed(5));
+  };
+  
+  // Handle donation transaction
+  const handleDonate = async () => {
+    if (!isConnected || parseFloat(donationAmount) <= 0) return;
+    
+    setIsTransacting(true);
+    setTxHash('');
+    
+    try {
+      // Ensure we're on Polygon network
+      await ensurePolygonNetwork();
+      
+      // Convert amount to wei (18 decimals)
+      const amountInWei = '0x' + (parseFloat(donationAmount) * Math.pow(10, 18)).toString(16).split('.')[0];
+      
+      // Send transaction
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: walletAddress,
+            to: targetAddress,
+            value: amountInWei,
+            gas: '0x5208', // 21000 gas limit for simple transfer
+          },
+        ],
+      });
+      
+      setTxHash(txHash);
+      alert(`Transaction sent! Hash: ${txHash}\n\nYou can view it on Polygonscan: https://polygonscan.com/tx/${txHash}`);
+      
+      // Reset amount and update balance after successful transaction
+      setDonationAmount('0.00000');
+      
+      // Wait a bit then update balance
+      setTimeout(() => {
+        updateBalance(walletAddress);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      
+      if (error.code === 4001) {
+        alert('Transaction was rejected by user.');
+      } else if (error.code === -32603) {
+        alert('Transaction failed. You may have insufficient funds for gas fees.');
+      } else {
+        alert(`Transaction failed: ${error.message || 'Unknown error'}`);
+      }
+    } finally {
+      setIsTransacting(false);
+    }
+  };
+  
+  // Render connect button if not connected
+  if (!isConnected) {
+    return (
+      <div className="wallet-connect">
+        <button onClick={connectWallet} className="pixel-button wallet-connect-btn">
+          <span className="whitepaper-button-text">CONNECT WALLET</span>
+        </button>
+        <div className="wallet-info-text">
+          <p>Connect your wallet to donate POL directly to PIXLNAUTS on Polygon network.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render donation interface if connected
+  return (
+    <div className="wallet-donation">
+      <div className="wallet-header">
+        <div className="wallet-info">
+          <span className="wallet-label">WALLET:</span>
+          <span className="wallet-address">{walletAddress.substring(0, 8)}...{walletAddress.substring(34)}</span>
+        </div>
+        <button onClick={disconnect} className="disconnect-btn">[DISCONNECT]</button>
+      </div>
+      
+      <div className="donation-panel">
+        <div className="donation-header">
+          <span className="prompt">&gt;&gt;&gt;</span>
+          <span className="donation-title">DONATE POL TO PIXELNAUTS</span>
+        </div>
+        
+        <div className="target-address">
+          <span className="target-label">TARGET:</span>
+          <span className="target-value">{targetAddress}</span>
+        </div>
+        
+        <div className="amount-section">
+          <div className="amount-label">AMOUNT (POL):</div>
+          <div className="amount-input-row">
+            <input
+              type="number"
+              value={donationAmount}
+              onChange={(e) => setDonationAmount(e.target.value)}
+              className="amount-input"
+              step="0.00001"
+              min="0"
+              max={polBalance}
+              placeholder="0.00000"
+            />
+            <button onClick={setMaxAmount} className="max-btn">[MAX]</button>
+          </div>
+        </div>
+        
+        <div className="preset-amounts">
+          <button onClick={() => setAmount(0.42069)} className="preset-btn">[0.42069]</button>
+          <button onClick={() => setAmount(1)} className="preset-btn">[1]</button>
+          <button onClick={() => setAmount(6.9)} className="preset-btn">[6.9]</button>
+          <button onClick={() => setAmount(69)} className="preset-btn">[69]</button>
+        </div>
+        
+        <button 
+          onClick={handleDonate} 
+          className="donate-btn"
+          disabled={isTransacting || parseFloat(donationAmount) <= 0 || parseFloat(donationAmount) > parseFloat(polBalance)}
+        >
+          {isTransacting ? '[PROCESSING...]' : `[DONATE ${parseFloat(donationAmount || 0).toFixed(5)} POL]`}
+        </button>
+        
+        <div className="available-balance">
+          AVAILABLE: {polBalance} POL
+        </div>
+        
+        {txHash && (
+          <div className="transaction-hash">
+            <span className="tx-label">LAST TX:</span>
+            <a 
+              href={`https://polygonscan.com/tx/${txHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="tx-link"
+            >
+              {txHash.substring(0, 10)}...{txHash.substring(56)}
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Improved Tab component with better bottom scrolling
 const Tab = ({ title, children, isOpen, toggleTab }) => {
   const [height, setHeight] = useState(0);
@@ -791,7 +1107,6 @@ const IntroductionTab = () => {
       </p>
       <div className="whitepaper-link">
         <a href="https://pixelnauts.gitbook.io/pixel-cryptonauts-whitepaper" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          {/* Using direct span with black color, not using ScrambleText for button text */}
           <span className="whitepaper-button-text">READ WHITEPAPER</span>
         </a>
       </div>
@@ -906,6 +1221,9 @@ const SupportUsTab = () => {
           speed={10} 
         />
       </p>
+      
+      <WalletDonation />
+      
       <div className="support-links">
         <a href="https://teamtrees.org/search?q=project%20cosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
           <span className="whitepaper-button-text">TEAM TREES</span>
@@ -1034,8 +1352,8 @@ const Footer = () => {
 const CustomizerView = ({ onClose }) => {
   const [animationStage, setAnimationStage] = useState('fadeIn');
   const [showIframe, setShowIframe] = useState(false);
-  const [iframeOpacity, setIframeOpacity] = useState(0); // New state for iframe opacity
-  const [buttonOpacity, setButtonOpacity] = useState(0); // New state for button opacity
+  const [iframeOpacity, setIframeOpacity] = useState(0);
+  const [buttonOpacity, setButtonOpacity] = useState(0);
   const timerRef = useRef([]);
   const iframeRef = useRef(null);
   
@@ -1136,7 +1454,7 @@ const CustomizerView = ({ onClose }) => {
 
 // Main component
 const App = () => {
-  const [currentState, setCurrentState] = useState('systemCheck'); // systemCheck, loading, content
+  const [currentState, setCurrentState] = useState('systemCheck');
   const [tabsVisible] = useState(true); 
   const [showContent, setShowContent] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
@@ -1274,16 +1592,16 @@ const styles = `
   .terminal-line {
     color: #0f0;
     margin-bottom: 10px;
-    white-space: pre-wrap; /* CHANGED: From 'pre' to 'pre-wrap' to allow wrapping */
-    word-break: break-word; /* ADDED: Ensures words break properly */
-    overflow-wrap: break-word; /* ADDED: Additional word wrapping support */
-    max-width: 100%; /* ADDED: Ensure content fits within container */
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
     font-size: 16px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
     font-family: monospace;
-    display: block; /* Ensure block display for proper line breaks */
-    min-height: 1.2em; /* Minimum height to ensure empty lines render */
-    position: relative; /* For positioning the status */
+    display: block;
+    min-height: 1.2em;
+    position: relative;
   }
   
   .terminal-prompt {
@@ -1311,8 +1629,8 @@ const styles = `
   .pixlnauts-app {
     max-width: 800px;
     margin: 0 auto;
-    padding: 40px 20px 20px 20px; /* Increased top padding */
-    position: relative; /* Added for absolute positioning of logo */
+    padding: 40px 20px 20px 20px;
+    position: relative;
   }
 
   /* Logo container and toggle styling */
@@ -1327,8 +1645,8 @@ const styles = `
 
   .logo-toggle-area {
     position: relative;
-    min-height: 120px; /* Set minimum height to prevent layout shift */
-    min-width: 300px; /* Ensure sufficient width */
+    min-height: 120px;
+    min-width: 300px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1380,7 +1698,7 @@ const styles = `
 
   .tab {
     margin-bottom: 15px;
-    scroll-margin-top: 20px; /* Add scroll margin for better positioning when scrolled into view */
+    scroll-margin-top: 20px;
   }
 
   .tab-header {
@@ -1394,7 +1712,7 @@ const styles = `
     transition: all 0.2s ease;
     position: relative;
     z-index: 1;
-    font-size: 24px; /* Doubled from default of 12px */
+    font-size: 24px;
   }
 
   .tab-header:hover {
@@ -1409,7 +1727,7 @@ const styles = `
   .play-icon {
     color: #0f0;
     margin-right: 15px;
-    font-size: 24px; /* Increased to match the larger tab header text */
+    font-size: 24px;
     transition: transform 0.3s ease, color 0.2s ease;
   }
   
@@ -1529,13 +1847,12 @@ const styles = `
   }
 
   .logo-text-wrapper {
-    white-space: nowrap !important; /* Force nowrap with !important */
+    white-space: nowrap !important;
     overflow: visible;
     display: inline-block;
     width: auto;
   }
 
-  /* Ensure ScrambleText inside logo never wraps */
   .logo .scramble-text {
     white-space: nowrap !important;
     display: inline-block;
@@ -1631,7 +1948,7 @@ const styles = `
   .video-container {
     position: relative;
     width: 100%;
-    padding-bottom: 50%; /* 16:9 Aspect Ratio */
+    padding-bottom: 50%;
     margin-bottom: 30px;
     border: 4px solid #0f0;
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
@@ -1785,6 +2102,260 @@ const styles = `
     margin-bottom: 30px;
   }
 
+  .secret-message {
+    font-size: 12px;
+    color: #444;
+    text-align: center;
+    max-width: 600px;
+    margin-top: 20px;
+    padding: 15px;
+    line-height: 1.4;
+  }
+
+  /* Wallet donation styles */
+  .wallet-donation {
+    position: relative;
+    background-color: #000;
+    border: 4px solid #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    font-family: monospace;
+    color: #0f0;
+    margin: 20px 0;
+  }
+
+  .wallet-header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    font-size: 14px;
+    font-family: monospace;
+  }
+
+  .wallet-info, .pol-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f0;
+  }
+
+  .wallet-address, .pol-balance {
+    color: #0f0;
+    font-weight: bold;
+  }
+
+  .disconnect-btn {
+    background: none;
+    border: none;
+    color: #0f0;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 2px 4px;
+  }
+
+  .disconnect-btn:hover {
+    color: #5f5;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  }
+
+  .donation-panel {
+    padding: 20px;
+    padding-top: 80px;
+  }
+
+  .donation-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .prompt {
+    color: #0f0;
+    font-weight: bold;
+  }
+
+  .donation-title {
+    color: #0f0;
+    font-weight: bold;
+  }
+
+  .target-address {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    word-break: break-all;
+  }
+
+  .target-label {
+    color: #0f0;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .target-value {
+    color: #0f0;
+    font-family: monospace;
+  }
+
+  .amount-section {
+    margin-bottom: 20px;
+  }
+
+  .amount-label {
+    color: #0f0;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .amount-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .amount-input {
+    flex: 1;
+    background-color: #111;
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 8px 12px;
+    font-family: monospace;
+    font-size: 16px;
+    min-width: 0;
+  }
+
+  .amount-input:focus {
+    outline: none;
+    border-color: #5f5;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  }
+
+  .max-btn {
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    font-family: monospace;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .max-btn:hover {
+    background-color: #5f5;
+  }
+
+  .preset-amounts {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    justify-content: flex-start;
+  }
+
+  .preset-btn {
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    font-family: monospace;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .preset-btn:hover {
+    background-color: #5f5;
+  }
+
+  .donate-btn {
+    width: 100%;
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 15px 20px;
+    font-family: monospace;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+
+  .donate-btn:hover:not(:disabled) {
+    background-color: #5f5;
+  }
+
+  .donate-btn:disabled {
+    background-color: #555;
+    color: #999;
+    cursor: not-allowed;
+  }
+
+  .available-balance {
+    color: #0f0;
+    font-family: monospace;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 14px;
+  }
+
+  .transaction-hash {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    word-break: break-all;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+  }
+
+  .tx-label {
+    color: #0f0;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .tx-link {
+    color: #0f0;
+    text-decoration: underline;
+    font-family: monospace;
+  }
+
+  .tx-link:hover {
+    color: #5f5;
+  }
+
+  .wallet-connect {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .wallet-connect-btn {
+    margin-bottom: 20px;
+  }
+
+  .wallet-info-text {
+    color: #0f0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .wallet-info-text p {
+    margin: 0;
+    text-shadow: 0 0 3px #0f03;
+  }
+
   /* ENHANCED B-b0 Customizer Styles */
   .customizer-overlay {
     position: fixed;
@@ -1904,7 +2475,7 @@ const styles = `
     border: none;
   }
 
-  /* Return button styling - using your preferred positioning */
+  /* Return button styling */
   .customizer-return-button {
     position: fixed;
     bottom: 20px;
@@ -2005,7 +2576,7 @@ const styles = `
     }
     
     .logo {
-      font-size: 40px; /* Smaller on mobile but still readable */
+      font-size: 40px;
       padding: 10px 15px;
     }
     
@@ -2033,24 +2604,30 @@ const styles = `
     .terminal {
       width: 95%;
       height: 90vh;
-      padding: 10px 8px; /* CHANGED: Adjusted padding for mobile */
-      font-size: 12px; /* ADDED: Smaller font size on mobile */
+      padding: 10px 8px;
+      font-size: 12px;
     }
     
     .terminal-line {
-      font-size: 12px; /* CHANGED: Smaller font on mobile */
-      margin-bottom: 8px; /* ADDED: Slightly reduced margin */
+      font-size: 12px;
+      margin-bottom: 8px;
     }
     
-    /* ADDED: Better mobile status indicators */
     .spinning-status, .status-text {
       margin-left: 5px;
     }
     
-    /* ADDED: Better spacing for continue prompt */
     .continue-prompt, .continue-prompt-empty {
       margin-top: 20px;
       font-size: 14px;
+    }
+    
+    .games p {
+      font-size: 14px;
+    }
+    
+    .app-download .pixel-button {
+      width: 80%;
     }
     
     /* Mobile quirkiest app styles */
@@ -2058,8 +2635,82 @@ const styles = `
       font-size: 14px;
     }
     
-    .app-download .pixel-button {
-      width: 80%;
+    /* Mobile wallet donation styles */
+    .wallet-donation {
+      margin: 15px 0;
+    }
+    
+    .wallet-header {
+      position: static;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 2px solid #0f0;
+      margin-bottom: 0;
+    }
+    
+    .wallet-header .wallet-info,
+    .wallet-header .pol-info {
+      font-size: 12px;
+    }
+    
+    .wallet-header .disconnect-btn {
+      font-size: 12px;
+    }
+    
+    .donation-panel {
+      padding: 15px;
+      padding-top: 15px;
+    }
+    
+    .donation-header {
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    
+    .target-address {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      margin-bottom: 15px;
+    }
+    
+    .amount-input-row {
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .amount-input {
+      width: 100%;
+      font-size: 14px;
+    }
+    
+    .max-btn {
+      width: 100%;
+      padding: 10px;
+    }
+    
+    .preset-amounts {
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    .preset-btn {
+      flex: 1;
+      margin: 0 5px;
+    }
+    
+    .donate-btn {
+      font-size: 14px;
+      padding: 12px;
+    }
+    
+    .transaction-hash {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
     }
     
     /* Mobile footer styles */
