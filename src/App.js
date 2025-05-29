@@ -981,7 +981,7 @@ const TabsManager = ({ openCustomizer }) => {
         <GamesTab />
       </Tab>
       <Tab 
-        title="B-b0 CUSTOMIZER" 
+        title="BUILD-A-BEEBO" 
         isOpen={openTab === 3} 
         toggleTab={() => toggleTab(3)}
       >
