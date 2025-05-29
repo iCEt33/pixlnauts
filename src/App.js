@@ -790,10 +790,16 @@ const WalletDonation = () => {
   }, [updateBalance]);
   
   // Handle chain changes
-  const handleChainChanged = useCallback(() => {
-    // Reload the page when chain changes to avoid issues
-    window.location.reload();
-  }, []);
+  const handleChainChanged = useCallback((chainId) => {
+    // Only reload if we're already connected and it's not switching to Polygon
+    if (isConnected && chainId !== POLYGON_CHAIN_ID) {
+      // Give a small delay to avoid reloading during connection process
+      setTimeout(() => {
+        console.log('Chain changed to non-Polygon network, reloading...');
+        window.location.reload();
+      }, 2000);
+    }
+  }, [isConnected, POLYGON_CHAIN_ID]);
   
   // Setup wallet listeners on mount
   useEffect(() => {
