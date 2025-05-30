@@ -957,7 +957,6 @@ const WalletDonation = () => {
         
         <div className="preset-amounts">
           <button onClick={() => setAmount(0.42069)} className="preset-btn">[0.42069]</button>
-          <button onClick={() => setAmount(1)} className="preset-btn">[1]</button>
           <button onClick={() => setAmount(6.9)} className="preset-btn">[6.9]</button>
           <button onClick={() => setAmount(69)} className="preset-btn">[69]</button>
         </div>
