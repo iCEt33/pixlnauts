@@ -758,22 +758,7 @@ const WalletDonation = () => {
     }
   }, [POLYGON_CHAIN_ID, POLYGON_RPC]);
   
-  // Check connection function
-  const checkConnection = useCallback(async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          setIsConnected(true);
-          setWalletAddress(accounts[0]);
-          await updateBalance(accounts[0]);
-          await ensurePolygonNetwork();
-        }
-      } catch (error) {
-        console.error('Error checking connection:', error);
-      }
-    }
-  }, [updateBalance, ensurePolygonNetwork]);
+  // Removed automatic connection check - user must explicitly connect
   
   // Handle account changes
   const handleAccountsChanged = useCallback((accounts) => {
@@ -803,7 +788,7 @@ const WalletDonation = () => {
   
   // Setup wallet listeners on mount
   useEffect(() => {
-    checkConnection();
+    // Don't automatically check connection - user must explicitly connect
     
     // Listen for account changes
     if (window.ethereum) {
@@ -817,7 +802,7 @@ const WalletDonation = () => {
         window.ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
-  }, [checkConnection, handleAccountsChanged, handleChainChanged]);
+  }, [handleAccountsChanged, handleChainChanged]);
   
   // Connect wallet function
   const connectWallet = async () => {
@@ -844,13 +829,13 @@ const WalletDonation = () => {
     }
   };
   
-  // Disconnect wallet function
+  // Disconnect function that reloads page but skips boot sequence
   const disconnect = () => {
-    setIsConnected(false);
-    setWalletAddress('');
-    setPolBalance('0.0000');
-    setDonationAmount('0.00000');
-    setTxHash('');
+    // Set a flag in localStorage to skip boot sequence on reload
+    localStorage.setItem('skipBootSequence', 'true');
+    
+    // Reload the page to fully disconnect from wallet extension
+    window.location.reload();
   };
   
   // Set preset amount
@@ -1013,11 +998,34 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
   const contentRef = useRef(null);
   const tabRef = useRef(null);
   
-  useEffect(() => {
+  // Function to update height
+  const updateHeight = useCallback(() => {
     if (isOpen && contentRef.current) {
-      // Set the expanded height
       setHeight(contentRef.current.scrollHeight);
-      
+    } else {
+      setHeight(0);
+    }
+  }, [isOpen]);
+  
+  // Use ResizeObserver to watch for content changes
+  useEffect(() => {
+    if (!contentRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+    
+    resizeObserver.observe(contentRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [updateHeight]);
+  
+  useEffect(() => {
+    updateHeight();
+    
+    if (isOpen && contentRef.current) {
       // Improved scrolling that ensures content isn't cut off at bottom
       setTimeout(() => {
         if (tabRef.current) {
@@ -1061,10 +1069,8 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
           // Otherwise, no scrolling needed - everything fits nicely
         }
       }, 50); // Small delay to allow for DOM updates
-    } else {
-      setHeight(0);
     }
-  }, [isOpen]);
+  }, [isOpen, updateHeight]);
   
   return (
     <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
@@ -1460,7 +1466,14 @@ const CustomizerView = ({ onClose }) => {
 
 // Main component
 const App = () => {
-  const [currentState, setCurrentState] = useState('systemCheck');
+  const [currentState, setCurrentState] = useState(() => {
+    // Check if we should skip boot sequence
+    if (localStorage.getItem('skipBootSequence') === 'true') {
+      localStorage.removeItem('skipBootSequence'); // Clean up the flag
+      return 'content'; // Skip directly to content
+    }
+    return 'systemCheck'; // Normal boot sequence
+  });
   const [tabsVisible] = useState(true); 
   const [showContent, setShowContent] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
