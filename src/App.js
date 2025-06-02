@@ -1,3 +1,4 @@
+/* global BigInt */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const isMobileDevice = () => {
@@ -1463,6 +1464,272 @@ const CustomizerView = ({ onClose }) => {
   );
 };
 
+// Global Dashboard Component
+const GlobalDashboard = () => {
+  const [stats, setStats] = useState({
+    totalDonations: 0,
+    totalAmount: 0,
+    carbonOffset: 0,
+    topDonors: [],
+    loading: true
+  });
+  const [polPrice, setPolPrice] = useState(0);
+  
+  const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
+  
+  // Fetch POL price from multiple sources with fallbacks
+  const fetchPolPrice = useCallback(async () => {
+    try {
+      // Try CoinGecko as backup
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd');
+        const data = await response.json();
+        if (data && data.polygon && data.polygon.usd) {
+          const price = parseFloat(data.polygon.usd);
+          if (price > 0) {
+            setPolPrice(price);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('CoinGecko failed, trying next...');
+      }
+
+      // Try CryptoCompare as third option
+      try {
+        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=MATIC&tsyms=USD');
+        const data = await response.json();
+        if (data && data.USD) {
+          const price = parseFloat(data.USD);
+          if (price > 0) {
+            setPolPrice(price);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('CryptoCompare failed...');
+      }
+
+      // If all APIs fail, use a reasonable default
+      console.warn('All price APIs failed, using fallback price');
+      setPolPrice(0.4); // Fallback price for POL
+      
+    } catch (error) {
+      console.error('Failed to fetch POL price:', error);
+      setPolPrice(0.4); // Fallback price
+    }
+  }, []);
+  
+  const fetchTransactionsFromPolygonScan = useCallback(async () => {
+    try {
+      const apiKey = '6MSYXMBWYCUPQPU8MJ4T7UN7R634VTRSP8'; 
+      const url = `https://api.polygonscan.com/api?module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === '1' && data.result && Array.isArray(data.result)) {
+        // Filter for incoming transactions only
+        const donations = data.result.filter(tx => {
+          return (
+            tx.to && 
+            tx.to.toLowerCase() === targetAddress.toLowerCase() && 
+            tx.value && 
+            tx.value !== '0' &&
+            tx.isError === '0' && 
+            tx.from !== targetAddress.toLowerCase()
+          );
+        });
+        
+        // Group by donor address and sum amounts
+        const donorMap = new Map();
+        let totalAmount = 0;
+        
+        donations.forEach(tx => {
+          try {
+            const valueInWei = BigInt(tx.value);
+            const amountInPol = Number(valueInWei) / Math.pow(10, 18);
+            
+            if (!isNaN(amountInPol) && amountInPol > 0 && amountInPol < 1000000) {
+              totalAmount += amountInPol;
+              
+              // Add to donor map
+              const currentAmount = donorMap.get(tx.from) || 0;
+              donorMap.set(tx.from, currentAmount + amountInPol);
+            }
+          } catch (e) {
+            console.warn('Error parsing transaction value:', tx.value, e);
+          }
+        });
+        
+        // Convert to array and sort by amount (top 3)
+        const topDonors = Array.from(donorMap.entries())
+          .map(([address, amount]) => ({ address, amount }))
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 3);
+        
+        const carbonOffset = polPrice > 0 ? (totalAmount * polPrice * 10) / 1000 : 0;
+        
+        return {
+          totalDonations: donations.length,
+          totalAmount: totalAmount,
+          carbonOffset: carbonOffset,
+          topDonors: topDonors
+        };
+      } else {
+        console.warn('PolygonScan API response:', data);
+        return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [] };
+      }
+    } catch (error) {
+      console.error('Failed to fetch transactions from PolygonScan:', error);
+      return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [] };
+    }
+  }, [targetAddress, polPrice]);
+  
+  // Alternative method using account balance check
+  const fetchAccountBalance = useCallback(async () => {
+    try {
+      // Direct balance check using Polygon RPC
+      const response = await fetch('https://polygon-rpc.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_getBalance',
+          params: [targetAddress, 'latest'],
+          id: 1
+        })
+      });
+      
+      const data = await response.json();
+      if (data.result) {
+        const balanceInWei = parseInt(data.result, 16);
+        const balanceInPol = Number(balanceInWei) / Math.pow(10, 18);
+        return balanceInPol;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Failed to fetch account balance:', error);
+      return 0;
+    }
+  }, [targetAddress]);
+  
+  const fetchGlobalStats = useCallback(async () => {
+    try {
+      setStats(prev => ({ ...prev, loading: true }));
+      
+      const [transactionStats, currentBalance] = await Promise.all([
+        fetchTransactionsFromPolygonScan(),
+        fetchAccountBalance()
+      ]);
+      
+      const totalAmount = currentBalance;
+      const carbonOffset = polPrice > 0 ? (totalAmount * polPrice * 10) / 1000 : 0;
+      
+      setStats({
+        totalDonations: transactionStats.totalDonations,
+        totalAmount: totalAmount,
+        carbonOffset: carbonOffset,
+        topDonors: transactionStats.topDonors,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Failed to fetch global stats:', error);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  }, [fetchTransactionsFromPolygonScan, fetchAccountBalance, polPrice]);
+  
+  // Fetch POL price on component mount
+  useEffect(() => {
+    fetchPolPrice();
+    
+    // Update price every 5 minutes
+    const priceInterval = setInterval(fetchPolPrice, 5 * 60 * 1000);
+    return () => clearInterval(priceInterval);
+  }, [fetchPolPrice]);
+
+  // Fetch global stats after price is loaded
+  useEffect(() => {
+    if (polPrice > 0) {
+      fetchGlobalStats();
+    }
+  }, [polPrice, fetchGlobalStats]);
+  
+  return (
+    <div className="global-dashboard">
+      <div className="dashboard-header">
+        <span className="prompt">&gt;&gt;&gt;</span>
+        <span className="dashboard-title">PIXELNAUTS GLOBAL IMPACT</span>
+      </div>
+      
+      <div className="dashboard-grid">
+        <div className="stats-panel global-stats">
+          <div className="stats-header">COMMUNITY DONATIONS</div>
+          {stats.loading ? (
+            <div className="loading-stats">LOADING...</div>
+          ) : (
+            <div className="stats-content">
+              <div className="stat-item">
+                <span className="stat-label">TOTAL DONATIONS:</span>
+                <span className="stat-value">{stats.totalDonations}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">TOTAL POL:</span>
+                <span className="stat-value">{stats.totalAmount.toFixed(5)}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">USD VALUE:</span>
+                <span className="stat-value">${(stats.totalAmount * polPrice).toFixed(2)}</span>
+              </div>
+              <div className="stat-item carbon-impact">
+                <span className="stat-label">CO2 OFFSET:</span>
+                <span className="stat-value">{stats.carbonOffset.toFixed(3)} METRIC TONS</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="stats-panel price-panel">
+          <div className="stats-header">TOP DONORS</div>
+          <div className="stats-content">
+            {stats.topDonors && stats.topDonors.length > 0 ? (
+              stats.topDonors.map((donor, index) => (
+                <div key={donor.address} className="stat-item leaderboard-item">
+                  <span className="stat-label">#{index + 1} {donor.address.substring(0, 6)}...{donor.address.substring(38)}:</span>
+                  <span className="stat-value">{donor.amount.toFixed(5)} POL</span>
+                </div>
+              ))
+            ) : (
+              <div className="loading-stats">LOADING DONORS...</div>
+            )}
+            <div className="stat-item price-info">
+              <span className="stat-label">POL PRICE:</span>
+              <span className="stat-value">${polPrice > 0 ? polPrice.toFixed(4) : 'LOADING...'}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">LAST UPDATE:</span>
+              <span className="stat-value">{new Date().toLocaleTimeString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="dashboard-footer">
+        <div className="impact-message">
+          <ScrambleText 
+            text="Every donation helps fund environmental initiatives and carbon offset projects." 
+            speed={15} 
+            intensity={0.8}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main component
 const App = () => {
   const [currentState, setCurrentState] = useState(() => {
@@ -1543,6 +1810,7 @@ const App = () => {
       <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
         <TabsManager openCustomizer={handleOpenCustomizer} />
       </div>
+      <GlobalDashboard />
       <Footer />
     </div>
   );
@@ -2374,6 +2642,133 @@ const styles = `
     text-shadow: 0 0 3px #0f03;
   }
 
+  /* Global Dashboard Styles */
+  .global-dashboard {
+    margin: 40px 0;
+    background-color: #0a0a0a;
+    border: 4px solid #0f0;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    position: relative;
+  }
+
+  .global-dashboard .dashboard-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .global-dashboard .dashboard-title {
+    color: #0f0;
+    font-weight: bold;
+  }
+
+  .global-dashboard .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .global-dashboard .stats-panel {
+    background-color: #111;
+    border: 2px solid #333;
+    padding: 15px;
+    transition: border-color 0.3s ease;
+  }
+
+  .global-dashboard .stats-panel:hover {
+    border-color: #0f0;
+  }
+
+  .global-dashboard .global-stats {
+    border-left: 4px solid #0f0;
+  }
+
+  .global-dashboard .price-panel {
+    border-left: 4px solid #5f5;
+  }
+
+  .global-dashboard .stats-header {
+    color: #0f0;
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 15px;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  }
+
+  .global-dashboard .stats-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .global-dashboard .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #333;
+    font-size: 14px;
+  }
+
+  .global-dashboard .stat-item:last-child {
+    border-bottom: none;
+  }
+
+  .global-dashboard .stat-label {
+    color: #0f0;
+    font-weight: bold;
+  }
+
+  .global-dashboard .stat-value {
+    color: #fff;
+    font-family: monospace;
+  }
+
+  .global-dashboard .carbon-impact .stat-value {
+    color: #5f5;
+    text-shadow: 0 0 3px rgba(95, 255, 95, 0.5);
+  }
+
+  .global-dashboard .loading-stats {
+    text-align: center;
+    color: #0f0;
+    font-style: italic;
+    padding: 20px 0;
+    animation: pulse 1.5s infinite;
+  }
+
+  .dashboard-footer {
+    padding: 15px;
+    border-top: 2px solid #333;
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .global-dashboard .leaderboard-item {
+    background-color: #0a0a0a;
+    border-left: 3px solid #0f0;
+    padding-left: 8px;
+    margin: 2px 0;
+  }
+
+  .global-dashboard .price-info {
+    border-top: 1px solid #0f0;
+    margin-top: 10px;
+    padding-top: 8px;
+  }
+
+  .impact-message {
+    font-size: 14px;
+    color: #0f0;
+    text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+  }
+
   /* ENHANCED B-b0 Customizer Styles */
   .customizer-overlay {
     position: fixed;
@@ -2546,6 +2941,42 @@ const styles = `
     
     .customizer-overlay.ready .customizer-container {
       height: 95vh;
+    }
+  }
+
+  /* Mobile responsiveness for global dashboard */
+  @media (max-width: 768px) {
+    .global-dashboard .dashboard-grid {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+    
+    .global-dashboard {
+      margin: 30px 0;
+      padding: 15px;
+    }
+    
+    .global-dashboard .dashboard-header {
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    
+    .global-dashboard .stats-header {
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    
+    .global-dashboard .stat-item {
+      font-size: 12px;
+      padding: 4px 0;
+    }
+    
+    .dashboard-footer {
+      padding: 12px;
+    }
+    
+    .impact-message {
+      font-size: 12px;
     }
   }
 
