@@ -1275,8 +1275,115 @@ const QuirkiestAppTab = () => {
   );
 };
 
+// Donation Milestones tab content
+const DonationMilestonesTab = ({ currentUsdValue }) => {
+  const milestones = [
+    { name: "NFT Customizer", amount: 450, selfFunded: 0, description: "Smart contract for actually minting your very own custom B-b0s" },
+    { name: "Revenue Card", amount: 350, selfFunded: 0, description: "Smart contract for convertible note inspired dynamic revenue redistribution" },
+    { name: "Project: Cosmos alpha release", amount: 3200, selfFunded: 0, description: "Blockchain integration, multiplayer and performance optimizations" },
+    { name: "3D Printer", amount: 750, selfFunded: 0, description: "Physical prototyping capabilities" },
+    { name: "Coming Soon", amount: null, selfFunded: 0, description: "Future milestone to be announced" }
+  ];
+
+  // Calculate cumulative totals and status for each milestone
+  const processedMilestones = [];
+  let cumulativeTotal = 0;
+  
+  milestones.forEach((milestone, index) => {
+    if (milestone.amount === null) {
+      processedMilestones.push({
+        ...milestone,
+        cumulativeTotal: cumulativeTotal,
+        status: 'locked',
+        progress: 0,
+        isComingSoon: true
+      });
+      return;
+    }
+
+    cumulativeTotal += milestone.amount;
+    
+    let status, progress;
+    const totalFunding = currentUsdValue + (milestone.selfFunded || 0);
+
+    if (totalFunding >= cumulativeTotal) {
+      status = 'completed';
+      progress = 100;
+    } else if (index === 0 || totalFunding >= (processedMilestones[index - 1]?.cumulativeTotal || 0)) {
+      status = 'in-progress';
+      const previousTotal = index === 0 ? 0 : (processedMilestones[index - 1]?.cumulativeTotal || 0);
+      progress = Math.min(100, ((totalFunding - previousTotal) / milestone.amount) * 100);
+    } else {
+      status = 'locked';
+      progress = 0;
+    }
+
+    processedMilestones.push({
+      ...milestone,
+      cumulativeTotal,
+      status,
+      progress
+    });
+  });
+
+  return (
+    <div className="donation-milestones">
+      <div className="milestones-header">
+        <p>
+          <ScrambleText 
+            text="Track our progress towards key development milestones funded by community donations." 
+            speed={10} 
+          />
+        </p>
+        <div className="current-progress">
+          <span className="progress-label">CURRENT DONATIONS:</span>
+          <span className="progress-value">${currentUsdValue.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="milestones-list">
+        {processedMilestones.map((milestone, index) => (
+          <div 
+            key={index} 
+            className={`milestone-item ${milestone.status} ${milestone.isComingSoon ? 'coming-soon' : ''}`}
+          >
+            <div className="milestone-header">
+              <div className="milestone-info">
+                <span className="milestone-name">{milestone.name}</span>
+              </div>
+              <div className="milestone-total">
+                {!milestone.isComingSoon && (
+                  <span className="milestone-amount">${milestone.amount}</span>
+                )}
+              </div>
+            </div>
+            
+            <div className="milestone-description">
+              {milestone.description}
+            </div>
+
+            {!milestone.isComingSoon && (
+              <div className="milestone-progress">
+                <div className="progress-bar-container">
+                  <div 
+                    className="progress-bar-fill" 
+                    style={{ width: `${milestone.progress}%` }}
+                  ></div>
+                </div>
+                <div className="progress-text">
+                  {milestone.status === 'completed' ? 'COMPLETED' : `${milestone.progress.toFixed(1)}%`}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // TabsManager to control which tab is open
-const TabsManager = ({ openCustomizer }) => {
+const TabsManager = ({ openCustomizer, currentUsdValue }) => {
   const [openTab, setOpenTab] = useState(0);
   
   const toggleTab = (index) => {
@@ -1325,9 +1432,16 @@ const TabsManager = ({ openCustomizer }) => {
         <QuirkiestAppTab />
       </Tab>
       <Tab 
-        title="SUPPORT US" 
+        title="DONATION MILESTONES" 
         isOpen={openTab === 5} 
         toggleTab={() => toggleTab(5)}
+      >
+        <DonationMilestonesTab currentUsdValue={currentUsdValue} />
+      </Tab>
+      <Tab 
+        title="SUPPORT US" 
+        isOpen={openTab === 6} 
+        toggleTab={() => toggleTab(6)}
       >
         <SupportUsTab />
       </Tab>
@@ -1465,7 +1579,7 @@ const CustomizerView = ({ onClose }) => {
 };
 
 // Global Dashboard Component
-const GlobalDashboard = () => {
+const GlobalDashboard = ({ onUsdValueChange }) => {
   const [stats, setStats] = useState({
     totalDonations: 0,
     totalAmount: 0,
@@ -1658,6 +1772,14 @@ const GlobalDashboard = () => {
     }
   }, [polPrice, fetchGlobalStats]);
   
+  // Add this useEffect to emit USD value changes
+  useEffect(() => {
+    const usdValue = stats.totalAmount * polPrice;
+    if (onUsdValueChange && !stats.loading && polPrice > 0) {
+      onUsdValueChange(usdValue);
+    }
+  }, [stats.totalAmount, polPrice, stats.loading, onUsdValueChange]);
+
   return (
     <div className="global-dashboard">
       <div className="dashboard-header">
@@ -1743,6 +1865,7 @@ const App = () => {
   const [tabsVisible] = useState(true); 
   const [showContent, setShowContent] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [currentUsdValue, setCurrentUsdValue] = useState(0);
   
   // Add simple scroll-to-top effect on initial load
   useEffect(() => {
@@ -1808,9 +1931,9 @@ const App = () => {
     <div className={`pixlnauts-app ${showContent ? 'show' : 'hide'}`}>
       <Logo />
       <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
-        <TabsManager openCustomizer={handleOpenCustomizer} />
+        <TabsManager openCustomizer={handleOpenCustomizer} currentUsdValue={currentUsdValue} />
       </div>
-      <GlobalDashboard />
+      <GlobalDashboard onUsdValueChange={setCurrentUsdValue} />
       <Footer />
     </div>
   );
@@ -2769,6 +2892,162 @@ const styles = `
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
   }
 
+  /* Donation Milestones Styles */
+  .donation-milestones {
+    color: #0f0;
+  }
+
+  .donation-milestones p {
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+  }
+
+  .milestones-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #333;
+  }
+
+  .current-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #0a0a0a;
+    border: 2px solid #0f0;
+  }
+
+  .progress-label {
+    font-weight: bold;
+    color: #0f0;
+  }
+
+  .progress-value {
+    font-family: monospace;
+    font-weight: bold;
+    color: #fff;
+    font-size: 18px;
+  }
+
+  .milestones-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .milestone-item {
+    padding: 15px;
+    border: 2px solid #333;
+    background-color: #0a0a0a;
+    transition: all 0.3s ease;
+  }
+
+  .milestone-item.completed {
+    border-color: #0f0;
+    background-color: rgba(0, 50, 0, 0.3);
+    color: #0f0;
+  }
+
+  .milestone-item.in-progress {
+    border-color: #fff;
+    background-color: rgba(50, 50, 50, 0.3);
+    color: #fff;
+  }
+
+  .milestone-item.locked {
+    border-color: #666;
+    background-color: rgba(20, 20, 20, 0.3);
+    color: #666;
+  }
+
+  .milestone-item.coming-soon {
+    border-color: #888;
+    background-color: rgba(30, 30, 30, 0.3);
+    color: #888;
+    border-style: dashed;
+  }
+
+  .milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .milestone-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .milestone-name {
+    font-weight: bold;
+    font-size: 18px;
+  }
+
+  .milestone-amount {
+    font-family: monospace;
+    font-size: 20px;
+    opacity: 0.8;
+  }
+
+  .milestone-total {
+    text-align: right;
+  }
+
+  .total-needed {
+    font-family: monospace;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+
+  .milestone-description {
+    margin-bottom: 15px;
+    font-size: 14px;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+
+  .milestone-progress {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .progress-bar-container {
+    flex: 1;
+    height: 20px;
+    background-color: #111;
+    border: 1px solid currentColor;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background-color: currentColor;
+    transition: width 0.5s ease;
+    position: relative;
+  }
+
+  .milestone-item.completed .progress-bar-fill {
+    background-color: #0f0;
+  }
+
+  .milestone-item.in-progress .progress-bar-fill {
+    background-color: #fff;
+  }
+
+  .progress-text {
+    font-family: monospace;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: right;
+  }
+
   /* ENHANCED B-b0 Customizer Styles */
   .customizer-overlay {
     position: fixed;
@@ -2977,6 +3256,43 @@ const styles = `
     
     .impact-message {
       font-size: 12px;
+    }
+  }
+
+  /* Mobile responsiveness for milestones */
+  @media (max-width: 600px) {
+    .milestone-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .milestone-total {
+      text-align: left;
+    }
+
+    .milestone-name {
+      font-size: 16px;
+    }
+
+    .current-progress {
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .progress-value {
+      font-size: 16px;
+    }
+
+    .milestone-progress {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-text {
+      text-align: center;
+      min-width: auto;
     }
   }
 
