@@ -923,7 +923,7 @@ const WalletDonation = () => {
       <div className="wallet-header">
         <div className="wallet-info">
           <span className="wallet-label">WALLET:</span>
-          <span className="wallet-address">{walletAddress.substring(0, 8)}...{walletAddress.substring(34)}</span>
+          <span className="wallet-address">{walletAddress.substring(0, 6)}...{walletAddress.substring(38)}</span>
         </div>
         <button onClick={disconnect} className="disconnect-btn">[DISCONNECT]</button>
       </div>
@@ -1578,7 +1578,7 @@ const CustomizerView = ({ onClose }) => {
   );
 };
 
-// Global Dashboard Component
+// Enhanced Global Dashboard Component with Dynamic Views
 const GlobalDashboard = ({ onUsdValueChange }) => {
   const [stats, setStats] = useState({
     totalDonations: 0,
@@ -1587,14 +1587,35 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
     topDonors: [],
     loading: true
   });
+  const [userStats, setUserStats] = useState({
+    userDonations: 0,
+    userAmount: 0,
+    userRank: 0,
+    loading: true
+  });
   const [polPrice, setPolPrice] = useState(0);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  
+  // Dashboard state management
+  const [leftViewIndex, setLeftViewIndex] = useState(0); // 0: global, 1: user (if connected)
+  const [rightViewIndex, setRightViewIndex] = useState(0); // 0: price info, 1: leaderboard
+  const [isLeftHighlighted, setIsLeftHighlighted] = useState(false);
+  const [isRightHighlighted, setIsRightHighlighted] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isLeftHovered, setIsLeftHovered] = useState(false);
+  const [isRightHovered, setIsRightHovered] = useState(false);
+  
+  // Auto-cycle and refresh intervals
+  const cycleIntervalRef = useRef(null);
+  const refreshIntervalRef = useRef(null);
   
   const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
   
   // Fetch POL price from multiple sources with fallbacks
   const fetchPolPrice = useCallback(async () => {
     try {
-      // Try CoinGecko as backup
+      // Try CoinGecko first
       try {
         const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd');
         const data = await response.json();
@@ -1609,7 +1630,7 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
         console.log('CoinGecko failed, trying next...');
       }
 
-      // Try CryptoCompare as third option
+      // Try CryptoCompare as backup
       try {
         const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=MATIC&tsyms=USD');
         const data = await response.json();
@@ -1624,13 +1645,13 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
         console.log('CryptoCompare failed...');
       }
 
-      // If all APIs fail, use a reasonable default
+      // Fallback price
       console.warn('All price APIs failed, using fallback price');
-      setPolPrice(0.4); // Fallback price for POL
+      setPolPrice(0.4);
       
     } catch (error) {
       console.error('Failed to fetch POL price:', error);
-      setPolPrice(0.4); // Fallback price
+      setPolPrice(0.4);
     }
   }, []);
   
@@ -1688,22 +1709,21 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
           totalDonations: donations.length,
           totalAmount: totalAmount,
           carbonOffset: carbonOffset,
-          topDonors: topDonors
+          topDonors: topDonors,
+          donorMap: donorMap
         };
       } else {
         console.warn('PolygonScan API response:', data);
-        return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [] };
+        return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [], donorMap: new Map() };
       }
     } catch (error) {
       console.error('Failed to fetch transactions from PolygonScan:', error);
-      return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [] };
+      return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [], donorMap: new Map() };
     }
   }, [targetAddress, polPrice]);
   
-  // Alternative method using account balance check
   const fetchAccountBalance = useCallback(async () => {
     try {
-      // Direct balance check using Polygon RPC
       const response = await fetch('https://polygon-rpc.com', {
         method: 'POST',
         headers: {
@@ -1731,10 +1751,44 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
     }
   }, [targetAddress]);
   
+  const fetchUserStats = useCallback(async (userAddress) => {
+    if (!userAddress) return;
+    
+    try {
+      // Show loading values in the stats instead of loading screen
+      setUserStats(prev => ({ 
+        userDonations: 0,
+        userAmount: 0,
+        userRank: 0,
+        loading: true 
+      }));
+      
+      const transactionData = await fetchTransactionsFromPolygonScan();
+      const userAmount = transactionData.donorMap.get(userAddress.toLowerCase()) || 0;
+      
+      // Count actual transactions for this user
+      const userDonationCount = userAmount > 0 ? 1 : 0;
+      
+      // Calculate user rank
+      const sortedDonors = Array.from(transactionData.donorMap.entries())
+        .sort((a, b) => b[1] - a[1]);
+      const userRank = sortedDonors.findIndex(([address]) => address.toLowerCase() === userAddress.toLowerCase()) + 1;
+      
+      setUserStats({
+        userDonations: userDonationCount,
+        userAmount: userAmount,
+        userRank: userRank || 0,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+      setUserStats(prev => ({ ...prev, loading: false }));
+    }
+  }, [fetchTransactionsFromPolygonScan]);
+  
   const fetchGlobalStats = useCallback(async () => {
     try {
-      setStats(prev => ({ ...prev, loading: true }));
-      
+      // Don't show loading state for the entire panel during refresh
       const [transactionStats, currentBalance] = await Promise.all([
         fetchTransactionsFromPolygonScan(),
         fetchAccountBalance()
@@ -1756,23 +1810,155 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
     }
   }, [fetchTransactionsFromPolygonScan, fetchAccountBalance, polPrice]);
   
-  // Fetch POL price on component mount
+  // Check wallet connection status
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+            setIsConnected(true);
+            await fetchUserStats(accounts[0]);
+          } else {
+            // No wallet connected - ensure we're in global view
+            setIsConnected(false);
+            setWalletAddress('');
+            setLeftViewIndex(0);
+          }
+        } catch (error) {
+          console.error('Failed to check wallet connection:', error);
+          setIsConnected(false);
+          setWalletAddress('');
+          setLeftViewIndex(0);
+        }
+      }
+    };
+    
+    checkWalletConnection();
+    
+    // Listen for account changes
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts) => {
+        if (accounts.length === 0) {
+          setIsConnected(false);
+          setWalletAddress('');
+          setLeftViewIndex(0); // Force to global view
+          setUserStats({
+            userDonations: 0,
+            userAmount: 0,
+            userRank: 0,
+            loading: false
+          });
+        } else {
+          setWalletAddress(accounts[0]);
+          setIsConnected(true);
+          fetchUserStats(accounts[0]);
+        }
+      };
+      
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      return () => window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    }
+  }, [fetchUserStats]);
+  
+  // Auto-cycle between views every 10 seconds
+  useEffect(() => {
+    const startCycle = () => {
+      cycleIntervalRef.current = setInterval(() => {
+        // Only cycle left panel if wallet is connected and not hovered
+        if (isConnected && !isLeftHovered) {
+          // Highlight and change left view first
+          setIsLeftHighlighted(true);
+          setTimeout(() => {
+            setIsLeftHighlighted(false);
+            setLeftViewIndex(prev => prev === 0 ? 1 : 0);
+          }, 500);
+        }
+        
+        // Always cycle right panel if not hovered (after delay if left panel cycled)
+        const rightPanelDelay = (isConnected && !isLeftHovered) ? 1500 : 0;
+        setTimeout(() => {
+          if (!isRightHovered) {
+            setIsRightHighlighted(true);
+            setTimeout(() => {
+              setIsRightHighlighted(false);
+              setRightViewIndex(prev => prev === 0 ? 1 : 0);
+            }, 500);
+          }
+        }, rightPanelDelay);
+      }, 10000);
+    };
+    
+    startCycle();
+    
+    return () => {
+      if (cycleIntervalRef.current) {
+        clearInterval(cycleIntervalRef.current);
+      }
+    };
+  }, [isConnected, isLeftHovered, isRightHovered]);
+  
+  // Refresh data every 2 minutes
+  useEffect(() => {
+    const startRefresh = () => {
+      refreshIntervalRef.current = setInterval(() => {
+        // Set last updated to LOADING... before starting refresh
+        setLastUpdated('LOADING...');
+        
+        fetchPolPrice();
+        fetchGlobalStats();
+        if (isConnected && walletAddress) {
+          fetchUserStats(walletAddress);
+        }
+        
+        // Set actual time after a short delay to allow data to load
+        setTimeout(() => {
+          setLastUpdated(new Date());
+        }, 2000);
+      }, 120000); // 2 minutes
+    };
+    
+    startRefresh();
+    
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [isConnected, walletAddress, fetchPolPrice, fetchGlobalStats, fetchUserStats]);
+  
+  // Manual click handlers for panels (no longer breaks cycle)
+  const handleLeftPanelClick = () => {
+    if (isConnected) {
+      setIsLeftHighlighted(true);
+      setTimeout(() => {
+        setIsLeftHighlighted(false);
+        setLeftViewIndex(prev => prev === 0 ? 1 : 0);
+      }, 500);
+    }
+  };
+  
+  const handleRightPanelClick = () => {
+    setIsRightHighlighted(true);
+    setTimeout(() => {
+      setIsRightHighlighted(false);
+      setRightViewIndex(prev => prev === 0 ? 1 : 0);
+    }, 500);
+  };
+  
+  // Initial data fetch
   useEffect(() => {
     fetchPolPrice();
-    
-    // Update price every 5 minutes
-    const priceInterval = setInterval(fetchPolPrice, 5 * 60 * 1000);
-    return () => clearInterval(priceInterval);
   }, [fetchPolPrice]);
 
-  // Fetch global stats after price is loaded
   useEffect(() => {
     if (polPrice > 0) {
       fetchGlobalStats();
     }
   }, [polPrice, fetchGlobalStats]);
   
-  // Add this useEffect to emit USD value changes
+  // USD value change emission
   useEffect(() => {
     const usdValue = stats.totalAmount * polPrice;
     if (onUsdValueChange && !stats.loading && polPrice > 0) {
@@ -1780,63 +1966,128 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
     }
   }, [stats.totalAmount, polPrice, stats.loading, onUsdValueChange]);
 
-  return (
-    <div className="global-dashboard">
-      <div className="dashboard-header">
-        <span className="prompt">&gt;&gt;&gt;</span>
-        <span className="dashboard-title">PIXELNAUTS GLOBAL IMPACT</span>
-      </div>
-      
-      <div className="dashboard-grid">
-        <div className="stats-panel global-stats">
-          <div className="stats-header">COMMUNITY DONATIONS</div>
-          {stats.loading ? (
-            <div className="loading-stats">LOADING...</div>
-          ) : (
-            <div className="stats-content">
+  // Render left panel content
+  const renderLeftPanel = () => {
+    const isGlobalView = leftViewIndex === 0;
+    const currentStats = isGlobalView ? stats : userStats;
+    const isLoading = currentStats.loading;
+    
+    return (
+      <div 
+        className={`stats-panel left-panel ${isGlobalView ? 'global-stats' : 'user-stats'} ${isLeftHighlighted ? 'highlighted' : ''} ${isConnected ? 'clickable' : ''}`}
+        onClick={handleLeftPanelClick}
+        onMouseEnter={() => setIsLeftHovered(true)}
+        onMouseLeave={() => setIsLeftHovered(false)}
+      >
+        <div className="stats-header">
+          {isGlobalView ? 'COMMUNITY DONATIONS' : 'YOUR DONATIONS'}
+        </div>
+        <div className="stats-content">
+          {isGlobalView ? (
+            <>
               <div className="stat-item">
                 <span className="stat-label">TOTAL DONATIONS:</span>
-                <span className="stat-value">{stats.totalDonations}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : stats.totalDonations}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">TOTAL POL:</span>
-                <span className="stat-value">{stats.totalAmount.toFixed(5)}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : stats.totalAmount.toFixed(5)}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">USD VALUE:</span>
-                <span className="stat-value">${(stats.totalAmount * polPrice).toFixed(2)}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${(stats.totalAmount * polPrice).toFixed(2)}`}</span>
               </div>
               <div className="stat-item carbon-impact">
                 <span className="stat-label">CO2 OFFSET:</span>
-                <span className="stat-value">{stats.carbonOffset.toFixed(3)} METRIC TONS</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${stats.carbonOffset.toFixed(3)} METRIC TONS`}</span>
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              <div className="stat-item">
+                <span className="stat-label">WALLET:</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${walletAddress.substring(0, 6)}...${walletAddress.substring(38)}`}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">YOUR DONATIONS:</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${userStats.userAmount.toFixed(5)} POL`}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">USD VALUE:</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${(userStats.userAmount * polPrice).toFixed(2)}`}</span>
+              </div>
+              <div className="stat-item carbon-impact">
+                <span className="stat-label">YOUR CO2 OFFSET:</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${(userStats.userAmount * polPrice * 10 / 1000).toFixed(3)} METRIC TONS`}</span>
+              </div>
+            </>
           )}
         </div>
-        
-        <div className="stats-panel price-panel">
-          <div className="stats-header">TOP DONORS</div>
-          <div className="stats-content">
-            {stats.topDonors && stats.topDonors.length > 0 ? (
-              stats.topDonors.map((donor, index) => (
-                <div key={donor.address} className="stat-item leaderboard-item">
-                  <span className="stat-label">#{index + 1} {donor.address.substring(0, 6)}...{donor.address.substring(38)}:</span>
-                  <span className="stat-value">{donor.amount.toFixed(5)} POL</span>
-                </div>
-              ))
-            ) : (
-              <div className="loading-stats">LOADING DONORS...</div>
-            )}
-            <div className="stat-item price-info">
-              <span className="stat-label">POL PRICE:</span>
-              <span className="stat-value">${polPrice > 0 ? polPrice.toFixed(4) : 'LOADING...'}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">LAST UPDATE:</span>
-              <span className="stat-value">{new Date().toLocaleTimeString()}</span>
-            </div>
-          </div>
+      </div>
+    );
+  };
+  
+  // Render right panel content
+  const renderRightPanel = () => {
+    const isPriceView = rightViewIndex === 0;
+    
+    return (
+      <div 
+        className={`stats-panel right-panel ${isPriceView ? 'price-panel' : 'leaderboard-panel'} ${isRightHighlighted ? 'highlighted' : ''} clickable`}
+        onClick={handleRightPanelClick}
+        onMouseEnter={() => setIsRightHovered(true)}
+        onMouseLeave={() => setIsRightHovered(false)}
+      >
+        <div className="stats-header">
+          {isPriceView ? 'MARKET DATA' : 'TOP DONORS'}
         </div>
+        <div className="stats-content">
+          {isPriceView ? (
+            <>
+              <div className="stat-item price-highlight">
+                <span className="stat-label">POL PRICE:</span>
+                <span className="stat-value">${polPrice > 0 ? polPrice.toFixed(4) : 'LOADING...'}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">LAST UPDATE:</span>
+                <span className="stat-value">{typeof lastUpdated === 'string' ? lastUpdated : lastUpdated.toLocaleTimeString()}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {stats.topDonors && stats.topDonors.length > 0 ? (
+                stats.topDonors.map((donor, index) => (
+                  <div key={donor.address} className="stat-item leaderboard-item">
+                    <span className="stat-label">#{index + 1} {donor.address.substring(0, 6)}...{donor.address.substring(38)}:</span>
+                    <span className="stat-value">{donor.amount.toFixed(5)} POL</span>
+                  </div>
+                ))
+              ) : (
+                <div className="loading-stats">LOADING DONORS...</div>
+              )}
+              <div className="stat-item">
+                <span className="stat-label">LAST UPDATE:</span>
+                <span className="stat-value">{typeof lastUpdated === 'string' ? lastUpdated : lastUpdated.toLocaleTimeString()}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="global-dashboard">
+      <div className="dashboard-header">
+        <div className="dashboard-title">
+          <span className="prompt">&gt;&gt;&gt;</span>
+          <span>PIXELNAUTS GLOBAL IMPACT</span>
+        </div>
+      </div>
+      
+      <div className="dashboard-grid">
+        {renderLeftPanel()}
+        {renderRightPanel()}
       </div>
       
       <div className="dashboard-footer">
@@ -2778,15 +3029,20 @@ const styles = `
   .global-dashboard .dashboard-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
     margin-bottom: 20px;
     font-size: 18px;
     font-weight: bold;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .global-dashboard .dashboard-title {
     color: #0f0;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .global-dashboard .dashboard-grid {
@@ -2800,19 +3056,60 @@ const styles = `
     background-color: #111;
     border: 2px solid #333;
     padding: 15px;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
   }
 
   .global-dashboard .stats-panel:hover {
     border-color: #0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.2);
   }
 
-  .global-dashboard .global-stats {
+  /* Clickable panels */
+  .global-dashboard .stats-panel.clickable {
+    cursor: pointer;
+  }
+
+  .global-dashboard .stats-panel.clickable:hover {
+    border-color: #5f5;
+  }
+
+  /* Highlighted state for auto-cycling */
+  .global-dashboard .stats-panel.highlighted {
+    border-color: #0f0 !important;
+    background-color: #1a1a1a;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
+    animation: highlight-pulse 0.5s ease-in-out;
+  }
+
+  @keyframes highlight-pulse {
+    0%, 100% { 
+      box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
+    }
+    50% { 
+      box-shadow: 0 8px 25px rgba(0, 255, 0, 0.6);
+      transform: translateY(-4px);
+    }
+  }
+
+  /* Panel type styling */
+  .global-dashboard .left-panel.global-stats {
     border-left: 4px solid #0f0;
   }
 
-  .global-dashboard .price-panel {
+  .global-dashboard .left-panel.user-stats {
+    border-left: 4px solid #ff5;
+  }
+
+  .global-dashboard .right-panel.price-panel {
     border-left: 4px solid #5f5;
+  }
+
+  .global-dashboard .right-panel.leaderboard-panel {
+    border-left: 4px solid #f5f;
   }
 
   .global-dashboard .stats-header {
@@ -2837,10 +3134,16 @@ const styles = `
     padding: 5px 0;
     border-bottom: 1px solid #333;
     font-size: 14px;
+    transition: all 0.2s ease;
   }
 
   .global-dashboard .stat-item:last-child {
     border-bottom: none;
+  }
+
+  .global-dashboard .stat-item:hover {
+    background-color: rgba(0, 255, 0, 0.05);
+    padding-left: 5px;
   }
 
   .global-dashboard .stat-label {
@@ -2856,6 +3159,12 @@ const styles = `
   .global-dashboard .carbon-impact .stat-value {
     color: #5f5;
     text-shadow: 0 0 3px rgba(95, 255, 95, 0.5);
+  }
+
+  .global-dashboard .price-highlight .stat-value {
+    color: #ff5;
+    font-weight: bold;
+    text-shadow: 0 0 3px rgba(255, 255, 95, 0.5);
   }
 
   .global-dashboard .loading-stats {
@@ -2875,21 +3184,46 @@ const styles = `
 
   .global-dashboard .leaderboard-item {
     background-color: #0a0a0a;
-    border-left: 3px solid #0f0;
+    border-left: 3px solid;
     padding-left: 8px;
     margin: 2px 0;
+    transition: all 0.2s ease;
   }
 
-  .global-dashboard .price-info {
-    border-top: 1px solid #0f0;
-    margin-top: 10px;
-    padding-top: 8px;
+  .global-dashboard .leaderboard-item:nth-child(1) {
+    border-left-color: #ffd700; /* Gold */
+  }
+
+  .global-dashboard .leaderboard-item:nth-child(2) {
+    border-left-color: #c0c0c0; /* Silver */
+  }
+
+  .global-dashboard .leaderboard-item:nth-child(3) {
+    border-left-color: #cd7f32; /* Bronze */
+  }
+
+  .global-dashboard .leaderboard-item:hover {
+    background-color: #151515;
+    transform: translateX(3px);
   }
 
   .impact-message {
     font-size: 14px;
     color: #0f0;
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+  }
+
+  /* Panel transition effects */
+  .stats-panel {
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .stats-panel .stats-content {
+    transition: opacity 0.2s ease;
+  }
+
+  .stats-panel.highlighted .stats-content {
+    opacity: 0.9;
   }
 
   /* Donation Milestones Styles */
@@ -3225,6 +3559,13 @@ const styles = `
 
   /* Mobile responsiveness for global dashboard */
   @media (max-width: 768px) {
+    .global-dashboard .dashboard-header {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 15px;
+    }
+      
     .global-dashboard .dashboard-grid {
       grid-template-columns: 1fr;
       gap: 15px;
