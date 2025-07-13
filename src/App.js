@@ -1267,7 +1267,7 @@ const QuirkiestAppTab = () => {
         <p>GET THE LATEST VERSION SmartClock v2.7 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockbeta.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv2.7.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
       </div>
