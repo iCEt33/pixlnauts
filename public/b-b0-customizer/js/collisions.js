@@ -1,201 +1,480 @@
-// Function to check collisions between accessories
-const checkAccessoryCollisions = (newModelData, newCategory) => {
+// Simple but accurate voxel collision system using raycasting + CACHING + UI improvements
+// Caches voxel data so we don't recalculate the same models repeatedly
+
+class CachedVoxelSystem {
+  constructor(voxelSize = 0.1) {
+    this.voxelSize = voxelSize;
+    this.modelVoxels = new Map(); // Cache for voxel data
+    this.raycaster = new THREE.Raycaster();
+    this.processingCache = new Map(); // Track what's currently being processed
+  }
+  
+  // Extract voxel centers by testing if points are actually inside solid geometry
+  async extractVoxelCenters(gltfScene, modelId) {
+    // Check if we already have this cached
+    if (this.modelVoxels.has(modelId)) {
+      log(`Using cached voxel data for ${modelId}`);
+      return this.modelVoxels.get(modelId);
+    }
+    
+    // Check if we're already processing this model
+    if (this.processingCache.has(modelId)) {
+      log(`Already processing ${modelId}, waiting for completion...`);
+      return await this.processingCache.get(modelId);
+    }
+    
+    log(`Extracting accurate voxel centers for ${modelId}...`);
+    
+    // Create a promise for this processing and cache it
+    const processingPromise = this._performVoxelExtraction(gltfScene, modelId);
+    this.processingCache.set(modelId, processingPromise);
+    
+    try {
+      const result = await processingPromise;
+      this.processingCache.delete(modelId); // Clean up processing cache
+      return result;
+    } catch (error) {
+      this.processingCache.delete(modelId); // Clean up on error too
+      throw error;
+    }
+  }
+  
+  // The actual voxel extraction work
+  async _performVoxelExtraction(gltfScene, modelId) {
+    // Collect all meshes
+    const meshes = [];
+    gltfScene.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        // Prepare mesh for raycasting
+        child.updateMatrixWorld(true);
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.side = THREE.DoubleSide);
+          } else {
+            child.material.side = THREE.DoubleSide;
+          }
+        }
+        meshes.push(child);
+      }
+    });
+    
+    if (meshes.length === 0) {
+      const emptyResult = [];
+      this.modelVoxels.set(modelId, emptyResult);
+      return emptyResult;
+    }
+    
+    // Get bounding box for the entire model
+    const boundingBox = new THREE.Box3().setFromObject(gltfScene);
+    const voxelCenters = [];
+    
+    // Calculate total iterations for progress tracking
+    const xSteps = Math.ceil((boundingBox.max.x - boundingBox.min.x) / this.voxelSize);
+    const ySteps = Math.ceil((boundingBox.max.y - boundingBox.min.y) / this.voxelSize);
+    const zSteps = Math.ceil((boundingBox.max.z - boundingBox.min.z) / this.voxelSize);
+    
+    let processedSteps = 0;
+    
+    // Process in chunks to avoid freezing
+    const chunkSize = 100; // Increased chunk size since we have better UI feedback now
+    let currentChunk = [];
+    
+    for (let x = boundingBox.min.x; x <= boundingBox.max.x; x += this.voxelSize) {
+      for (let y = boundingBox.min.y; y <= boundingBox.max.y; y += this.voxelSize) {
+        for (let z = boundingBox.min.z; z <= boundingBox.max.z; z += this.voxelSize) {
+          
+          const voxelCenter = new THREE.Vector3(
+            x + this.voxelSize * 0.5,
+            y + this.voxelSize * 0.5,
+            z + this.voxelSize * 0.5
+          );
+          
+          currentChunk.push(voxelCenter);
+          
+          // Process chunk when it's full
+          if (currentChunk.length >= chunkSize) {
+            await this.processVoxelChunk(currentChunk, meshes, voxelCenters);
+            currentChunk = [];
+            
+            // Update progress in UI
+            processedSteps += chunkSize;
+            this.updateCollisionProgress(modelId, processedSteps, xSteps * ySteps * zSteps);
+            
+            // Small delay to prevent freezing
+            await new Promise(resolve => setTimeout(resolve, 1));
+          }
+          
+          processedSteps++;
+        }
+      }
+    }
+    
+    // Process remaining voxels
+    if (currentChunk.length > 0) {
+      await this.processVoxelChunk(currentChunk, meshes, voxelCenters);
+    }
+    
+    // Cache the result
+    this.modelVoxels.set(modelId, voxelCenters);
+    log(`Generated and cached ${voxelCenters.length} accurate voxel centers for ${modelId}`);
+    return voxelCenters;
+  }
+  
+  // Update collision progress in UI
+  updateCollisionProgress(modelId, processed, total) {
+    // Remove percentage display since it's broken
+    const messageElement = document.querySelector('.collision-progress-text');
+    if (messageElement) {
+      messageElement.innerHTML = `Please be patient while collisions are being mapped.<br>This should only take a few seconds.`;
+    }
+  }
+  
+  // Process a chunk of voxels
+  async processVoxelChunk(voxelCenters, meshes, results) {
+    for (const voxelCenter of voxelCenters) {
+      // Test if this voxel center is inside solid geometry
+      if (this.isPointInsideSolidGeometry(voxelCenter, meshes)) {
+        results.push({
+          center: voxelCenter,
+          type: 'solid_voxel'
+        });
+      }
+    }
+  }
+  
+  // Test if a point is inside solid geometry using optimized raycasting
+  isPointInsideSolidGeometry(point, meshes) {
+    // Use fewer directions for speed - just 3 perpendicular rays
+    const directions = [
+      new THREE.Vector3(1, 0, 0),   // +X
+      new THREE.Vector3(0, 1, 0),   // +Y
+      new THREE.Vector3(0, 0, 1)    // +Z
+    ];
+    
+    let insideCount = 0;
+    
+    for (const direction of directions) {
+      this.raycaster.set(point, direction);
+      const intersections = this.raycaster.intersectObjects(meshes, false);
+      
+      // If odd number of intersections, point is inside from this direction
+      if (intersections.length > 0 && intersections.length % 2 === 1) {
+        insideCount++;
+      }
+    }
+    
+    // Point is inside if at least 2 out of 3 directions say it's inside
+    // This is much faster but still accurate for voxel models
+    return insideCount >= 2;
+  }
+  
+  // Check collision between two models using spatial hashing for speed
+  // STOPS IMMEDIATELY when first collision is found
+  checkCollision(modelId1, modelId2, tolerance = 0.05) {
+    const voxels1 = this.modelVoxels.get(modelId1);
+    const voxels2 = this.modelVoxels.get(modelId2);
+    
+    if (!voxels1 || !voxels2) {
+      return { hasCollision: false, reason: 'Model not found in cache' };
+    }
+    
+    // Use spatial hashing for super fast collision detection
+    const cellSize = tolerance * 2; // Grid cell size
+    const spatialGrid = new Map();
+    
+    // Add all voxels from model2 to spatial grid
+    for (const voxel2 of voxels2) {
+      const cellKey = this.getSpatialKey(voxel2.center, cellSize);
+      if (!spatialGrid.has(cellKey)) {
+        spatialGrid.set(cellKey, []);
+      }
+      spatialGrid.get(cellKey).push(voxel2);
+    }
+    
+    // Check each voxel from model1 against nearby cells only
+    // RETURN IMMEDIATELY when first collision is found
+    for (const voxel1 of voxels1) {
+      const cellKey = this.getSpatialKey(voxel1.center, cellSize);
+      
+      // Check the cell and its 26 neighbors (3x3x3 cube around it)
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            const neighborKey = this.getNeighborKey(cellKey, dx, dy, dz);
+            const nearbyVoxels = spatialGrid.get(neighborKey);
+            
+            if (nearbyVoxels) {
+              // Only check voxels in this nearby cell
+              for (const voxel2 of nearbyVoxels) {
+                const distance = voxel1.center.distanceTo(voxel2.center);
+                
+                // IMMEDIATE RETURN - don't check anything else!
+                if (distance <= tolerance) {
+                  return {
+                    hasCollision: true,
+                    distance: distance,
+                    voxel1: voxel1,
+                    voxel2: voxel2
+                  };
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Only reach here if NO collisions were found
+    return { hasCollision: false };
+  }
+  
+  // Get spatial grid key for a position
+  getSpatialKey(position, cellSize) {
+    const x = Math.floor(position.x / cellSize);
+    const y = Math.floor(position.y / cellSize);
+    const z = Math.floor(position.z / cellSize);
+    return `${x},${y},${z}`;
+  }
+  
+  // Get neighbor cell key
+  getNeighborKey(baseKey, dx, dy, dz) {
+    const [x, y, z] = baseKey.split(',').map(Number);
+    return `${x + dx},${y + dy},${z + dz}`;
+  }
+  
+  // Remove model from cache
+  removeModel(modelId) {
+    this.modelVoxels.delete(modelId);
+    this.processingCache.delete(modelId);
+  }
+  
+  // Get voxel centers for a model
+  getVoxelCenters(modelId) {
+    return this.modelVoxels.get(modelId) || [];
+  }
+  
+  // Clear all cached data
+  clearCache() {
+    this.modelVoxels.clear();
+    this.processingCache.clear();
+    log("Voxel cache cleared");
+  }
+}
+
+// Create global instance with caching
+const cachedVoxelSystem = new CachedVoxelSystem(0.1);
+
+// Show collision checking overlay with smart delay to prevent flickering
+const showCollisionProgress = () => {
+  let overlay = document.getElementById('collision-progress-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'collision-progress-overlay';
+    overlay.innerHTML = `
+      <div class="collision-progress-content">
+        <div class="collision-spinner"></div>
+        <div class="collision-progress-text">Please be patient while collisions are being mapped.<br>This should only take a few seconds.</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Add CSS styles with smooth animations
+    const style = document.createElement('style');
+    style.textContent = `
+      #collision-progress-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        font-family: monospace;
+        opacity: 0;
+        transition: all 0.5s ease-in-out;
+        pointer-events: none;
+      }
+      #collision-progress-overlay.visible {
+        background-color: rgba(0, 0, 0, 0.8);
+        opacity: 1;
+        pointer-events: all;
+      }
+      .collision-progress-content {
+        background-color: #111;
+        border: 2px solid #0f0;
+        padding: 30px;
+        text-align: center;
+        color: #0f0;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        transform: scale(0.8);
+        transition: transform 0.3s ease-in-out;
+      }
+      #collision-progress-overlay.visible .collision-progress-content {
+        transform: scale(1);
+      }
+      .collision-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #333;
+        border-top: 4px solid #0f0;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+      .collision-progress-text {
+        font-size: 16px;
+        color: #0f0;
+        line-height: 1.4;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Mark that we want to show progress (but don't show yet)
+  overlay.dataset.shouldShow = 'true';
+  
+  // Only show after 1 second delay to prevent flickering for quick operations
+  setTimeout(() => {
+    // Only show if we still want to show it (collision check might have finished)
+    if (overlay.dataset.shouldShow === 'true') {
+      overlay.style.display = 'flex';
+      // Small delay to ensure display is set before animation
+      setTimeout(() => {
+        overlay.classList.add('visible');
+      }, 10);
+    }
+  }, 1000);
+};
+
+// Hide collision checking overlay with smart cleanup
+const hideCollisionProgress = () => {
+  const overlay = document.getElementById('collision-progress-overlay');
+  if (overlay) {
+    // Mark that we no longer want to show it
+    overlay.dataset.shouldShow = 'false';
+    
+    // If it's currently visible, animate it out
+    if (overlay.style.display === 'flex') {
+      overlay.classList.remove('visible');
+      // Hide completely after animation finishes
+      setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 500);
+    }
+    // If it was never shown, no cleanup needed
+  }
+};
+
+// Collision check function with caching and UI feedback
+const checkAccessoryCollisions = async (newModelData, newCategory) => {
   if (!collisionCheckEnabled) return { hasCollision: false };
   
-  // Get a list of currently loaded accessories (except for the category we're changing)
+  if (!newModelData || !newModelData.filename) return { hasCollision: false };
+  
   const loadedAccessories = [];
   for (const category in loadedModels.accessories) {
     if (category !== newCategory && loadedModels.accessories[category]) {
       loadedAccessories.push({
         model: loadedModels.accessories[category],
-        category: category
+        category: category,
+        modelId: `accessory-${category}`
       });
     }
   }
   
-  // If no other accessories are loaded, there can't be a collision
   if (loadedAccessories.length === 0) return { hasCollision: false };
   
-  // If this is a "None" selection, there won't be a collision
-  if (!newModelData || !newModelData.filename) return { hasCollision: false };
-  
-  // Generate request ID for this collision check
   const collisionCheckId = Date.now() + Math.random();
-  
-  // Store as latest collision check for this category
   loadedModels.latestRequests[`collision-${newCategory}`] = collisionCheckId;
   
-  // Load the new model without displaying it to check for collisions
+  // Show progress overlay
+  showCollisionProgress();
+  
   return new Promise((resolve) => {
-    // Construct path
     const fullPath = `models/${newModelData.filename}`;
-    
-    // Create a temporary loader
     const tempLoader = new THREE.GLTFLoader();
     
-    // Load the model temporarily to check collisions
     tempLoader.load(
       fullPath,
-      (gltf) => {
+      async (gltf) => {
         try {
-          // Check if this is still the latest collision request for this category
           if (loadedModels.latestRequests[`collision-${newCategory}`] !== collisionCheckId) {
-            log(`Ignoring outdated collision check for ${newModelData.displayName} (ID: ${collisionCheckId})`);
-            resolve({ hasCollision: false }); // Resolve with no collision to allow the latest request to determine
-            return;
-          }
-        
-          const tempModel = gltf.scene.clone();
-          tempModel.scale.set(0.1, 0.1, 0.1); // Match the same scale as the real model
-          
-          // Create a group to hold our temporary model for collision checking
-          const tempGroup = new THREE.Group();
-          tempGroup.add(tempModel);
-          tempGroup.updateMatrixWorld(true);
-          
-          // Collect meshes from the new model
-          const newModelMeshes = [];
-          tempModel.traverse(child => {
-            if (child.isMesh && child.geometry) {
-              newModelMeshes.push(child);
-            }
-          });
-          
-          // Debug info
-          log(`Found ${newModelMeshes.length} meshes in new model`);
-          
-          // No meshes found? Fallback to bounding box with a smaller size
-          if (newModelMeshes.length === 0) {
+            log(`Ignoring outdated collision check for ${newModelData.displayName}`);
+            hideCollisionProgress();
             resolve({ hasCollision: false });
-            scene.remove(tempGroup);
             return;
           }
           
-          // Check collision with each loaded accessory
+          // Use consistent model ID based on filename for caching
+          const tempModelId = `model-${newModelData.filename}`;
+          const tempScene = gltf.scene.clone();
+          tempScene.scale.set(0.1, 0.1, 0.1);
+          tempScene.updateMatrixWorld(true);
+          
+          // Extract voxel centers using cached system
+          const tempVoxels = await cachedVoxelSystem.extractVoxelCenters(tempScene, tempModelId);
+          
+          if (tempVoxels.length === 0) {
+            log(`No voxel centers found for ${newModelData.displayName}`);
+            hideCollisionProgress();
+            resolve({ hasCollision: false });
+            return;
+          }
+          
           let collisionDetected = false;
           let collidingWith = '';
           
           for (const accessory of loadedAccessories) {
-            // Force matrix update for existing model
-            accessory.model.updateMatrixWorld(true);
+            // Use consistent model ID based on filename for existing accessories too
+            const existingModel = accessory.model;
+            let existingFilename = '';
             
-            // Collect meshes from existing model
-            const existingMeshes = [];
-            accessory.model.traverse(child => {
-              if (child.isMesh && child.geometry) {
-                existingMeshes.push(child);
-              }
-            });
-            
-            // Debug info
-            log(`Found ${existingMeshes.length} meshes in existing ${accessory.category} model`);
-            
-            // No meshes in existing model? Skip it
-            if (existingMeshes.length === 0) continue;
-            
-            // We'll sample points from one model and check if they're inside the other
-            // This is more efficient than full mesh-to-mesh collision
-            
-            // First, get bounding boxes for quick culling
-            const newBoundingBox = new THREE.Box3().setFromObject(tempModel);
-            const existingBoundingBox = new THREE.Box3().setFromObject(accessory.model);
-            
-            // If bounding boxes don't intersect, we can quickly say no collision
-            if (!newBoundingBox.intersectsBox(existingBoundingBox)) {
-              continue;
+            // Try to get filename from userData first
+            if (existingModel.userData && existingModel.userData.modelData && existingModel.userData.modelData.filename) {
+              existingFilename = existingModel.userData.modelData.filename;
+            } else {
+              // Fallback to old method
+              existingFilename = accessory.modelId;
             }
             
-            // Bounding boxes intersect, so we need to do more detailed checking
+            const existingModelId = `model-${existingFilename}`;
             
-            // Create raycasters for collision detection
-            const raycaster = new THREE.Raycaster();
+            // Extract voxels for existing model if not cached
+            if (!cachedVoxelSystem.getVoxelCenters(existingModelId).length) {
+              await cachedVoxelSystem.extractVoxelCenters(accessory.model, existingModelId);
+            }
             
-            // Sample each mesh from new model against each mesh from existing model
-            for (const newMesh of newModelMeshes) {
-              // Skip if collision already detected
-              if (collisionDetected) break;
+            const collisionResult = cachedVoxelSystem.checkCollision(
+              tempModelId, 
+              existingModelId,
+              0.05
+            );
+            
+            if (collisionResult.hasCollision) {
+              const categoryKey = accessory.category;
+              const categoryIndex = currentSelections[`accessories-${categoryKey}`];
+              collidingWith = modelDefinitions.accessories[categoryKey][categoryIndex].displayName;
               
-              // For accurate testing, work with the geometry in its final position
-              const newGeometry = newMesh.geometry.clone();
-              
-              // We need to apply the world matrix transformations to get vertices in world space
-              const worldMatrix = newMesh.matrixWorld;
-              newGeometry.applyMatrix4(worldMatrix);
-              
-              // Get vertices from the new model geometry
-              // We'll sample a subset of vertices to keep performance reasonable
-              const newVertices = [];
-              const positionAttribute = newGeometry.getAttribute('position');
-              
-              // Get a reasonable number of vertices to test (max 100)
-              const totalVertices = positionAttribute.count;
-              const stride = Math.max(1, Math.floor(totalVertices / 100));
-              
-              // Sample vertices at regular intervals
-              for (let i = 0; i < totalVertices; i += stride) {
-                const vertex = new THREE.Vector3(
-                  positionAttribute.getX(i),
-                  positionAttribute.getY(i),
-                  positionAttribute.getZ(i)
-                );
-                newVertices.push(vertex);
-              }
-              
-              // For each vertex, check if it's close to any mesh in the existing model
-              for (const vertex of newVertices) {
-                // Skip if collision already detected
-                if (collisionDetected) break;
-                
-                for (const existingMesh of existingMeshes) {
-                  // Skip if collision already detected
-                  if (collisionDetected) break;
-                  
-                  // Create a sphere at this vertex position
-                  const sphereRadius = 0.02; // Small radius for proximity detection
-                  
-                  // Use raycasting from 6 directions to check for proximity
-                  const directions = [
-                    new THREE.Vector3(1, 0, 0),
-                    new THREE.Vector3(-1, 0, 0),
-                    new THREE.Vector3(0, 1, 0),
-                    new THREE.Vector3(0, -1, 0),
-                    new THREE.Vector3(0, 0, 1),
-                    new THREE.Vector3(0, 0, -1)
-                  ];
-                  
-                  for (const direction of directions) {
-                    // Skip if collision already detected
-                    if (collisionDetected) break;
-                    
-                    // Cast a ray from the vertex in this direction
-                    raycaster.set(vertex, direction.normalize());
-                    
-                    // Intersect with the existing mesh
-                    const intersects = raycaster.intersectObject(existingMesh, false);
-                    
-                    // If we hit something within our proximity sphere, it's a collision
-                    if (intersects.length > 0 && intersects[0].distance < sphereRadius) {
-                      // Get the display name of what this item is colliding with
-                      const categoryKey = accessory.category;
-                      const categoryIndex = currentSelections[`accessories-${categoryKey}`];
-                      const collidingItemName = modelDefinitions.accessories[categoryKey][categoryIndex].displayName;
-                      
-                      collisionDetected = true;
-                      collidingWith = collidingItemName;
-                      
-                      log(`Collision detected: ${newModelData.displayName} collides with ${collidingItemName}`);
-                      break;
-                    }
-                  }
-                }
-              }
+              collisionDetected = true;
+              log(`Cached collision: ${newModelData.displayName} vs ${collidingWith} (distance: ${collisionResult.distance.toFixed(4)})`);
+              break;
             }
           }
           
-          // Clean up
-          scene.remove(tempGroup);
+          // Don't clean up temp model from cache - keep it for reuse!
+          // cachedVoxelSystem.removeModel(tempModelId);
           
-          // Return result
+          // Hide progress overlay
+          hideCollisionProgress();
+          
           if (collisionDetected) {
             resolve({
               hasCollision: true,
@@ -205,39 +484,46 @@ const checkAccessoryCollisions = (newModelData, newCategory) => {
           } else {
             resolve({ hasCollision: false });
           }
+          
         } catch (error) {
-          // If there was an error, assume no collision to prevent blocking the UI
-          log(`Error during collision check: ${error.message}`);
-          scene.remove(tempGroup);
+          log(`Error during cached collision check: ${error.message}`);
+          hideCollisionProgress();
           resolve({ hasCollision: false });
         }
       },
       undefined,
       (error) => {
-        // If load failed, assume no collision to prevent blocking the UI
         log(`Error loading model for collision check: ${error.message}`);
+        hideCollisionProgress();
         resolve({ hasCollision: false });
       }
     );
   });
 };
 
-// Function to show collision warning
+// Visualization functions - DISABLED for performance
+let debugGroups = [];
+
+const showVoxelVisualization = () => {
+  // Visualization disabled - collision detection works without it
+  log("Voxel visualization disabled for performance");
+};
+
+const clearVoxelVisualization = () => {
+  debugGroups.forEach(group => scene.remove(group));
+  debugGroups = [];
+};
+
+// Keep existing UI functions
 const showCollisionWarning = (collisionInfo) => {
   const warningElement = document.getElementById('collision-warning');
   const messageElement = document.getElementById('collision-message');
   
   if (collisionInfo.hasCollision) {
-    // Update message with specific items that are colliding
     messageElement.textContent = `Item "${collisionInfo.newItemName}" collides with "${collisionInfo.collidingWith}". Please choose something else.`;
-    
-    // Show the warning
     warningElement.style.display = 'flex';
-    
-    // Store current collision
     currentCollision = collisionInfo;
     
-    // Automatically hide after 5 seconds
     setTimeout(() => {
       if (currentCollision === collisionInfo) {
         hideCollisionWarning();
@@ -251,14 +537,12 @@ const showCollisionWarning = (collisionInfo) => {
   }
 };
 
-// Function to hide collision warning
 const hideCollisionWarning = () => {
   const warningElement = document.getElementById('collision-warning');
   warningElement.style.display = 'none';
   currentCollision = null;
 };
 
-// Function to add collision toggle button
 const addCollisionToggle = () => {
   const buttonsGroup = document.querySelector('.buttons-group');
   const collisionToggle = document.createElement('button');
@@ -266,16 +550,13 @@ const addCollisionToggle = () => {
   collisionToggle.className = 'toggle-button active';
   collisionToggle.textContent = 'Collision Check: ON';
   
-  // Add to buttons group
   buttonsGroup.appendChild(collisionToggle);
   
-  // Add event listener
   collisionToggle.addEventListener('click', () => {
     collisionCheckEnabled = !collisionCheckEnabled;
     collisionToggle.textContent = `Collision Check: ${collisionCheckEnabled ? 'ON' : 'OFF'}`;
     collisionToggle.classList.toggle('active', collisionCheckEnabled);
     
-    // Hide any existing warning when disabled
     if (!collisionCheckEnabled) {
       hideCollisionWarning();
     }
@@ -284,7 +565,7 @@ const addCollisionToggle = () => {
   });
 };
 
-// Function to recheck all accessories for collisions when something changes
+// YOUR WORKING RECHECK LOGIC - this is what makes accessory reapplication work correctly
 const recheckAllAccessories = async () => {
   if (!collisionCheckEnabled) return;
   
@@ -452,3 +733,44 @@ const recheckAllAccessories = async () => {
   // Hide any collision warnings that might be showing
   hideCollisionWarning();
 };
+
+// NEW: Function to sync UI state with loaded models (call this after major changes)
+const syncUIWithLoadedModels = () => {
+  log("Syncing UI state with loaded models");
+  
+  const subcategories = ['clothes', 'face', 'head'];
+  
+  for (const subcategory of subcategories) {
+    const categoryKey = `accessories-${subcategory}`;
+    const isCurrentlyLoaded = loadedModels.accessories[subcategory] !== null;
+    const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
+    
+    if (currentElem) {
+      if (isCurrentlyLoaded) {
+        // Model is loaded - show as active
+        currentElem.classList.remove('collision');
+        currentElem.classList.add('active');
+        collidingAccessories[subcategory] = false;
+      } else if (currentSelections[categoryKey] === 0) {
+        // "None" selected - show as neither active nor collision
+        currentElem.classList.remove('collision');
+        currentElem.classList.remove('active');
+        collidingAccessories[subcategory] = false;
+      } else {
+        // Something selected but not loaded - check if it's because of collision
+        if (collidingAccessories[subcategory]) {
+          currentElem.classList.remove('active');
+          currentElem.classList.add('collision');
+        } else {
+          // Shouldn't happen, but handle it
+          currentElem.classList.remove('collision');
+          currentElem.classList.remove('active');
+        }
+      }
+    }
+  }
+  
+  updatePrices();
+};
+
+log("Cached voxel collision system with your working recheck logic and smooth UI animations!");
