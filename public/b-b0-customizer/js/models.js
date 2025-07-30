@@ -2,7 +2,13 @@
 const modelDefinitions = {
   body: [
     { id: "body_white", filename: "body_white.glb", displayName: "White", price: 5 },
+    { id: "body_red", filename: "body_red.glb", displayName: "Red", price: 6 },
+    { id: "body_orange", filename: "body_orange.glb", displayName: "Orange", price: 6 },
+    { id: "body_yellow", filename: "body_yellow.glb", displayName: "Yellow", price: 6 },
     { id: "body_green", filename: "body_green.glb", displayName: "Green", price: 6 },
+    { id: "body_blue", filename: "body_blue.glb", displayName: "Blue", price: 6 },
+    { id: "body_purple", filename: "body_purple.glb", displayName: "Purple", price: 6 },
+    { id: "body_black", filename: "body_black.glb", displayName: "Black", price: 6 },
     { id: "body_pirate", filename: "body_pirate.glb", displayName: "Pirate", price: 9 },
     { id: "body_welded", filename: "body_welded.glb", displayName: "Welded", price: 10 },
     { id: "body_heart", filename: "body_heart.glb", displayName: "Heart", price: 10 },
@@ -15,6 +21,7 @@ const modelDefinitions = {
     { id: "body_circuitboard", filename: "body_circuitboard.glb", displayName: "Circuit Board", price: 20 },
     { id: "body_camo", filename: "body_camo.glb", displayName: "Camo", price: 15 },
     { id: "body_devil", filename: "body_devil.glb", displayName: "Devil", price: 666 },
+    { id: "body_gold", filename: "body_gold.glb", displayName: "Gold", price: 1000 },
   ],
   face: [
     { id: "face_smile", filename: "face_smile.glb", displayName: "Smile", price: 1 },
@@ -47,6 +54,12 @@ const modelDefinitions = {
   ],
   screen: [
     { id: "screen_green", filename: "screen_green.glb", displayName: "Green", price: 2 },
+    { id: "screen_red", filename: "screen_red.glb", displayName: "Red", price: 3 },
+    { id: "screen_orange", filename: "screen_orange.glb", displayName: "Orange", price: 3 },
+    { id: "screen_yellow", filename: "screen_yellow.glb", displayName: "Yellow", price: 3 },
+    { id: "screen_blue", filename: "screen_blue.glb", displayName: "Blue", price: 3 },
+    { id: "screen_purple", filename: "screen_purple.glb", displayName: "Purple", price: 3 },
+    { id: "screen_black", filename: "screen_black.glb", displayName: "Black", price: 3 },
     { id: "screen_broken", filename: "screen_broken.glb", displayName: "Broken", price: 5 },
     { id: "screen_scratched", filename: "screen_scratched.glb", displayName: "Scratched", price: 3 },
     { id: "screen_freckles", filename: "screen_freckles.glb", displayName: "Freckles", price: 3 },
