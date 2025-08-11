@@ -1215,9 +1215,29 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
       )}
       {/* Keep the Discord invite button for all devices */}
       <div className={`beebo-links ${isMobile ? 'mobile-only-links' : 'secondary-links'}`}>
-        <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button">
+        <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button discord-button">
           <span className="whitepaper-button-text">INVITE BEEBO TO YOUR DISCORD SERVER!</span>
         </a>
+      </div>
+      
+      <div className="beebo-community-section">
+        <p>
+          <ScrambleText 
+            text="Want to submit your own ideas or assets for the B-b0 customizer? Navigate to the SOCIALS tab to find our Discord community!" 
+            speed={10} 
+          />
+        </p>
+        <p>
+          <ScrambleText 
+            text="For those interested in the physical version, check out our open source Project: Mango" 
+            speed={10} 
+          />
+        </p>
+        <div className="beebo-links">
+          <a href="https://github.com/iCEt33/beebo-robot" target="_blank" rel="noopener noreferrer" className="pixel-button mango-button">
+            <span className="whitepaper-button-text">PROJECT: MANGO (OPEN SOURCE)</span>
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -2441,6 +2461,32 @@ const styles = `
       calc(100% - 4px) 100%, 
       0 100%
     );
+  }
+
+  /* Mango button styling */
+  .mango-button {
+    background-color: #ff8c00 !important;
+    box-shadow: 4px 4px 0 #cc7000 !important;
+  }
+
+  .mango-button:hover {
+    background-color: #ffa500 !important;
+    box-shadow: 2px 2px 0 #cc7000 !important;
+  }
+
+  /* Discord button styling */
+  .discord-button {
+    background-color: #7289da !important;
+    box-shadow: 4px 4px 0 #5b6eae !important;
+  }
+
+  .discord-button:hover {
+    background-color: #8ea1e1 !important;
+    box-shadow: 2px 2px 0 #5b6eae !important;
+  }
+
+  .discord-button .whitepaper-button-text {
+    color: #fff !important;
   }
 
   .spinning-status {
