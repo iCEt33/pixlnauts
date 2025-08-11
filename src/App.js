@@ -1284,11 +1284,14 @@ const QuirkiestAppTab = () => {
         <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v2.8 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v2.9 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv2.8.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv2.9.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="pixel-button">
+          <span className="whitepaper-button-text">GET FROM PLAY STORE</span>
         </a>
       </div>
     </div>
@@ -2737,8 +2740,10 @@ const styles = `
   
   .app-download {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: 15px;
     margin-top: 30px;
   }
   
@@ -2746,8 +2751,8 @@ const styles = `
     position: relative;
     overflow: hidden;
   }
-  
-  .app-download .pixel-button::before {
+
+  .app-download .pixel-button:last-child::before {
     content: '';
     position: absolute;
     top: -50%;
@@ -2757,10 +2762,10 @@ const styles = `
     background: linear-gradient(
       45deg, 
       rgba(0, 255, 0, 0) 0%,
-      rgba(0, 255, 0, 0.2) 50%,
+      rgba(0, 255, 0, 0.6) 50%,
       rgba(0, 255, 0, 0) 100%
     );
-    animation: shimmer 3s infinite linear;
+    animation: shimmer 2s infinite linear;
     z-index: 1;
     pointer-events: none;
   }
