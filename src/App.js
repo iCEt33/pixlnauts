@@ -926,49 +926,25 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
     updateHeight();
     
     if (isOpen && contentRef.current) {
-      // Improved scrolling that ensures content isn't cut off at bottom
+      // Simple scrolling logic focused on tab header positioning
       setTimeout(() => {
         if (tabRef.current) {
           const tabRect = tabRef.current.getBoundingClientRect();
-          const topOffset = 120; // Space for logo at top
-          const bottomPadding = 60; // Extra space at bottom of viewport
+          const topOffset = 140; // Space for logo at top - nice comfortable margin
           
-          // Calculate total content height (header + expanded content)
-          const totalContentHeight = tabRect.height + contentRef.current.scrollHeight;
+          // Check if tab header is well-positioned
+          const headerTop = tabRect.top;
+          const needsScrolling = headerTop < topOffset || headerTop > window.innerHeight * 0.3;
           
-          // Check if bottom of expanded content would be visible in viewport
-          const tabBottom = tabRect.bottom + contentRef.current.scrollHeight;
-          const bottomWouldBeCutOff = tabBottom > window.innerHeight - bottomPadding;
-          
-          // Check if tab header is visible
-          const headerIsVisible = tabRect.top >= topOffset && tabRect.top <= window.innerHeight - topOffset;
-          
-          // If content is too large to fit entirely in viewport, prioritize showing as much as possible
-          if (totalContentHeight > window.innerHeight - topOffset - bottomPadding) {
-            // Position tab as high as possible while respecting top offset
+          if (needsScrolling) {
+            // Always position the tab header at the topOffset for consistency
             window.scrollTo({
-              top: window.scrollY + tabRect.top - topOffset,
-              behavior: 'smooth'
-            });
-          } 
-          // If header is visible but bottom would be cut off, scroll to show more of the bottom
-          else if (headerIsVisible && bottomWouldBeCutOff) {
-            // Scroll just enough to show bottom content with padding
-            window.scrollTo({
-              top: window.scrollY + (tabBottom - window.innerHeight + bottomPadding),
+              top: window.scrollY + headerTop - topOffset,
               behavior: 'smooth'
             });
           }
-          // If header is not visible, scroll to position it properly
-          else if (!headerIsVisible) {
-            window.scrollTo({
-              top: window.scrollY + tabRect.top - topOffset,
-              behavior: 'smooth'
-            });
-          }
-          // Otherwise, no scrolling needed - everything fits nicely
         }
-      }, 50); // Small delay to allow for DOM updates
+      }, 250); // Small delay to allow for DOM updates
     }
   }, [isOpen, updateHeight]);
   
@@ -1184,10 +1160,10 @@ const QuirkiestAppTab = () => {
         <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v2.9 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v3.1 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv2.9.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv3.1.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
         <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="pixel-button">
