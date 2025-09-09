@@ -1,5 +1,10 @@
 /* global BigInt */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+// Import RainbowKit hooks
+import { useAccount, useBalance, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { parseEther } from 'viem';
+import { WalletProvider } from './WalletProvider';
 
 const isMobileDevice = () => {
   return (
@@ -686,156 +691,41 @@ const Logo = () => {
   );
 };
 
-// Wallet connection component with real Web3 implementation
+// Wallet connection component with RainbowKit
 const WalletDonation = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [polBalance, setPolBalance] = useState('0.0000');
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { data: balance } = useBalance({
+    address: address,
+    enabled: !!address,
+  });
+  
   const [donationAmount, setDonationAmount] = useState('0.00000');
-  const [isTransacting, setIsTransacting] = useState(false);
   const [txHash, setTxHash] = useState('');
   
   const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
-  const POLYGON_CHAIN_ID = '0x89'; // 137 in hex
-  const POLYGON_RPC = 'https://polygon-rpc.com';
   
-  // Update balance function
-  const updateBalance = useCallback(async (address) => {
-    try {
-      const balance = await window.ethereum.request({
-        method: 'eth_getBalance',
-        params: [address, 'latest'],
-      });
-      
-      // Convert from wei to POL (18 decimals)
-      const balanceInPol = parseInt(balance, 16) / Math.pow(10, 18);
-      setPolBalance(balanceInPol.toFixed(4));
-    } catch (error) {
-      console.error('Failed to get balance:', error);
-      setPolBalance('0.0000');
-    }
-  }, []);
-  
-  // Ensure Polygon network function
-  const ensurePolygonNetwork = useCallback(async () => {
-    try {
-      // Check current network
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      
-      if (chainId !== POLYGON_CHAIN_ID) {
-        try {
-          // Try to switch to Polygon
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: POLYGON_CHAIN_ID }],
-          });
-        } catch (switchError) {
-          // If the chain isn't added, add it
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [
-                {
-                  chainId: POLYGON_CHAIN_ID,
-                  chainName: 'Polygon Mainnet',
-                  nativeCurrency: {
-                    name: 'POL',
-                    symbol: 'POL',
-                    decimals: 18,
-                  },
-                  rpcUrls: [POLYGON_RPC],
-                  blockExplorerUrls: ['https://polygonscan.com/'],
-                },
-              ],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to switch to Polygon network:', error);
-      alert('Please manually switch to Polygon network in your wallet.');
-    }
-  }, [POLYGON_CHAIN_ID, POLYGON_RPC]);
-  
-  // Removed automatic connection check - user must explicitly connect
-  
-  // Handle account changes
-  const handleAccountsChanged = useCallback((accounts) => {
-    if (accounts.length === 0) {
-      setIsConnected(false);
-      setWalletAddress('');
-      setPolBalance('0.0000');
-      setDonationAmount('0.00000');
-      setTxHash('');
-    } else {
-      setWalletAddress(accounts[0]);
-      updateBalance(accounts[0]);
-    }
-  }, [updateBalance]);
-  
-  // Handle chain changes
-  const handleChainChanged = useCallback((chainId) => {
-    // Only reload if we're already connected and it's not switching to Polygon
-    if (isConnected && chainId !== POLYGON_CHAIN_ID) {
-      // Give a small delay to avoid reloading during connection process
-      setTimeout(() => {
-        console.log('Chain changed to non-Polygon network, reloading...');
-        window.location.reload();
-      }, 2000);
-    }
-  }, [isConnected, POLYGON_CHAIN_ID]);
-  
-  // Setup wallet listeners on mount
+  const { data: txData, sendTransaction, isPending: isTransacting } = useSendTransaction();
+  const { isLoading: isWaitingForTx } = useWaitForTransactionReceipt({
+    hash: txData,
+    query: {
+      enabled: !!txData,
+    },
+  });
+
+  // Handle transaction success/error with useEffect
   useEffect(() => {
-    // Don't automatically check connection - user must explicitly connect
-    
-    // Listen for account changes
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
+    if (txData && !isWaitingForTx) {
+      setTxHash(txData);
+      setDonationAmount('0.00000');
+      alert(`Transaction successful! Hash: ${txData}\n\nYou can view it on Polygonscan: https://polygonscan.com/tx/${txData}`);
     }
-    
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
-      }
-    };
-  }, [handleAccountsChanged, handleChainChanged]);
-  
-  // Connect wallet function
-  const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts.length > 0) {
-          setIsConnected(true);
-          const address = accounts[0];
-          setWalletAddress(address);
-          await updateBalance(address);
-          await ensurePolygonNetwork();
-        }
-      } catch (error) {
-        console.error('Failed to connect wallet:', error);
-        if (error.code === 4001) {
-          alert('Please accept the connection request in your wallet.');
-        } else {
-          alert('Failed to connect wallet. Please try again.');
-        }
-      }
-    } else {
-      alert('Please install MetaMask or another Web3 wallet to continue.\n\nYou can download MetaMask from: https://metamask.io');
-    }
-  };
+  }, [txData, isWaitingForTx]);
   
   // Disconnect function that reloads page but skips boot sequence
-  const disconnect = () => {
-    // Set a flag in localStorage to skip boot sequence on reload
+  const handleDisconnect = () => {
     localStorage.setItem('skipBootSequence', 'true');
-    
-    // Reload the page to fully disconnect from wallet extension
+    disconnect();
     window.location.reload();
   };
   
@@ -846,60 +736,31 @@ const WalletDonation = () => {
   
   // Set max amount (minus gas)
   const setMaxAmount = () => {
-    const maxAmount = Math.max(0, parseFloat(polBalance) - 0.01);
-    setDonationAmount(maxAmount.toFixed(5));
+    if (balance?.formatted) {
+      const maxAmount = Math.max(0, parseFloat(balance.formatted) - 0.01);
+      setDonationAmount(maxAmount.toFixed(5));
+    }
   };
   
   // Handle donation transaction
   const handleDonate = async () => {
     if (!isConnected || parseFloat(donationAmount) <= 0) return;
     
-    setIsTransacting(true);
-    setTxHash('');
-    
     try {
-      // Ensure we're on Polygon network
-      await ensurePolygonNetwork();
-      
-      // Convert amount to wei (18 decimals)
-      const amountInWei = '0x' + (parseFloat(donationAmount) * Math.pow(10, 18)).toString(16).split('.')[0];
-      
-      // Send transaction
-      const txHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: walletAddress,
-            to: targetAddress,
-            value: amountInWei,
-            gas: '0x5208', // 21000 gas limit for simple transfer
-          },
-        ],
+      await sendTransaction({
+        to: targetAddress,
+        value: parseEther(donationAmount),
       });
-      
-      setTxHash(txHash);
-      alert(`Transaction sent! Hash: ${txHash}\n\nYou can view it on Polygonscan: https://polygonscan.com/tx/${txHash}`);
-      
-      // Reset amount and update balance after successful transaction
-      setDonationAmount('0.00000');
-      
-      // Wait a bit then update balance
-      setTimeout(() => {
-        updateBalance(walletAddress);
-      }, 3000);
-      
     } catch (error) {
       console.error('Transaction failed:', error);
       
-      if (error.code === 4001) {
+      if (error.message?.includes('rejected')) {
         alert('Transaction was rejected by user.');
-      } else if (error.code === -32603) {
+      } else if (error.message?.includes('insufficient funds')) {
         alert('Transaction failed. You may have insufficient funds for gas fees.');
       } else {
         alert(`Transaction failed: ${error.message || 'Unknown error'}`);
       }
-    } finally {
-      setIsTransacting(false);
     }
   };
   
@@ -907,9 +768,48 @@ const WalletDonation = () => {
   if (!isConnected) {
     return (
       <div className="wallet-connect">
-        <button onClick={connectWallet} className="pixel-button wallet-connect-btn">
-          <span className="whitepaper-button-text">CONNECT WALLET</span>
-        </button>
+        <div className="rainbow-connect-wrapper">
+          <ConnectButton.Custom>
+            {({
+              account,
+              chain,
+              openAccountModal,
+              openChainModal,
+              openConnectModal,
+              mounted,
+            }) => {
+              const ready = mounted;
+              const connected = ready && account && chain;
+
+              return (
+                <div
+                  {...(!ready && {
+                    'aria-hidden': true,
+                    'style': {
+                      opacity: 0,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    },
+                  })}
+                >
+                  {(() => {
+                    if (!connected) {
+                      return (
+                        <button 
+                          onClick={openConnectModal} 
+                          className="pixel-button wallet-connect-btn"
+                        >
+                          <span className="whitepaper-button-text">CONNECT WALLET</span>
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              );
+            }}
+          </ConnectButton.Custom>
+        </div>
         <div className="wallet-info-text">
           <p>Connect your wallet to donate POL directly to PIXLNAUTS on Polygon network.</p>
         </div>
@@ -923,9 +823,9 @@ const WalletDonation = () => {
       <div className="wallet-header">
         <div className="wallet-info">
           <span className="wallet-label">WALLET:</span>
-          <span className="wallet-address">{walletAddress.substring(0, 6)}...{walletAddress.substring(38)}</span>
+          <span className="wallet-address">{address?.substring(0, 6)}...{address?.substring(38)}</span>
         </div>
-        <button onClick={disconnect} className="disconnect-btn">[DISCONNECT]</button>
+        <button onClick={handleDisconnect} className="disconnect-btn">[DISCONNECT]</button>
       </div>
       
       <div className="donation-panel">
@@ -949,7 +849,7 @@ const WalletDonation = () => {
               className="amount-input"
               step="0.00001"
               min="0"
-              max={polBalance}
+              max={balance?.formatted || '0'}
               placeholder="0.00000"
             />
             <button onClick={setMaxAmount} className="max-btn">[MAX]</button>
@@ -965,13 +865,13 @@ const WalletDonation = () => {
         <button 
           onClick={handleDonate} 
           className="donate-btn"
-          disabled={isTransacting || parseFloat(donationAmount) <= 0 || parseFloat(donationAmount) > parseFloat(polBalance)}
+          disabled={isTransacting || isWaitingForTx || parseFloat(donationAmount) <= 0 || parseFloat(donationAmount) > parseFloat(balance?.formatted || '0')}
         >
-          {isTransacting ? '[PROCESSING...]' : `[DONATE ${parseFloat(donationAmount || 0).toFixed(5)} POL]`}
+          {(isTransacting || isWaitingForTx) ? '[PROCESSING...]' : `[DONATE ${parseFloat(donationAmount || 0).toFixed(5)} POL]`}
         </button>
         
         <div className="available-balance">
-          AVAILABLE: {polBalance} POL
+          AVAILABLE: {balance?.formatted ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} POL
         </div>
         
         {txHash && (
@@ -2466,6 +2366,46 @@ const styles = `
     );
   }
 
+  /* RainbowKit custom styling */
+  .rainbow-connect-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  /* Override RainbowKit button to match our pixel theme */
+  .rainbow-connect-wrapper button {
+    background-color: #0f0 !important;
+    color: #000 !important;
+    border: none !important;
+    font-family: 'PixelFont', monospace !important;
+    font-weight: bold !important;
+    font-size: 18px !important;
+    letter-spacing: 1px !important;
+    padding: 15px 30px !important;
+    box-shadow: 4px 4px 0 #086 !important;
+    clip-path: polygon(
+      0 0, 
+      100% 0, 
+      100% calc(100% - 4px), 
+      calc(100% - 4px) 100%, 
+      0 100%
+    ) !important;
+    transition: all 0.2s ease !important;
+    image-rendering: pixelated !important;
+  }
+
+  .rainbow-connect-wrapper button:hover {
+    background-color: #0c0 !important;
+    transform: translate(2px, 2px) !important;
+    box-shadow: 2px 2px 0 #086 !important;
+  }
+
+  .rainbow-connect-wrapper button:active {
+    transform: translate(4px, 4px) !important;
+    box-shadow: none !important;
+  }
+
   /* Mango button styling */
   .mango-button {
     background-color: #ff8c00 !important;
@@ -3906,10 +3846,10 @@ const StyleSheet = () => {
 // Wrap everything together
 const PixlnautsWebsite = () => {
   return (
-    <>
+    <WalletProvider>
       <StyleSheet />
       <App />
-    </>
+    </WalletProvider>
   );
 };
 
