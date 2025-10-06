@@ -1556,9 +1556,8 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
   
   const fetchTransactionsFromPolygonScan = useCallback(async () => {
     try {
-      const apiKey = '6MSYXMBWYCUPQPU8MJ4T7UN7R634VTRSP8'; 
-      const url = `https://api.polygonscan.com/api?module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`;
-      
+      const apiKey = 'VP2R2EY1PK7YXE6HI2WTHG5D7K117WYRNS'; 
+      const url = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${apiKey}`;      
       const response = await fetch(url);
       const data = await response.json();
       
