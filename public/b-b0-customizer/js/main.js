@@ -162,38 +162,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Add to the container
     buttonsContainer.appendChild(snapshotButton);
-    
-    // Add export GLB button with direct function call
-    const exportButton = document.createElement('button');
-    exportButton.id = 'export-glb-clone';
-    exportButton.textContent = 'Export GLB';
-    exportButton.className = 'toggle-button';
-    
-    // Apply styling (keeping default green for now, can customize)
-    exportButton.style.backgroundColor = '#222';
-    exportButton.style.color = '#0f0';
-    exportButton.style.border = '1px solid #0f0';
-    
-    // Direct event handler for exporting GLB
-    exportButton.addEventListener('click', function() {
-      // Try to call the function directly first
-      if (typeof exportBeeboAsGLB === 'function') {
-        exportBeeboAsGLB();
-        log('GLB export initiated via direct function call');
-      } else {
-        // Try to get the button as fallback
-        const originalExportButton = document.getElementById('export-glb');
-        if (originalExportButton) {
-          originalExportButton.click();
-          log('GLB export initiated via button click');
-        } else {
-          log('Cannot find export function or button');
-        }
-      }
-    });
-    
-    // Add to the container
-    buttonsContainer.appendChild(exportButton);
-    log('Added Export GLB button to the left of renderer');
   }
 });
