@@ -1178,7 +1178,7 @@ const QuirkiestAppTab = () => {
 const DonationMilestonesTab = ({ currentUsdValue }) => {
   const milestones = [
     { name: "NFT Customizer", amount: 450, selfFunded: 0, description: "Smart contract for actually minting your very own custom B-b0s" },
-    { name: "Revenue Card", amount: 350, selfFunded: 0, description: "Smart contract for convertible note inspired dynamic revenue redistribution" },
+    { name: "PxP Flip Phone", amount: 650, selfFunded: 0, description: "Air-gapped hardware wallet in a flip phone" },
     { name: "Project: Cosmos alpha release", amount: 3200, selfFunded: 0, description: "Blockchain integration, multiplayer and performance optimizations" },
     { name: "3D Printer", amount: 750, selfFunded: 0, description: "Physical prototyping capabilities" },
     { name: "Coming Soon", amount: null, selfFunded: 0, description: "Future milestone to be announced" }
