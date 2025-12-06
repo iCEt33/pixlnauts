@@ -261,7 +261,7 @@ const SystemCheck = ({ onComplete }) => {
               });
               
               // Show processing for a short time
-              const processingTime = 300 + Math.random() * 700; // 300-1000ms
+              const processingTime = 300 + Math.random() * 1500; // 300-1000ms
               setTimeout(() => {
                 if (!mounted) return;
                 
@@ -314,7 +314,7 @@ const SystemCheck = ({ onComplete }) => {
     // Each line starts after a fixed delay from the beginning
     lines.forEach((line, index) => {
       // First line appears immediately, subsequent lines appear with staggered delays
-      const baseDelay = index * 700; // Delay between starting each new line
+      const baseDelay = index * 400; // Delay between starting each new line
       typeOutLine(index, baseDelay);
     });
     
@@ -649,7 +649,11 @@ const LoadingAnimation = ({ onComplete }) => {
         <div className="progress-bar" style={{ width: `${progress}%` }}></div>
       </div>
       <div className="loading-text">
-        <ScrambleText text={`LOADING: ${progress}%`} speed={10} />
+        <ScrambleText 
+          text={progress >= 69 ? "LOADING: " : `LOADING: ${progress}%`} 
+          speed={10} 
+        />
+        {progress >= 69 && <span>{progress}%</span>}
       </div>
       <div className="skip-prompt"></div>
     </div>
@@ -1177,22 +1181,22 @@ const QuirkiestAppTab = () => {
 // Donation Milestones tab content
 const DonationMilestonesTab = ({ currentUsdValue }) => {
   const milestones = [
+    { name: "3D Printer", amount: 500, selfFunded: 500, description: "Physical prototyping capabilities" },
     { name: "NFT Customizer", amount: 450, selfFunded: 0, description: "Smart contract for actually minting your very own custom B-b0s" },
     { name: "PxP Flip Phone", amount: 650, selfFunded: 0, description: "Air-gapped hardware wallet in a flip phone" },
     { name: "Project: Cosmos alpha release", amount: 3200, selfFunded: 0, description: "Blockchain integration, multiplayer and performance optimizations" },
-    { name: "3D Printer", amount: 750, selfFunded: 0, description: "Physical prototyping capabilities" },
     { name: "Coming Soon", amount: null, selfFunded: 0, description: "Future milestone to be announced" }
   ];
 
   // Calculate cumulative totals and status for each milestone
   const processedMilestones = [];
-  let cumulativeTotal = 0;
-  
+  let remainingDonations = currentUsdValue; // Track how much donation money is left to allocate
+
   milestones.forEach((milestone, index) => {
     if (milestone.amount === null) {
       processedMilestones.push({
         ...milestone,
-        cumulativeTotal: cumulativeTotal,
+        cumulativeTotal: 0,
         status: 'locked',
         progress: 0,
         isComingSoon: true
@@ -1200,28 +1204,36 @@ const DonationMilestonesTab = ({ currentUsdValue }) => {
       return;
     }
 
-    cumulativeTotal += milestone.amount;
+    const selfFunded = milestone.selfFunded || 0;
+    const neededFromDonations = Math.max(0, milestone.amount - selfFunded);
     
-    let status, progress;
-    const totalFunding = currentUsdValue + (milestone.selfFunded || 0);
-
-    if (totalFunding >= cumulativeTotal) {
+    // How much of the remaining donations goes to this milestone
+    const donationsAllocated = Math.min(remainingDonations, neededFromDonations);
+    const totalFunded = selfFunded + donationsAllocated;
+    
+    // Calculate progress and status
+    const progress = Math.min(100, (totalFunded / milestone.amount) * 100);
+    let status;
+    
+    if (totalFunded >= milestone.amount) {
       status = 'completed';
-      progress = 100;
-    } else if (index === 0 || totalFunding >= (processedMilestones[index - 1]?.cumulativeTotal || 0)) {
+      // Subtract what we used and let the rest spill over
+      remainingDonations -= donationsAllocated;
+    } else if (donationsAllocated > 0 || selfFunded > 0) {
       status = 'in-progress';
-      const previousTotal = index === 0 ? 0 : (processedMilestones[index - 1]?.cumulativeTotal || 0);
-      progress = Math.min(100, ((totalFunding - previousTotal) / milestone.amount) * 100);
+      // Use up all remaining donations for this incomplete milestone
+      remainingDonations = 0;
     } else {
       status = 'locked';
-      progress = 0;
     }
 
     processedMilestones.push({
       ...milestone,
-      cumulativeTotal,
+      cumulativeTotal: milestone.amount,
       status,
-      progress
+      progress,
+      donationsAllocated,
+      totalFunded
     });
   });
 
