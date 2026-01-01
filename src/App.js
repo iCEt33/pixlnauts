@@ -978,7 +978,7 @@ const IntroductionTab = () => {
         <iframe 
           width="100%" 
           height="315" 
-          src="https://youtu.be/F7dctCxL8XM" 
+          src="https://www.youtube.com/watch?v=F7dctCxL8XM" 
           title="Pixelnauts Introduction Video"
           frameBorder="0" 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -987,7 +987,7 @@ const IntroductionTab = () => {
       </div>
       <p>
         <ScrambleText 
-          text="Welcome to PIXLNAUTS, an innovative non-profit environmental project that uses blockchain technology to drive positive change." 
+          text="Welcome to PIXLNAUTS, an innovative environmental project that uses blockchain technology to drive positive change." 
           speed={10} 
         />
       </p>
