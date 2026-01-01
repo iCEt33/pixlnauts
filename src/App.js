@@ -978,7 +978,7 @@ const IntroductionTab = () => {
         <iframe 
           width="100%" 
           height="315" 
-          src="https://www.youtube.com/embed/KSz8VG1Tzm0" 
+          src="https://youtu.be/F7dctCxL8XM" 
           title="Pixelnauts Introduction Video"
           frameBorder="0" 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
