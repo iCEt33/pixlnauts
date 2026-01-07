@@ -18,6 +18,8 @@ const initLoader = async () => {
     // Store extensions for later use
     window.gltfExtensions = gltfExtensions;
     
+    log("gltf-transform loaded successfully with material extensions");
+    
   } catch (error) {
     log(`ERROR: Failed to load gltf-transform - ${error.message}`);
     console.error('Import error:', error);
@@ -41,8 +43,9 @@ const loadAllModels = async () => {
     if (collidingAccessories.face) loadedModels.accessories.face = null;
     if (collidingAccessories.head) loadedModels.accessories.head = null;
     
-    if (!gltfTransform || !gltfFunctions) {
-      log("ERROR: gltf-transform not loaded yet!");
+    // VERIFY ALL REQUIRED LIBRARIES ARE LOADED INCLUDING EXTENSIONS
+    if (!gltfTransform || !gltfFunctions || !window.gltfExtensions) {
+      log("ERROR: gltf-transform or extensions not loaded yet! Waiting...");
       hideLoadingOverlay();
       isCurrentlyLoading = false;
       return;
@@ -73,13 +76,14 @@ const loadAllModels = async () => {
     const io = new gltfTransform.WebIO();
     
     // Register material extensions to preserve transparency
-    if (window.gltfExtensions) {
-      io.registerExtensions([
-        window.gltfExtensions.KHRMaterialsTransmission,
-        window.gltfExtensions.KHRMaterialsIOR,
-        window.gltfExtensions.KHRMaterialsEmissiveStrength
-      ]);
-    }
+    // These MUST be registered before reading any GLB files
+    io.registerExtensions([
+      window.gltfExtensions.KHRMaterialsTransmission,
+      window.gltfExtensions.KHRMaterialsIOR,
+      window.gltfExtensions.KHRMaterialsEmissiveStrength
+    ]);
+    
+    log("Material extensions registered successfully");
     
     // Load first model as base
     const firstModel = modelsToLoad[0];

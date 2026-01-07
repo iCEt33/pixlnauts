@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Add buttons
     const sideButtons = [
-      { id: 'auto-rotate-side', text: 'Auto Rotate', active: true, clickTarget: 'auto-rotate-toggle' },
+      { id: 'auto-rotate-side', text: 'Auto Rotate', active: false, clickTarget: 'auto-rotate-toggle' },
       { id: 'camera-reset-side', text: 'Reset Camera', clickTarget: 'camera-reset' },
       { id: 'performance-side', text: 'Performance', clickTarget: 'performance-toggle' },
       { id: 'snapshot-side', text: 'Snapshot', onClick: () => takeHighResSnapshot() },

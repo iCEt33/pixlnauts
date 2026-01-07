@@ -175,13 +175,13 @@ const modelDefinitions = {
 const loadDefaultModels = async () => {
   // Wait for gltf-transform to be ready
   let attempts = 0;
-  while ((!gltfTransform || !gltfFunctions) && attempts < 50) {
+  while ((!gltfTransform || !gltfFunctions || !window.gltfExtensions) && attempts < 50) {
     await new Promise(resolve => setTimeout(resolve, 100));
     attempts++;
   }
   
-  if (!gltfTransform || !gltfFunctions) {
-    log("ERROR: gltf-transform failed to load after 5 seconds");
+  if (!gltfTransform || !gltfFunctions || !window.gltfExtensions) {
+    log("ERROR: gltf-transform or extensions failed to load after 5 seconds");
     return;
   }
   

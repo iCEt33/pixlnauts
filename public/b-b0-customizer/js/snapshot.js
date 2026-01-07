@@ -8,6 +8,22 @@ const takeHighResSnapshot = async () => {
     return;
   }
   
+  // Store current auto-rotate state
+  const wasAutoRotating = modelViewer.hasAttribute('auto-rotate');
+  
+  // Disable auto-rotate for snapshot
+  if (wasAutoRotating) {
+    modelViewer.removeAttribute('auto-rotate');
+  }
+  
+  // Reset camera EXACTLY like the reset button does
+  modelViewer.resetTurntableRotation();
+  modelViewer.cameraOrbit = '-28deg 90deg 6.5m';
+  modelViewer.fieldOfView = '40deg';
+  
+  // Wait for camera to finish moving
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   // Show a message that snapshot is being generated
   const snapshotMessage = document.createElement('div');
   snapshotMessage.className = 'snapshot-message';
@@ -58,6 +74,11 @@ const takeHighResSnapshot = async () => {
         snapshotMessage.parentNode.removeChild(snapshotMessage);
       }
     }, 3000);
+  }
+  
+  // Restore auto-rotate state
+  if (wasAutoRotating) {
+    modelViewer.setAttribute('auto-rotate', '');
   }
 };
 

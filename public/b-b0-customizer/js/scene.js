@@ -32,15 +32,18 @@ const initScene = () => {
     if (modelViewer) {
       modelViewer.resetTurntableRotation();
       // Match the original Three.js camera position
-      modelViewer.cameraOrbit = '-2.5rad 75deg 6.5m';
+      modelViewer.cameraOrbit = '-28deg 90deg 6.5m';
       modelViewer.fieldOfView = '40deg';
       log('Camera reset to default position');
     }
   });
   
   // Handle auto-rotate toggle
-  let autoRotateEnabled = true;
+  let autoRotateEnabled = false;
   const autoRotateToggle = document.getElementById('auto-rotate-toggle');
+  
+  autoRotateToggle.textContent = `Auto Rotate: OFF`;
+  autoRotateToggle.classList.remove('active');
   
   autoRotateToggle.addEventListener('click', () => {
     autoRotateEnabled = !autoRotateEnabled;
@@ -79,13 +82,13 @@ const togglePerformanceMode = () => {
   
   if (modelViewer) {
     if (performanceMode) {
-      // Performance mode: disable shadows and reduce quality
-      modelViewer.shadowIntensity = 0;
+      // Performance mode: disable shadows completely and reduce quality
+      modelViewer.removeAttribute('shadow-intensity');
       modelViewer.environmentImage = null;
       log("Performance mode enabled - reduced quality");
     } else {
       // High quality mode: enable shadows and lighting
-      modelViewer.shadowIntensity = 1;
+      modelViewer.setAttribute('shadow-intensity', '1');
       modelViewer.environmentImage = 'neutral';
       log("High quality mode enabled - full quality");
     }
