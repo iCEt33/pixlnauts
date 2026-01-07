@@ -374,23 +374,41 @@ const hideCollisionProgress = () => {
 };
 
 // Collision check function with caching and UI feedback
+// Collision check function - checks against SELECTED accessories, not just loaded ones
 const checkAccessoryCollisions = async (newModelData, newCategory) => {
   if (!collisionCheckEnabled) return { hasCollision: false };
   
   if (!newModelData || !newModelData.filename) return { hasCollision: false };
   
-  const loadedAccessories = [];
-  for (const category in loadedModels.accessories) {
-    if (category !== newCategory && loadedModels.accessories[category]) {
-      loadedAccessories.push({
-        model: loadedModels.accessories[category],
-        category: category,
-        modelId: `accessory-${category}`
-      });
-    }
+  // CRITICAL FIX: Check against SELECTED accessories from currentSelections
+  // not just what's currently in loadedModels.accessories
+  const accessoriesToCheck = [];
+  const subcategories = ['clothes', 'face', 'head'];
+  
+  for (const subcategory of subcategories) {
+    // Skip the category we're trying to add
+    if (subcategory === newCategory) continue;
+    
+    // Get what's SELECTED (not what's loaded)
+    const categoryKey = `accessories-${subcategory}`;
+    const selectedIndex = currentSelections[categoryKey];
+    
+    // Skip if "None" is selected
+    if (selectedIndex === 0) continue;
+    
+    // Skip if marked as colliding
+    if (collidingAccessories[subcategory]) continue;
+    
+    // Get the model definition
+    const model = modelDefinitions.accessories[subcategory][selectedIndex];
+    
+    accessoriesToCheck.push({
+      model: model,
+      category: subcategory
+    });
   }
   
-  if (loadedAccessories.length === 0) return { hasCollision: false };
+  if (accessoriesToCheck.length === 0) return { hasCollision: false };
   
   const collisionCheckId = Date.now() + Math.random();
   loadedModels.latestRequests[`collision-${newCategory}`] = collisionCheckId;
@@ -407,23 +425,21 @@ const checkAccessoryCollisions = async (newModelData, newCategory) => {
       async (gltf) => {
         try {
           if (loadedModels.latestRequests[`collision-${newCategory}`] !== collisionCheckId) {
-            log(`Ignoring outdated collision check for ${newModelData.displayName}`);
             hideCollisionProgress();
             resolve({ hasCollision: false });
             return;
           }
           
-          // Use consistent model ID based on filename for caching
+          // Load the new model
           const tempModelId = `model-${newModelData.filename}`;
           const tempScene = gltf.scene.clone();
           tempScene.scale.set(0.1, 0.1, 0.1);
           tempScene.updateMatrixWorld(true);
           
-          // Extract voxel centers using cached system
+          // Extract voxel centers
           const tempVoxels = await cachedVoxelSystem.extractVoxelCenters(tempScene, tempModelId);
           
           if (tempVoxels.length === 0) {
-            log(`No voxel centers found for ${newModelData.displayName}`);
             hideCollisionProgress();
             resolve({ hasCollision: false });
             return;
@@ -432,47 +448,45 @@ const checkAccessoryCollisions = async (newModelData, newCategory) => {
           let collisionDetected = false;
           let collidingWith = '';
           
-          for (const accessory of loadedAccessories) {
-            // Use consistent model ID based on filename for existing accessories too
-            const existingModel = accessory.model;
-            let existingFilename = '';
+          // Check against each SELECTED accessory
+          for (const accessory of accessoriesToCheck) {
+            // Load this accessory's model for collision checking
+            const accessoryPath = `models/${accessory.model.filename}`;
             
-            // Try to get filename from userData first
-            if (existingModel.userData && existingModel.userData.modelData && existingModel.userData.modelData.filename) {
-              existingFilename = existingModel.userData.modelData.filename;
-            } else {
-              // Fallback to old method
-              existingFilename = accessory.modelId;
-            }
+            // Try to get from cache first
+            const existingModelId = `model-${accessory.model.filename}`;
             
-            const existingModelId = `model-${existingFilename}`;
-            
-            // Extract voxels for existing model if not cached
+            // If not cached, load it
             if (!cachedVoxelSystem.getVoxelCenters(existingModelId).length) {
-              await cachedVoxelSystem.extractVoxelCenters(accessory.model, existingModelId);
+              // Load the model synchronously
+              await new Promise((loadResolve) => {
+                const accessoryLoader = new THREE.GLTFLoader();
+                accessoryLoader.load(accessoryPath, async (accessoryGltf) => {
+                  const accessoryScene = accessoryGltf.scene.clone();
+                  accessoryScene.scale.set(0.1, 0.1, 0.1);
+                  accessoryScene.updateMatrixWorld(true);
+                  
+                  await cachedVoxelSystem.extractVoxelCenters(accessoryScene, existingModelId);
+                  loadResolve();
+                });
+              });
             }
             
+            // Now check collision
             const collisionResult = cachedVoxelSystem.checkCollision(
-              tempModelId, 
+              tempModelId,
               existingModelId,
               0.05
             );
             
             if (collisionResult.hasCollision) {
-              const categoryKey = accessory.category;
-              const categoryIndex = currentSelections[`accessories-${categoryKey}`];
-              collidingWith = modelDefinitions.accessories[categoryKey][categoryIndex].displayName;
-              
+              collidingWith = accessory.model.displayName;
               collisionDetected = true;
-              log(`Cached collision: ${newModelData.displayName} vs ${collidingWith} (distance: ${collisionResult.distance.toFixed(4)})`);
+              log(`Collision detected: ${newModelData.displayName} vs ${collidingWith}`);
               break;
             }
           }
           
-          // Don't clean up temp model from cache - keep it for reuse!
-          // cachedVoxelSystem.removeModel(tempModelId);
-          
-          // Hide progress overlay
           hideCollisionProgress();
           
           if (collisionDetected) {
@@ -486,7 +500,7 @@ const checkAccessoryCollisions = async (newModelData, newCategory) => {
           }
           
         } catch (error) {
-          log(`Error during cached collision check: ${error.message}`);
+          log(`Error during collision check: ${error.message}`);
           hideCollisionProgress();
           resolve({ hasCollision: false });
         }
@@ -524,11 +538,7 @@ const showCollisionWarning = (collisionInfo) => {
     warningElement.style.display = 'flex';
     currentCollision = collisionInfo;
     
-    setTimeout(() => {
-      if (currentCollision === collisionInfo) {
-        hideCollisionWarning();
-      }
-    }, 5000);
+    // Don't auto-hide - let user dismiss by selecting something else
     
     return true;
   } else {
@@ -569,7 +579,7 @@ const addCollisionToggle = () => {
 const recheckAllAccessories = async () => {
   if (!collisionCheckEnabled) return;
   
-  log("Rechecking all accessories for collisions");
+  // log("Rechecking all accessories for collisions");
   
   // Track which accessories had their collision status changed
   const collisionStatusChanged = {
@@ -659,6 +669,11 @@ const recheckAllAccessories = async () => {
       // Still collides
       collidingAccessories[subcategory] = true;
       
+      // Show collision warning
+      if (collisionResult.collidingWith && collisionResult.newItemName) {
+        showCollisionWarning(collisionResult);
+      }
+      
       // Update UI
       const currentElem = document.querySelector(`.carousel-current[data-category="${categoryKey}"]`);
       if (currentElem) {
@@ -707,8 +722,6 @@ const recheckAllAccessories = async () => {
     
     // Force-remove any existing model first to ensure clean loading
     if (loadedModels.accessories[subcategory]) {
-      modelContainer.remove(loadedModels.accessories[subcategory]);
-      loadedModels.accessories[subcategory] = null;
     }
     
     // Load the model with a small delay to ensure UI updates first
@@ -731,7 +744,10 @@ const recheckAllAccessories = async () => {
   }
   
   // Hide any collision warnings that might be showing
-  hideCollisionWarning();
+  const hasAnyCollision = Object.values(collidingAccessories).some(isColliding => isColliding);
+  if (!hasAnyCollision) {
+    hideCollisionWarning();
+  }
 };
 
 // NEW: Function to sync UI state with loaded models (call this after major changes)

@@ -9,20 +9,39 @@
 <body>
   <div class="container">
     <div class="model-container">
-      <div class="model-viewer" id="model-viewer">
-        <div class="loading-overlay" id="loading-overlay">
+      <!-- Model-Viewer replaces Three.js renderer -->
+      <model-viewer
+        id="model-viewer"
+        class="model-viewer"
+        camera-controls
+        touch-action="pan-y"
+        auto-rotate
+        auto-rotate-delay="3000"
+        rotation-per-second="30deg"
+        camera-orbit="45deg 75deg 6.5m"
+        field-of-view="40deg"
+        min-camera-orbit="auto auto 4m"
+        max-camera-orbit="auto auto 10m"
+        shadow-intensity="1"
+        environment-image="neutral"
+        exposure="1"
+      >
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="loading-overlay" slot="poster">
           <div class="loading-text">Loading B-b0...</div>
         </div>
-        <!-- Collision warning - OUTSIDE the loading overlay -->
+        
+        <!-- Collision warning -->
         <div class="collision-warning" id="collision-warning">
           <div class="warning-message">
             <span id="collision-message">Item is colliding with other accessories</span>
           </div>
         </div>
-      </div>
+      </model-viewer>
+      
       <div class="controls-section">
         <div class="buttons-group">
-          <button class="toggle-button" id="auto-rotate-toggle">Auto Rotate: ON</button>
+          <button class="toggle-button active" id="auto-rotate-toggle">Auto Rotate: ON</button>
           <button class="toggle-button" id="performance-toggle">Performance Mode: OFF</button>
           <!-- Collision toggle button will be added dynamically -->
         </div>
@@ -186,31 +205,23 @@
     </div>
   </div>
 
-  <!-- Import Three.js and related libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.7.0/build/index.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.20.0/ammo.wasm.js"></script>
+  <!-- Load model-viewer from CDN -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  
+  <!-- Load Three.js for GLTFLoader and GLTFExporter (used in loader.js and export.js) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/cameras/CubeCamera.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/Frustum.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
   
   <!-- Import our custom JavaScript modules -->
   <script src="js/utils.js"></script>
   <script src="js/models.js"></script>
   <script src="js/scene.js"></script>
-  <script src="js/bloom.js"></script>
-  <script src="js/reflection.js"></script>
   <script src="js/collisions.js"></script>
   <script src="js/loader.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
   <script src="js/snapshot.js"></script>
+  <script src="js/export.js"></script>
 </body>
 </html>

@@ -118,7 +118,8 @@ const modelDefinitions = {
       { id: "accessories_face_mask1", filename: "accessories_face_mask1.glb", displayName: "Mask 2", price: 1 },
       { id: "accessories_face_mask2", filename: "accessories_face_mask2.glb", displayName: "Mask 3", price: 1 },
       { id: "accessories_face_mask3", filename: "accessories_face_mask3.glb", displayName: "Mask 4", price: 1 },
-      //{ id: "accessories_face_skigoggles", filename: "accessories_face_skigoggles.glb", displayName: "Ski Goggles", price: 5 },
+      { id: "accessories_face_eyepatch", filename: "accessories_face_eyepatch.glb", displayName: "Eye Patch", price: 2 },
+      { id: "accessories_face_skigoggles", filename: "accessories_face_skigoggles.glb", displayName: "Ski Goggles", price: 5 },
       { id: "accessories_face_beard", filename: "accessories_face_beard.glb", displayName: "Beard", price: 2 },
       { id: "accessories_face_nerd", filename: "accessories_face_nerd.glb", displayName: "Nerd Glasses", price: 1 },
       { id: "accessories_face_leprechaunbeard", filename: "accessories_face_leprechaunbeard.glb", displayName: "Leprechaun Beard", price: 2 },
@@ -145,7 +146,6 @@ const modelDefinitions = {
       { id: "accessories_head_gokuultrainstinct", filename: "accessories_head_gokuultrainstinct.glb", displayName: "Ultra Instinct", price: 1000 },
       { id: "accessories_head_beanie", filename: "accessories_head_beanie.glb", displayName: "Beanie", price: 3 },
       { id: "accessories_head_hockeymask", filename: "accessories_head_hockeymask.glb", displayName: "Hockey Mask", price: 13 },
-      { id: "accessories_head_eyepatch", filename: "accessories_head_eyepatch.glb", displayName: "Eye Patch", price: 2 },
       { id: "accessories_head_wolfears", filename: "accessories_head_wolfears.glb", displayName: "Wolf Ears", price: 4 },
       { id: "accessories_head_antlers", filename: "accessories_head_antlers.glb", displayName: "Antlers", price: 2 },
       { id: "accessories_head_pumpkin", filename: "accessories_head_pumpkin.glb", displayName: "Pumpkin", price: 5 },
@@ -171,7 +171,22 @@ const modelDefinitions = {
 };
 
 // Load the default models based on requirements
-const loadDefaultModels = () => {
+// Load the default models based on requirements
+const loadDefaultModels = async () => {
+  // Wait for gltf-transform to be ready
+  let attempts = 0;
+  while ((!gltfTransform || !gltfFunctions) && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  if (!gltfTransform || !gltfFunctions) {
+    log("ERROR: gltf-transform failed to load after 5 seconds");
+    return;
+  }
+  
+  log("gltf-transform ready, loading default models");
+  
   // Body: white
   const bodyModel = modelDefinitions.body[0]; // White body
   if (bodyModel) loadModel(bodyModel, 'body');

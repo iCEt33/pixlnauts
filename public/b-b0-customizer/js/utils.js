@@ -1,23 +1,7 @@
-// Global variables that will be shared across modules
-let scene, camera, renderer, controls;
-let loadingManager, gltfLoader;
+// Global variables
 let performanceMode = false;
-let reflectionEnabled = true;
-let ambientLight, mainLight, fillLight, backLight, rimLight;
 
-// Reflection elements
-let reflectionCamera;
-let modelContainer;
-let groundMaterial;
-let cubeCamera;
-let cubeRenderTarget;
-let mirrorGroup = null;
-
-// Post-processing
-let composer;
-let bloomPass;
-
-// Keep track of loaded models by category
+// Keep track of loaded models by category (for tracking only)
 const loadedModels = {
   body: null,
   face: null,
@@ -28,7 +12,7 @@ const loadedModels = {
     face: null,
     head: null
   },
-  // Add a new object to track the latest load request for each category
+  // Track the latest load request for each category
   latestRequests: {}
 };
 
@@ -60,31 +44,11 @@ const resetAllModels = () => {
   // Reset selection styles to clear any collision indicators
   resetSelectionStyles();
   
-  // IMPORTANT: First properly remove ALL accessories from the scene
-  // This ensures they are actually removed from the 3D scene
-  if (loadedModels.accessories.clothes) {
-    modelContainer.remove(loadedModels.accessories.clothes);
-    loadedModels.accessories.clothes = null;
-    log(`Removed clothes accessory during reset`);
-  }
-  
-  if (loadedModels.accessories.face) {
-    modelContainer.remove(loadedModels.accessories.face);
-    loadedModels.accessories.face = null;
-    log(`Removed face accessory during reset`);
-  }
-  
-  if (loadedModels.accessories.head) {
-    modelContainer.remove(loadedModels.accessories.head);
-    loadedModels.accessories.head = null;
-    log(`Removed head accessory during reset`);
-  }
-  
   // Reset all latest request tracking
   loadedModels.latestRequests = {};
   
-  // Load the default models
-  loadDefaultModels();
+  // Reload models with default selections
+  loadAllModels();
   
   // Update prices
   updatePrices();
@@ -136,16 +100,15 @@ const collidingAccessories = {
   'head': false
 };
 
-// Loading queue to manage multiple simultaneous loads
-let loadingQueue = 0;
-
 // Debug logger function
 const log = (message) => {
   const debugPanel = document.getElementById('debug-panel');
-  const logEntry = document.createElement('div');
-  logEntry.textContent = message;
-  debugPanel.appendChild(logEntry);
-  debugPanel.scrollTop = debugPanel.scrollHeight;
+  if (debugPanel) {
+    const logEntry = document.createElement('div');
+    logEntry.textContent = message;
+    debugPanel.appendChild(logEntry);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+  }
   
   // Also log to console for easier debugging
   console.log(message);
