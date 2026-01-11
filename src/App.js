@@ -1178,6 +1178,128 @@ const QuirkiestAppTab = () => {
   );
 };
 
+// PxP Flip tab content
+const PxPFlipTab = () => {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState(''); // '', 'loading', 'success', 'error'
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      setStatus('error');
+      setMessage('Please enter a valid email');
+      return;
+    }
+    
+    setStatus('loading');
+    setIsSubmitting(true);
+    setMessage('');
+    
+    try {
+      await fetch('https://script.google.com/macros/s/AKfycbygSyIJi-FdaHYYNLtY2fbm9gJxccoaO-qT7g5rFOosl1h3SpApL756Ko2lKiD5fPZmQg/exec', {
+        method: 'POST',
+        mode: 'no-cors', // Google Apps Script requires this
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ email: email })
+      });
+      
+      // With no-cors, we can't read the response, so we assume success
+      setStatus('success');
+      setMessage('Check your email! (including your spam folder)');
+      setEmail('');
+      
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setStatus('');
+        setMessage('');
+      }, 5000);
+      
+    } catch (error) {
+      setStatus('error');
+      setMessage('Connection failed. Try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="pxp-flip">
+      <div className="pxp-description">
+        <p>
+          <ScrambleText 
+            text="Remember when phones were just phones?" 
+            speed={10} 
+          />
+        </p>
+        <p>
+          <ScrambleText 
+            text="PxP Flip is a hardware wallet disguised as a flip phone." 
+            speed={10} 
+          />
+        </p>
+        <p>
+          <ScrambleText 
+            text="Your keys never touch the internet. Ever." 
+            speed={10} 
+          />
+        </p>
+        <p className="pxp-tagline">
+          <ScrambleText 
+            text="The future of crypto security is stuck in 2005." 
+            speed={10} 
+          />
+        </p>
+      </div>
+
+      <div className="pxp-waitlist-section">
+        <form onSubmit={handleSubmit} className="pxp-waitlist-form">
+          <div className="pxp-form-group">
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.email@example.com"
+              className="pxp-email-input"
+              disabled={isSubmitting}
+              required
+            />
+            <button 
+              type="submit" 
+              className="pixel-button pxp-submit-btn"
+              disabled={isSubmitting}
+            >
+              <span className="whitepaper-button-text">
+                {status === 'loading' ? 'JOINING...' : 'JOIN WAITLIST'}
+              </span>
+            </button>
+          </div>
+          {message && (
+            <div className={`pxp-status-message ${status}`}>
+              <ScrambleText text={message} speed={15} />
+            </div>
+          )}
+        </form>
+      </div>
+
+      <div className="pxp-learn-more">
+        <a 
+          href="https://pixelnauts.gitbook.io/pixel-cryptonauts-whitepaper/pixelnauts/future-plans/pxp-flip" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="pixel-button"
+        >
+          <span className="whitepaper-button-text">LEARN MORE</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
 // Donation Milestones tab content
 const DonationMilestonesTab = ({ currentUsdValue }) => {
   const milestones = [
@@ -1343,16 +1465,23 @@ const TabsManager = ({ openCustomizer, currentUsdValue }) => {
         <QuirkiestAppTab />
       </Tab>
       <Tab 
-        title="DONATION MILESTONES" 
+        title="PXP FLIP" 
         isOpen={openTab === 5} 
         toggleTab={() => toggleTab(5)}
+      >
+        <PxPFlipTab />
+      </Tab>
+      <Tab 
+        title="DONATION MILESTONES" 
+        isOpen={openTab === 6} 
+        toggleTab={() => toggleTab(6)}
       >
         <DonationMilestonesTab currentUsdValue={currentUsdValue} />
       </Tab>
       <Tab 
         title="SUPPORT US" 
-        isOpen={openTab === 6} 
-        toggleTab={() => toggleTab(6)}
+        isOpen={openTab === 7} 
+        toggleTab={() => toggleTab(7)}
       >
         <SupportUsTab />
       </Tab>
@@ -3358,6 +3487,160 @@ const styles = `
     font-weight: bold;
     min-width: 80px;
     text-align: right;
+  }
+
+  /* PxP Flip tab styles */
+  .pxp-flip {
+    color: #0f0;
+  }
+
+  .pxp-description {
+    margin-bottom: 30px;
+  }
+
+  .pxp-description p {
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-size: 16px;
+    text-shadow: 0 0 3px #0f03;
+    color: #0f0;
+  }
+
+  .pxp-tagline {
+    margin-top: 25px;
+    font-weight: bold;
+    font-size: 18px;
+    text-align: center;
+    padding: 15px;
+    border: 2px solid #0f0;
+    background-color: rgba(0, 50, 0, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  }
+
+  .pxp-waitlist-section {
+    margin: 40px 0;
+    padding: 30px;
+    border: 4px solid #0f0;
+    background-color: rgba(0, 20, 0, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  }
+
+  .pxp-waitlist-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .pxp-form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .pxp-email-input {
+    width: 100%;
+    background-color: #111;
+    border: 2px solid #0f0;
+    color: #0f0;
+    padding: 12px 15px;
+    font-family: monospace;
+    font-size: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .pxp-email-input:focus {
+    outline: none;
+    border-color: #5f5;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  }
+
+  .pxp-email-input::placeholder {
+    color: #555;
+    font-style: italic;
+  }
+
+  .pxp-email-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pxp-submit-btn {
+    width: 100%;
+    max-width: 300px;
+    background-color: #fff !important;
+    box-shadow: 4px 4px 0 #999 !important;
+  }
+
+  .pxp-submit-btn:hover:not(:disabled) {
+    background-color: #eee !important;
+    box-shadow: 2px 2px 0 #999 !important;
+  }
+
+  .pxp-submit-btn:active:not(:disabled) {
+    box-shadow: none !important;
+  }
+
+  .pxp-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #555 !important;
+    box-shadow: 4px 4px 0 #333 !important;
+  }
+
+  .pxp-status-message {
+    padding: 10px 20px;
+    border-radius: 0;
+    font-family: monospace;
+    font-size: 14px;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .pxp-status-message.success {
+    color: #0f0;
+    border: 2px solid #0f0;
+    background-color: rgba(0, 50, 0, 0.5);
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
+  }
+
+  .pxp-status-message.error {
+    color: #f55;
+    border: 2px solid #f55;
+    background-color: rgba(50, 0, 0, 0.5);
+    text-shadow: 0 0 5px rgba(255, 85, 85, 0.7);
+  }
+
+  .pxp-learn-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+  }
+
+  /* Mobile responsive for PxP Flip */
+  @media (max-width: 768px) {
+    .pxp-description p {
+      font-size: 14px;
+    }
+
+    .pxp-tagline {
+      font-size: 16px;
+      padding: 12px;
+    }
+
+    .pxp-waitlist-section {
+      padding: 20px;
+      margin: 30px 0;
+    }
+
+    .pxp-email-input {
+      font-size: 14px;
+      padding: 10px 12px;
+    }
   }
 
   /* ENHANCED B-b0 Customizer Styles */
