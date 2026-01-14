@@ -1181,9 +1181,37 @@ const QuirkiestAppTab = () => {
 // PxP Flip tab content
 const PxPFlipTab = () => {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState(''); // '', 'loading', 'success', 'error'
+  const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailSystemHealth, setEmailSystemHealth] = useState('checking');
+
+  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+  const API_KEY = process.env.REACT_APP_SHEETS_API_KEY;
+  const APPS_SCRIPT_URL = process.env.REACT_APP_APPS_SCRIPT_URL;
+
+  // Check Apps Script health on component mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'GET',
+        });
+        const text = await response.text();
+        if (text.includes('PxP Flip Waitlist API is running')) {
+          setEmailSystemHealth('healthy');
+        } else {
+          setEmailSystemHealth('down');
+        }
+      } catch (error) {
+        setEmailSystemHealth('down');
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, [APPS_SCRIPT_URL]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1198,22 +1226,59 @@ const PxPFlipTab = () => {
     setIsSubmitting(true);
     setMessage('');
     
+    let emailSent = false;
+    
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbygSyIJi-FdaHYYNLtY2fbm9gJxccoaO-qT7g5rFOosl1h3SpApL756Ko2lKiD5fPZmQg/exec', {
-        method: 'POST',
-        mode: 'no-cors', // Google Apps Script requires this
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ email: email })
-      });
+      const token = crypto.randomUUID();
+      const timestamp = new Date().toISOString();
       
-      // With no-cors, we can't read the response, so we assume success
+      // FIRST: Try to send welcome email (to know if it worked)
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({ 
+            email: email,
+            token: token 
+          })
+        });
+        emailSent = true;
+        setEmailSystemHealth('healthy');
+      } catch (emailError) {
+        console.log('Welcome email failed to send');
+        emailSent = false;
+        setEmailSystemHealth('down');
+      }
+      
+      // SECOND: Write to Google Sheets (ALWAYS succeeds)
+      const sheetsResponse = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/PxP Flip Waitlist:append?valueInputOption=RAW&key=${API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: [[timestamp, email, emailSent ? 'Active' : 'Pending', token]]
+          })
+        }
+      );
+      
+      if (!sheetsResponse.ok) {
+        throw new Error('Failed to save to sheet');
+      }
+      
       setStatus('success');
-      setMessage('Check your email! (including your spam folder)');
+      if (emailSent) {
+        setMessage('Check your email! (including your spam folder)');
+      } else {
+        setMessage("You're on the waitlist! (Welcome email may be delayed)");
+      }
       setEmail('');
       
-      // Reset after 5 seconds
       setTimeout(() => {
         setStatus('');
         setMessage('');
@@ -1222,8 +1287,22 @@ const PxPFlipTab = () => {
     } catch (error) {
       setStatus('error');
       setMessage('Connection failed. Try again.');
+      console.error('Signup error:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getHealthIndicator = () => {
+    switch(emailSystemHealth) {
+      case 'checking':
+        return <span className="health-indicator checking">⚪ Checking email system...</span>;
+      case 'healthy':
+        return <span className="health-indicator healthy">🟢 Email system operational</span>;
+      case 'down':
+        return <span className="health-indicator down">🔴 Email system down, signups still saved</span>;
+      default:
+        return null;
     }
   };
 
@@ -1257,6 +1336,10 @@ const PxPFlipTab = () => {
       </div>
 
       <div className="pxp-waitlist-section">
+        <div className="pxp-system-health">
+          {getHealthIndicator()}
+        </div>
+        
         <form onSubmit={handleSubmit} className="pxp-waitlist-form">
           <div className="pxp-form-group">
             <input 
@@ -3619,6 +3702,32 @@ const styles = `
     display: flex;
     justify-content: center;
     margin-top: 30px;
+  }
+
+  .pxp-system-health {
+    text-align: center;
+    margin-bottom: 15px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  .health-indicator {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 0;
+    font-weight: bold;
+  }
+
+  .health-indicator.checking {
+    color: #aaa;
+  }
+
+  .health-indicator.healthy {
+    color: #0f0;
+  }
+
+  .health-indicator.down {
+    color: #f55;
   }
 
   /* Mobile responsive for PxP Flip */
