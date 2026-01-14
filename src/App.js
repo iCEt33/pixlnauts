@@ -1186,8 +1186,6 @@ const PxPFlipTab = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailSystemHealth, setEmailSystemHealth] = useState('checking');
 
-  const SHEET_ID = process.env.REACT_APP_SHEET_ID;
-  const API_KEY = process.env.REACT_APP_SHEETS_API_KEY;
   const APPS_SCRIPT_URL = process.env.REACT_APP_APPS_SCRIPT_URL;
 
   // Check Apps Script health on component mount
@@ -1227,56 +1225,38 @@ const PxPFlipTab = () => {
     setMessage('');
     
     let emailSent = false;
+    const token = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
     
     try {
-      const token = crypto.randomUUID();
-      const timestamp = new Date().toISOString();
-      
-      // FIRST: Try to send welcome email (to know if it worked)
+      // Try to send email via Apps Script
       try {
         await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({ 
-            email: email,
-            token: token 
-          })
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ email, token })
         });
         emailSent = true;
         setEmailSystemHealth('healthy');
       } catch (emailError) {
-        console.log('Welcome email failed to send');
-        emailSent = false;
+        console.log('Email failed, continuing...');
         setEmailSystemHealth('down');
       }
       
-      // SECOND: Write to Google Sheets (ALWAYS succeeds)
-      const sheetsResponse = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/PxP Flip Waitlist:append?valueInputOption=RAW&key=${API_KEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            values: [[timestamp, email, emailSent ? 'Active' : 'Pending', token]]
-          })
-        }
-      );
+      // ALWAYS save to sheet via Vercel (bulletproof)
+      const response = await fetch('/api/pxp-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, timestamp, emailSent })
+      });
       
-      if (!sheetsResponse.ok) {
-        throw new Error('Failed to save to sheet');
-      }
+      const data = await response.json();
+      
+      if (!data.success) throw new Error(data.error || 'Failed to save');
       
       setStatus('success');
-      if (emailSent) {
-        setMessage('Check your email! (including your spam folder)');
-      } else {
-        setMessage("You're on the waitlist! (Welcome email may be delayed)");
-      }
+      setMessage(emailSent ? 'Check your email! (including spam)' : "You're on the waitlist!");
       setEmail('');
       
       setTimeout(() => {
