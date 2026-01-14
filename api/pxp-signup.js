@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: '17LM3VljOj9qVT2mF_bVuSMXV_r1OyucqbGbBLE0try8',
-      range: 'PxPFlipWaitlist!A:D',
+      range: 'A:D',
       valueInputOption: 'RAW',
       resource: {
         values: [[timestamp, email, emailSent ? 'Active' : 'Pending', token]],
