@@ -4,7 +4,7 @@ import { getDefaultConfig, RainbowKitProvider, darkTheme } from '@rainbow-me/rai
 import { WagmiProvider } from 'wagmi';
 import { polygon } from 'wagmi/chains';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { http } from 'wagmi';
+import { http, fallback } from 'wagmi';
 
 // Create wagmi config with new v2 API
 const config = getDefaultConfig({
@@ -12,7 +12,10 @@ const config = getDefaultConfig({
   projectId: process.env.REACT_APP_WALLET_CONNECT_ID || 'placeholder',
   chains: [polygon],
   transports: {
-    [polygon.id]: http(),
+    [polygon.id]: fallback([
+      http('https://tenderly.rpc.polygon.community'),
+      http('https://polygon.drpc.org'),
+    ]),
   },
 });
 

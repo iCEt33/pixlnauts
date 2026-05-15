@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 // Import RainbowKit hooks
 import { useAccount, useBalance, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { parseEther } from 'viem';
+import { parseEther, formatUnits } from 'viem';
 import { WalletProvider } from './WalletProvider';
 
 const isMobileDevice = () => {
@@ -661,7 +661,7 @@ const LoadingAnimation = ({ onComplete }) => {
 };
 
 // Updated Logo component with toggle functionality
-const Logo = () => {
+const Logo = ({ focusKey }) => {
   const [showText, setShowText] = useState(false); // Initially show the image
   const [scrambleKey, setScrambleKey] = useState(0); // To trigger scramble effect on each toggle
   
@@ -682,7 +682,7 @@ const Logo = () => {
             text="PIXLNAUTS" 
             speed={30} 
             intensity={1.5}
-            key={`scramble-${scrambleKey}`} // Key changes force remount and restart animation
+            key={`scramble-${scrambleKey}-${focusKey}`} // Key changes force remount and restart animation
           />
         </div>
         
@@ -701,8 +701,9 @@ const WalletDonation = () => {
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({
     address: address,
-    enabled: !!address,
   });
+
+  const balanceFormatted = balance ? formatUnits(balance.value, balance.decimals) : '0';
   
   const [donationAmount, setDonationAmount] = useState('0.00000');
   const [txHash, setTxHash] = useState('');
@@ -740,10 +741,8 @@ const WalletDonation = () => {
   
   // Set max amount (minus gas)
   const setMaxAmount = () => {
-    if (balance?.formatted) {
-      const maxAmount = Math.max(0, parseFloat(balance.formatted) - 0.01);
-      setDonationAmount(maxAmount.toFixed(5));
-    }
+    const maxAmount = Math.max(0, parseFloat(balanceFormatted) - 0.01);
+    setDonationAmount(maxAmount.toFixed(5));
   };
   
   // Handle donation transaction
@@ -835,7 +834,7 @@ const WalletDonation = () => {
       <div className="donation-panel">
         <div className="donation-header">
           <span className="prompt">&gt;&gt;&gt;</span>
-          <span className="donation-title">DONATE POL TO PIXELNAUTS</span>
+          <span className="donation-title">DONATE POL TO PIXLNAUTS</span>
         </div>
         
         <div className="target-address">
@@ -869,13 +868,13 @@ const WalletDonation = () => {
         <button 
           onClick={handleDonate} 
           className="donate-btn"
-          disabled={isTransacting || isWaitingForTx || parseFloat(donationAmount) <= 0 || parseFloat(donationAmount) > parseFloat(balance?.formatted || '0')}
+          disabled={isTransacting || isWaitingForTx || parseFloat(donationAmount) <= 0 || parseFloat(donationAmount) > parseFloat(balanceFormatted)}
         >
           {(isTransacting || isWaitingForTx) ? '[PROCESSING...]' : `[DONATE ${parseFloat(donationAmount || 0).toFixed(5)} POL]`}
         </button>
         
         <div className="available-balance">
-          AVAILABLE: {balance?.formatted ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} POL
+          AVAILABLE: {parseFloat(balanceFormatted).toFixed(4)} POL
         </div>
         
         {txHash && (
@@ -897,7 +896,7 @@ const WalletDonation = () => {
 };
 
 // Improved Tab component with better bottom scrolling
-const Tab = ({ title, children, isOpen, toggleTab }) => {
+const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
   const tabRef = useRef(null);
@@ -956,7 +955,7 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
     <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
       <div className="tab-header" onClick={toggleTab}>
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
-        <ScrambleText text={title} speed={30} intensity={0.8} />
+        <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
       </div>
       <div 
         className="tab-content-wrapper" 
@@ -971,7 +970,7 @@ const Tab = ({ title, children, isOpen, toggleTab }) => {
 };
 
 // Introduction tab content
-const IntroductionTab = () => {
+const IntroductionTab = ({ focusKey }) => {
   return (
     <div className="introduction">
       <div className="video-container">
@@ -979,7 +978,7 @@ const IntroductionTab = () => {
           width="100%" 
           height="315" 
           src="https://www.youtube.com/embed/WF31W8mmDFw" 
-          title="Pixelnauts Introduction Video"
+          title="PIXLNAUTS Introduction Video"
           frameBorder="0" 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
           allowFullScreen
@@ -989,12 +988,14 @@ const IntroductionTab = () => {
         <ScrambleText 
           text="Welcome to PIXLNAUTS, an innovative environmental project that uses blockchain technology to drive positive change." 
           speed={10} 
+          key={`intro-1-${focusKey}`}
         />
       </p>
       <p>
         <ScrambleText 
           text="Check out our whitepaper for more details on our vision and roadmap." 
           speed={10} 
+          key={`intro-2-${focusKey}`}
         />
       </p>
       <div className="whitepaper-link">
@@ -1007,13 +1008,14 @@ const IntroductionTab = () => {
 };
 
 // Socials tab content
-const SocialsTab = () => {
+const SocialsTab = ({ focusKey }) => {
   return (
     <div className="socials">
       <p>
         <ScrambleText 
           text="Join our community! Follow PIXLNAUTS on social media to stay up to date with our environmental initiatives." 
           speed={10} 
+          key={`socials-1-${focusKey}`}
         />
       </p>
       <div className="social-links">
@@ -1032,13 +1034,14 @@ const SocialsTab = () => {
 };
 
 // Games tab content
-const GamesTab = () => {
+const GamesTab = ({ focusKey }) => {
   return (
     <div className="games">
       <p>
         <ScrambleText 
           text="Try our concept beta games! Experience these exciting PIXLNAUTS titles:" 
           speed={10} 
+          key={`games-1-${focusKey}`}
         />
       </p>
       <div className="games-links">
@@ -1054,7 +1057,7 @@ const GamesTab = () => {
 };
 
 // B-b0 Customizer tab content
-const BeeboCustomizerTab = ({ onLaunch }) => {
+const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
   // Check if user is on mobile
   const isMobile = isMobileDevice();
   
@@ -1067,6 +1070,7 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
             <ScrambleText 
               text="The B-b0 Customizer requires a desktop computer." 
               speed={10} 
+              key={`beebo-1-${focusKey}`}
             />
           </p>
           <p className="mobile-notice">
@@ -1074,6 +1078,7 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
               text="This feature is not available on mobile devices. Please use a computer to access the full 3D customizer experience." 
               speed={10}
               color="#ff5" 
+              key={`beebo-2-${focusKey}`}
             />
           </p>
         </>
@@ -1084,6 +1089,7 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
             <ScrambleText 
               text="Customize your own B-b0 robot companion in our interactive 3D model viewer!" 
               speed={10} 
+              key={`beebo-3-${focusKey}`}
             />
           </p>
           <div className="beebo-links">
@@ -1105,12 +1111,14 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
           <ScrambleText 
             text="Want to submit your own ideas or assets for the B-b0 customizer? Navigate to the SOCIALS tab to find our Discord community!" 
             speed={10} 
+            key={`beebo-4-${focusKey}`}
           />
         </p>
         <p>
           <ScrambleText 
             text="For those interested in the physical version, check out our open source Project: Mango" 
             speed={10} 
+            key={`beebo-5-${focusKey}`}
           />
         </p>
         <div className="beebo-links">
@@ -1124,13 +1132,14 @@ const BeeboCustomizerTab = ({ onLaunch }) => {
 };
 
 // Support Us tab content
-const SupportUsTab = () => {
+const SupportUsTab = ({ focusKey }) => {
   return (
     <div className="support-us">
       <p>
         <ScrambleText 
           text="Support PIXLNAUTS environmental initiatives through these platforms:" 
           speed={10} 
+          key={`support-1-${focusKey}`}
         />
       </p>
       
@@ -1155,7 +1164,7 @@ const SupportUsTab = () => {
 };
 
 // The Quirkiest App tab content
-const QuirkiestAppTab = () => {
+const QuirkiestAppTab = ({ focusKey }) => {
   return (
     <div className="quirkiest-app">
       <div className="app-description">
@@ -1179,7 +1188,7 @@ const QuirkiestAppTab = () => {
 };
 
 // PxP Flip tab content
-const PxPFlipTab = () => {
+const PxPFlipTab = ({ focusKey }) => {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('');
   const [message, setMessage] = useState('');
@@ -1293,24 +1302,28 @@ const PxPFlipTab = () => {
           <ScrambleText 
             text="Remember when phones were just phones?" 
             speed={10} 
+            key={`pxp-1-${focusKey}`}
           />
         </p>
         <p>
           <ScrambleText 
             text="PxP Flip is a hardware wallet disguised as a flip phone." 
             speed={10} 
+            key={`pxp-2-${focusKey}`}
           />
         </p>
         <p>
           <ScrambleText 
             text="Your keys never touch the internet. Ever." 
             speed={10} 
+            key={`pxp-3-${focusKey}`}
           />
         </p>
         <p className="pxp-tagline">
           <ScrambleText 
             text="The future of crypto security is stuck in 2005." 
             speed={10} 
+            key={`pxp-4-${focusKey}`}
           />
         </p>
       </div>
@@ -1364,7 +1377,7 @@ const PxPFlipTab = () => {
 };
 
 // Donation Milestones tab content
-const DonationMilestonesTab = ({ currentUsdValue }) => {
+const DonationMilestonesTab = ({ currentUsdValue, focusKey }) => {
   const milestones = [
     { name: "3D Printer", amount: 500, selfFunded: 500, description: "Physical prototyping capabilities" },
     { name: "NFT Customizer", amount: 450, selfFunded: 0, description: "Smart contract for actually minting your very own custom B-b0s" },
@@ -1429,6 +1442,7 @@ const DonationMilestonesTab = ({ currentUsdValue }) => {
           <ScrambleText 
             text="Track our progress towards key development milestones funded by community donations." 
             speed={10} 
+            key={`milestones-1-${focusKey}`}
           />
         </p>
         <div className="current-progress">
@@ -1479,7 +1493,7 @@ const DonationMilestonesTab = ({ currentUsdValue }) => {
 };
 
 // TabsManager to control which tab is open
-const TabsManager = ({ openCustomizer, currentUsdValue }) => {
+const TabsManager = ({ openCustomizer, currentUsdValue, focusKey }) => {
   const [openTab, setOpenTab] = useState(0);
   
   const toggleTab = (index) => {
@@ -1496,64 +1510,72 @@ const TabsManager = ({ openCustomizer, currentUsdValue }) => {
         title="INTRODUCTION" 
         isOpen={openTab === 0} 
         toggleTab={() => toggleTab(0)}
+        focusKey={focusKey}
       >
-        <IntroductionTab />
+        <IntroductionTab focusKey={focusKey} />
       </Tab>
       <Tab 
         title="SOCIALS" 
         isOpen={openTab === 1} 
         toggleTab={() => toggleTab(1)}
+        focusKey={focusKey}
       >
-        <SocialsTab />
+        <SocialsTab focusKey={focusKey} />
       </Tab>
       <Tab 
         title="GAMES" 
         isOpen={openTab === 2} 
         toggleTab={() => toggleTab(2)}
+        focusKey={focusKey}
       >
-        <GamesTab />
+        <GamesTab focusKey={focusKey} />
       </Tab>
       <Tab 
         title="BUILD-A-BEEBO" 
         isOpen={openTab === 3} 
         toggleTab={() => toggleTab(3)}
+        focusKey={focusKey}
       >
-        <BeeboCustomizerTab onLaunch={openCustomizer} />
+        <BeeboCustomizerTab onLaunch={openCustomizer} focusKey={focusKey} />
       </Tab>
       <Tab 
         title="THE QUIRKIEST USELESS APP" 
         isOpen={openTab === 4} 
         toggleTab={() => toggleTab(4)}
+        focusKey={focusKey}
       >
-        <QuirkiestAppTab />
+        <QuirkiestAppTab focusKey={focusKey} />
       </Tab>
       <Tab 
         title="PXP FLIP" 
         isOpen={openTab === 5} 
         toggleTab={() => toggleTab(5)}
+        focusKey={focusKey}
       >
-        <PxPFlipTab />
+        <PxPFlipTab focusKey={focusKey} />
       </Tab>
       <Tab 
         title="DONATION MILESTONES" 
         isOpen={openTab === 6} 
         toggleTab={() => toggleTab(6)}
+        focusKey={focusKey}
       >
-        <DonationMilestonesTab currentUsdValue={currentUsdValue} />
+        <DonationMilestonesTab currentUsdValue={currentUsdValue} focusKey={focusKey} />
       </Tab>
       <Tab 
         title="SUPPORT US" 
         isOpen={openTab === 7} 
         toggleTab={() => toggleTab(7)}
+        focusKey={focusKey}
       >
-        <SupportUsTab />
+        <SupportUsTab focusKey={focusKey} />
       </Tab>
     </div>
   );
 };
 
 // Footer component
-const Footer = () => {
+const Footer = ({ focusKey }) => {
   return (
     <div className="footer">
       <div className="footer-logo">
@@ -1564,6 +1586,7 @@ const Footer = () => {
           text="This is the one and only authentic website of PIXLNAUTS project" 
           speed={20}
           intensity={1.0}
+          key={`footer-auth-${focusKey}`}
         />
       </div>
       <div className="secret-message">
@@ -1571,6 +1594,7 @@ const Footer = () => {
           text="If you found the loading screens to be too long, they are completely skippable. Just press any button it doesn't matter. I just wanted you to experience it at least one time before letting you know this :D" 
           speed={200}
           intensity={0.5}
+          key={`footer-secret-${focusKey}`}
         />
       </div>
     </div>
@@ -1682,7 +1706,7 @@ const CustomizerView = ({ onClose }) => {
 };
 
 // Enhanced Global Dashboard Component with Dynamic Views
-const GlobalDashboard = ({ onUsdValueChange }) => {
+const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
   const [stats, setStats] = useState({
     totalDonations: 0,
     totalAmount: 0,
@@ -1701,218 +1725,122 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
   const [isConnected, setIsConnected] = useState(false);
   
   // Dashboard state management
-  const [leftViewIndex, setLeftViewIndex] = useState(0); // 0: global, 1: user (if connected)
-  const [rightViewIndex, setRightViewIndex] = useState(0); // 0: price info, 1: leaderboard
+  const [leftViewIndex, setLeftViewIndex] = useState(0);
+  const [rightViewIndex, setRightViewIndex] = useState(0);
   const [isLeftHighlighted, setIsLeftHighlighted] = useState(false);
   const [isRightHighlighted, setIsRightHighlighted] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isLeftHovered, setIsLeftHovered] = useState(false);
   const [isRightHovered, setIsRightHovered] = useState(false);
   
-  // Auto-cycle and refresh intervals
   const cycleIntervalRef = useRef(null);
   const refreshIntervalRef = useRef(null);
   
   const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
-  
-  // Fetch POL price from multiple sources with fallbacks
+  const ETHERSCAN_API_KEY = 'VP2R2EY1PK7YXE6HI2WTHG5D7K117WYRNS';
+
+  // Fetch POL price with CoinGecko primary, CryptoCompare fallback
   const fetchPolPrice = useCallback(async () => {
     try {
-      // Try CoinGecko first
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd');
-        const data = await response.json();
-        if (data && data.polygon && data.polygon.usd) {
-          const price = parseFloat(data.polygon.usd);
-          if (price > 0) {
-            setPolPrice(price);
-            return;
-          }
-        }
-      } catch (error) {
-        console.log('CoinGecko failed, trying next...');
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd');
+      const data = await response.json();
+      if (data?.polygon?.usd > 0) {
+        setPolPrice(parseFloat(data.polygon.usd));
+        return;
       }
+    } catch {}
 
-      // Try CryptoCompare as backup
-      try {
-        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=MATIC&tsyms=USD');
-        const data = await response.json();
-        if (data && data.USD) {
-          const price = parseFloat(data.USD);
-          if (price > 0) {
-            setPolPrice(price);
-            return;
-          }
-        }
-      } catch (error) {
-        console.log('CryptoCompare failed...');
-      }
-
-      // Fallback price
-      console.warn('All price APIs failed, using fallback price');
-      setPolPrice(0.4);
-      
-    } catch (error) {
-      console.error('Failed to fetch POL price:', error);
-      setPolPrice(0.4);
-    }
-  }, []);
-  
-  const fetchTransactionsFromPolygonScan = useCallback(async () => {
     try {
-      const apiKey = 'VP2R2EY1PK7YXE6HI2WTHG5D7K117WYRNS'; 
-      const url = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${apiKey}`;      
+      const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=MATIC&tsyms=USD');
+      const data = await response.json();
+      if (data?.USD > 0) {
+        setPolPrice(parseFloat(data.USD));
+        return;
+      }
+    } catch {}
+
+    console.warn('All price APIs failed, using fallback price');
+    setPolPrice(0.4);
+  }, []);
+
+  // Single Etherscan call — returns everything needed for both global and user stats
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const url = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
-      
-      if (data.status === '1' && data.result && Array.isArray(data.result)) {
-        // Filter for incoming transactions only
-        const donations = data.result.filter(tx => {
-          return (
-            tx.to && 
-            tx.to.toLowerCase() === targetAddress.toLowerCase() && 
-            tx.value && 
-            tx.value !== '0' &&
-            tx.isError === '0' && 
-            tx.from !== targetAddress.toLowerCase()
-          );
-        });
-        
-        // Group by donor address and sum amounts
+
+      if (data.status === '1' && Array.isArray(data.result)) {
+        const donations = data.result.filter(tx =>
+          tx.to?.toLowerCase() === targetAddress.toLowerCase() &&
+          tx.value && tx.value !== '0' &&
+          tx.isError === '0' &&
+          tx.from !== targetAddress.toLowerCase()
+        );
+
         const donorMap = new Map();
         let totalAmount = 0;
-        
+
         donations.forEach(tx => {
           try {
-            const valueInWei = BigInt(tx.value);
-            const amountInPol = Number(valueInWei) / Math.pow(10, 18);
-            
+            const amountInPol = Number(BigInt(tx.value)) / Math.pow(10, 18);
             if (!isNaN(amountInPol) && amountInPol > 0 && amountInPol < 1000000) {
               totalAmount += amountInPol;
-              
-              // Add to donor map
-              const currentAmount = donorMap.get(tx.from) || 0;
-              donorMap.set(tx.from, currentAmount + amountInPol);
+              donorMap.set(tx.from, (donorMap.get(tx.from) || 0) + amountInPol);
             }
           } catch (e) {
-            console.warn('Error parsing transaction value:', tx.value, e);
+            console.warn('Error parsing tx value:', tx.value, e);
           }
         });
-        
-        // Convert to array and sort by amount (top 3)
+
         const topDonors = Array.from(donorMap.entries())
           .map(([address, amount]) => ({ address, amount }))
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 3);
-        
-        const carbonOffset = polPrice > 0 ? (totalAmount * polPrice * 10) / 1000 : 0;
-        
-        return {
-          totalDonations: donations.length,
-          totalAmount: totalAmount,
-          carbonOffset: carbonOffset,
-          topDonors: topDonors,
-          donorMap: donorMap
-        };
-      } else {
-        console.warn('PolygonScan API response:', data);
-        return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [], donorMap: new Map() };
+
+        return { totalDonations: donations.length, totalAmount, topDonors, donorMap };
       }
+
+      console.warn('Etherscan API response:', data);
+      return { totalDonations: 0, totalAmount: 0, topDonors: [], donorMap: new Map() };
     } catch (error) {
-      console.error('Failed to fetch transactions from PolygonScan:', error);
-      return { totalDonations: 0, totalAmount: 0, carbonOffset: 0, topDonors: [], donorMap: new Map() };
-    }
-  }, [targetAddress, polPrice]);
-  
-  const fetchAccountBalance = useCallback(async () => {
-    try {
-      const response = await fetch('https://polygon-rpc.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_getBalance',
-          params: [targetAddress, 'latest'],
-          id: 1
-        })
-      });
-      
-      const data = await response.json();
-      if (data.result) {
-        const balanceInWei = parseInt(data.result, 16);
-        const balanceInPol = Number(balanceInWei) / Math.pow(10, 18);
-        return balanceInPol;
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error('Failed to fetch account balance:', error);
-      return 0;
+      console.error('Failed to fetch transactions:', error);
+      return { totalDonations: 0, totalAmount: 0, topDonors: [], donorMap: new Map() };
     }
   }, [targetAddress]);
-  
+
+  // Fetch global stats — reuses the single Etherscan call
+  const fetchGlobalStats = useCallback(async () => {
+    const data = await fetchTransactions();
+    const carbonOffset = polPrice > 0 ? (data.totalAmount * polPrice * 10) / 1000 : 0;
+    setStats({
+      totalDonations: data.totalDonations,
+      totalAmount: data.totalAmount,
+      carbonOffset,
+      topDonors: data.topDonors,
+      loading: false
+    });
+  }, [fetchTransactions, polPrice]);
+
+  // Fetch user stats — reuses the same Etherscan call
   const fetchUserStats = useCallback(async (userAddress) => {
     if (!userAddress) return;
-    
-    try {
-      // Show loading values in the stats instead of loading screen
-      setUserStats(prev => ({ 
-        userDonations: 0,
-        userAmount: 0,
-        userRank: 0,
-        loading: true 
-      }));
-      
-      const transactionData = await fetchTransactionsFromPolygonScan();
-      const userAmount = transactionData.donorMap.get(userAddress.toLowerCase()) || 0;
-      
-      // Count actual transactions for this user
-      const userDonationCount = userAmount > 0 ? 1 : 0;
-      
-      // Calculate user rank
-      const sortedDonors = Array.from(transactionData.donorMap.entries())
-        .sort((a, b) => b[1] - a[1]);
-      const userRank = sortedDonors.findIndex(([address]) => address.toLowerCase() === userAddress.toLowerCase()) + 1;
-      
-      setUserStats({
-        userDonations: userDonationCount,
-        userAmount: userAmount,
-        userRank: userRank || 0,
-        loading: false
-      });
-    } catch (error) {
-      console.error('Failed to fetch user stats:', error);
-      setUserStats(prev => ({ ...prev, loading: false }));
-    }
-  }, [fetchTransactionsFromPolygonScan]);
-  
-  const fetchGlobalStats = useCallback(async () => {
-    try {
-      // Don't show loading state for the entire panel during refresh
-      const [transactionStats, currentBalance] = await Promise.all([
-        fetchTransactionsFromPolygonScan(),
-        fetchAccountBalance()
-      ]);
-      
-      const totalAmount = currentBalance;
-      const carbonOffset = polPrice > 0 ? (totalAmount * polPrice * 10) / 1000 : 0;
-      
-      setStats({
-        totalDonations: transactionStats.totalDonations,
-        totalAmount: totalAmount,
-        carbonOffset: carbonOffset,
-        topDonors: transactionStats.topDonors,
-        loading: false
-      });
-    } catch (error) {
-      console.error('Failed to fetch global stats:', error);
-      setStats(prev => ({ ...prev, loading: false }));
-    }
-  }, [fetchTransactionsFromPolygonScan, fetchAccountBalance, polPrice]);
-  
-  // Check wallet connection status
+    setUserStats({ userDonations: 0, userAmount: 0, userRank: 0, loading: true });
+
+    const data = await fetchTransactions();
+    const userAmount = data.donorMap.get(userAddress.toLowerCase()) || 0;
+    const sortedDonors = Array.from(data.donorMap.entries()).sort((a, b) => b[1] - a[1]);
+    const userRank = sortedDonors.findIndex(([addr]) => addr.toLowerCase() === userAddress.toLowerCase()) + 1;
+
+    setUserStats({
+      userDonations: userAmount > 0 ? 1 : 0,
+      userAmount,
+      userRank: userRank || 0,
+      loading: false
+    });
+  }, [fetchTransactions]);
+
+  // Check wallet connection
   useEffect(() => {
     const checkWalletConnection = async () => {
       if (typeof window.ethereum !== 'undefined') {
@@ -1921,116 +1849,89 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
           if (accounts.length > 0) {
             setWalletAddress(accounts[0]);
             setIsConnected(true);
-            await fetchUserStats(accounts[0]);
+            fetchUserStats(accounts[0]);
           } else {
-            // No wallet connected - ensure we're in global view
             setIsConnected(false);
             setWalletAddress('');
             setLeftViewIndex(0);
           }
-        } catch (error) {
-          console.error('Failed to check wallet connection:', error);
+        } catch {
           setIsConnected(false);
           setWalletAddress('');
           setLeftViewIndex(0);
         }
       }
     };
-    
+
     checkWalletConnection();
-    
-    // Listen for account changes
+
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
         if (accounts.length === 0) {
           setIsConnected(false);
           setWalletAddress('');
-          setLeftViewIndex(0); // Force to global view
-          setUserStats({
-            userDonations: 0,
-            userAmount: 0,
-            userRank: 0,
-            loading: false
-          });
+          setLeftViewIndex(0);
+          setUserStats({ userDonations: 0, userAmount: 0, userRank: 0, loading: false });
         } else {
           setWalletAddress(accounts[0]);
           setIsConnected(true);
           fetchUserStats(accounts[0]);
         }
       };
-      
       window.ethereum.on('accountsChanged', handleAccountsChanged);
       return () => window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
     }
   }, [fetchUserStats]);
-  
-  // Auto-cycle between views every 10 seconds
+
+  // Auto-cycle panels every 10 seconds
   useEffect(() => {
-    const startCycle = () => {
-      cycleIntervalRef.current = setInterval(() => {
-        // Only cycle left panel if wallet is connected and not hovered
-        if (isConnected && !isLeftHovered) {
-          // Highlight and change left view first
-          setIsLeftHighlighted(true);
+    cycleIntervalRef.current = setInterval(() => {
+      if (isConnected && !isLeftHovered) {
+        setIsLeftHighlighted(true);
+        setTimeout(() => {
+          setIsLeftHighlighted(false);
+          setLeftViewIndex(prev => prev === 0 ? 1 : 0);
+        }, 500);
+      }
+      const delay = isConnected && !isLeftHovered ? 1500 : 0;
+      setTimeout(() => {
+        if (!isRightHovered) {
+          setIsRightHighlighted(true);
           setTimeout(() => {
-            setIsLeftHighlighted(false);
-            setLeftViewIndex(prev => prev === 0 ? 1 : 0);
+            setIsRightHighlighted(false);
+            setRightViewIndex(prev => prev === 0 ? 1 : 0);
           }, 500);
         }
-        
-        // Always cycle right panel if not hovered (after delay if left panel cycled)
-        const rightPanelDelay = (isConnected && !isLeftHovered) ? 1500 : 0;
-        setTimeout(() => {
-          if (!isRightHovered) {
-            setIsRightHighlighted(true);
-            setTimeout(() => {
-              setIsRightHighlighted(false);
-              setRightViewIndex(prev => prev === 0 ? 1 : 0);
-            }, 500);
-          }
-        }, rightPanelDelay);
-      }, 10000);
-    };
-    
-    startCycle();
-    
-    return () => {
-      if (cycleIntervalRef.current) {
-        clearInterval(cycleIntervalRef.current);
-      }
-    };
+      }, delay);
+    }, 10000);
+
+    return () => clearInterval(cycleIntervalRef.current);
   }, [isConnected, isLeftHovered, isRightHovered]);
-  
-  // Refresh data every 2 minutes
+
+  // Refresh every 2 minutes
   useEffect(() => {
-    const startRefresh = () => {
-      refreshIntervalRef.current = setInterval(() => {
-        // Set last updated to LOADING... before starting refresh
-        setLastUpdated('LOADING...');
-        
-        fetchPolPrice();
-        fetchGlobalStats();
-        if (isConnected && walletAddress) {
-          fetchUserStats(walletAddress);
-        }
-        
-        // Set actual time after a short delay to allow data to load
-        setTimeout(() => {
-          setLastUpdated(new Date());
-        }, 2000);
-      }, 120000); // 2 minutes
-    };
-    
-    startRefresh();
-    
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
-    };
+    refreshIntervalRef.current = setInterval(() => {
+      setLastUpdated('LOADING...');
+      fetchPolPrice();
+      fetchGlobalStats();
+      if (isConnected && walletAddress) fetchUserStats(walletAddress);
+      setTimeout(() => setLastUpdated(new Date()), 2000);
+    }, 120000);
+
+    return () => clearInterval(refreshIntervalRef.current);
   }, [isConnected, walletAddress, fetchPolPrice, fetchGlobalStats, fetchUserStats]);
-  
-  // Manual click handlers for panels (no longer breaks cycle)
+
+  // Initial data fetch
+  useEffect(() => { fetchPolPrice(); }, [fetchPolPrice]);
+  useEffect(() => { if (polPrice > 0) fetchGlobalStats(); }, [polPrice, fetchGlobalStats]);
+
+  // Emit USD value to parent
+  useEffect(() => {
+    if (onUsdValueChange && !stats.loading && polPrice > 0) {
+      onUsdValueChange(stats.totalAmount * polPrice);
+    }
+  }, [stats.totalAmount, polPrice, stats.loading, onUsdValueChange]);
+
   const handleLeftPanelClick = () => {
     if (isConnected) {
       setIsLeftHighlighted(true);
@@ -2040,7 +1941,7 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
       }, 500);
     }
   };
-  
+
   const handleRightPanelClick = () => {
     setIsRightHighlighted(true);
     setTimeout(() => {
@@ -2048,34 +1949,13 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
       setRightViewIndex(prev => prev === 0 ? 1 : 0);
     }, 500);
   };
-  
-  // Initial data fetch
-  useEffect(() => {
-    fetchPolPrice();
-  }, [fetchPolPrice]);
 
-  useEffect(() => {
-    if (polPrice > 0) {
-      fetchGlobalStats();
-    }
-  }, [polPrice, fetchGlobalStats]);
-  
-  // USD value change emission
-  useEffect(() => {
-    const usdValue = stats.totalAmount * polPrice;
-    if (onUsdValueChange && !stats.loading && polPrice > 0) {
-      onUsdValueChange(usdValue);
-    }
-  }, [stats.totalAmount, polPrice, stats.loading, onUsdValueChange]);
-
-  // Render left panel content
   const renderLeftPanel = () => {
     const isGlobalView = leftViewIndex === 0;
-    const currentStats = isGlobalView ? stats : userStats;
-    const isLoading = currentStats.loading;
-    
+    const isLoading = isGlobalView ? stats.loading : userStats.loading;
+
     return (
-      <div 
+      <div
         className={`stats-panel left-panel ${isGlobalView ? 'global-stats' : 'user-stats'} ${isLeftHighlighted ? 'highlighted' : ''} ${isConnected ? 'clickable' : ''}`}
         onClick={handleLeftPanelClick}
         onMouseEnter={() => setIsLeftHovered(true)}
@@ -2097,7 +1977,7 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
               </div>
               <div className="stat-item">
                 <span className="stat-label">USD VALUE:</span>
-                <span className="stat-value">{isLoading ? 'LOADING...' : `${(stats.totalAmount * polPrice).toFixed(2)}`}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `$${(stats.totalAmount * polPrice).toFixed(2)}`}</span>
               </div>
               <div className="stat-item carbon-impact">
                 <span className="stat-label">CO2 OFFSET:</span>
@@ -2116,7 +1996,7 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
               </div>
               <div className="stat-item">
                 <span className="stat-label">USD VALUE:</span>
-                <span className="stat-value">{isLoading ? 'LOADING...' : `${(userStats.userAmount * polPrice).toFixed(2)}`}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `$${(userStats.userAmount * polPrice).toFixed(2)}`}</span>
               </div>
               <div className="stat-item carbon-impact">
                 <span className="stat-label">YOUR CO2 OFFSET:</span>
@@ -2128,13 +2008,12 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
       </div>
     );
   };
-  
-  // Render right panel content
+
   const renderRightPanel = () => {
     const isPriceView = rightViewIndex === 0;
-    
+
     return (
-      <div 
+      <div
         className={`stats-panel right-panel ${isPriceView ? 'price-panel' : 'leaderboard-panel'} ${isRightHighlighted ? 'highlighted' : ''} clickable`}
         onClick={handleRightPanelClick}
         onMouseEnter={() => setIsRightHovered(true)}
@@ -2183,21 +2062,20 @@ const GlobalDashboard = ({ onUsdValueChange }) => {
       <div className="dashboard-header">
         <div className="dashboard-title">
           <span className="prompt">&gt;&gt;&gt;</span>
-          <span>PIXELNAUTS GLOBAL IMPACT</span>
+          <span>PIXLNAUTS GLOBAL IMPACT</span>
         </div>
       </div>
-      
       <div className="dashboard-grid">
         {renderLeftPanel()}
         {renderRightPanel()}
       </div>
-      
       <div className="dashboard-footer">
         <div className="impact-message">
-          <ScrambleText 
-            text="Every donation helps fund environmental initiatives and carbon offset projects." 
-            speed={15} 
+          <ScrambleText
+            text="Every donation helps fund environmental initiatives and carbon offset projects."
+            speed={15}
             intensity={0.8}
+            key={`dashboard-impact-${focusKey}`}
           />
         </div>
       </div>
@@ -2219,6 +2097,7 @@ const App = () => {
   const [showContent, setShowContent] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [currentUsdValue, setCurrentUsdValue] = useState(0);
+  const [focusKey, setFocusKey] = useState(0);
   
   // Add simple scroll-to-top effect on initial load
   useEffect(() => {
@@ -2232,13 +2111,11 @@ const App = () => {
   
   // Add another effect specifically to handle page refresh
   useEffect(() => {
-    // This will run on component mount (page load/refresh)
     window.scrollTo(0, 0);
     
-    // Add event listener for page visibility changes
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        window.scrollTo(0, 0);
+        setFocusKey(prev => prev + 1);
       }
     };
     
@@ -2282,12 +2159,12 @@ const App = () => {
   
   return (
     <div className={`pixlnauts-app ${showContent ? 'show' : 'hide'}`}>
-      <Logo />
+      <Logo focusKey={focusKey} />
       <div className={`tabs-section ${tabsVisible ? 'open' : 'closed'}`}>
-        <TabsManager openCustomizer={handleOpenCustomizer} currentUsdValue={currentUsdValue} />
+        <TabsManager openCustomizer={handleOpenCustomizer} currentUsdValue={currentUsdValue} focusKey={focusKey} />
       </div>
-      <GlobalDashboard onUsdValueChange={setCurrentUsdValue} />
-      <Footer />
+      <GlobalDashboard onUsdValueChange={setCurrentUsdValue} focusKey={focusKey} />
+      <Footer focusKey={focusKey} />
     </div>
   );
 };
