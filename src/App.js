@@ -1173,10 +1173,10 @@ const QuirkiestAppTab = ({ focusKey }) => {
         <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v4.0 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v4.2 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv4.0.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv4.2.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
         <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="pixel-button">
