@@ -1176,7 +1176,7 @@ const QuirkiestAppTab = ({ focusKey }) => {
         <p>GET THE LATEST VERSION SmartClock v4.2 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv4.2.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv4.3.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
         <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="pixel-button">
