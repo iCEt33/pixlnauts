@@ -1,8 +1,13 @@
-// api/donations.js  —  Step 2a: cached donation ledger (in-memory cache only).
-// Drive persistence (Step 2b) bolts on later without changing this shape.
+// api/donations.js  —  Steps 2a + 2b: cached donation ledger (memory + Google Drive).
+// Reuses the same Google service account as the waitlist, with the Drive scope.
 //
-// Requires Node 18+ for global fetch (Vercel default). Set ETHERSCAN_API_KEY in
-// your Vercel env (the value currently hardcoded in App.js).
+// Env vars:
+//   ETHERSCAN_API_KEY    — the key formerly hardcoded in App.js
+//   DRIVE_CACHE_FILE_ID  — id of the donations-cache.json file shared with the service account
+//   GOOGLE_PROJECT_ID, GOOGLE_PRIVATE_KEY_ID, GOOGLE_PRIVATE_KEY,
+//   GOOGLE_CLIENT_EMAIL, GOOGLE_CLIENT_ID   — already set for the waitlist
+
+const { google } = require('googleapis');
 
 const TARGET = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
 const COIN = 'coingecko:polygon-ecosystem-token';
@@ -18,6 +23,46 @@ const RATE_LIMIT_DELAY = 250;
 let memory = { data: null, ts: 0 };
 let refreshing = false;
 const priceAtTime = new Map(); // immutable historical prices, keyed by unix timestamp
+
+// ---------- Google Drive (durable, cross-instance cache) ----------
+const driveAuth = new google.auth.GoogleAuth({
+  credentials: {
+    type: 'service_account',
+    project_id: process.env.GOOGLE_PROJECT_ID,
+    private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    client_id: process.env.GOOGLE_CLIENT_ID,
+  },
+  scopes: ['https://www.googleapis.com/auth/drive'],
+});
+const driveApi = google.drive({ version: 'v3', auth: driveAuth });
+
+async function readDriveCache() {
+  const fileId = process.env.DRIVE_CACHE_FILE_ID;
+  if (!fileId) return null;
+  try {
+    const res = await driveApi.files.get({ fileId, alt: 'media' });
+    const parsed = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+    return parsed && parsed.data && parsed.ts ? parsed : null; // { data, ts }
+  } catch (e) {
+    console.error('Drive read failed:', e.message);
+    return null;
+  }
+}
+
+async function writeDriveCache(snapshot) {
+  const fileId = process.env.DRIVE_CACHE_FILE_ID;
+  if (!fileId) return;
+  try {
+    await driveApi.files.update({
+      fileId,
+      media: { mimeType: 'application/json', body: JSON.stringify(snapshot) },
+    });
+  } catch (e) {
+    console.error('Drive write failed:', e.message);
+  }
+}
 
 // ---------- Etherscan ----------
 async function fetchEtherscanPaginated(extraParams) {
@@ -38,9 +83,9 @@ async function fetchEtherscanPaginated(extraParams) {
         if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
       }
     }
-    if (pageResult === null) break;            // page failed after retries -> return partial
+    if (pageResult === null) break;
     all.push(...pageResult);
-    if (pageResult.length < PAGE_SIZE) break;  // short page -> last page
+    if (pageResult.length < PAGE_SIZE) break;
     await new Promise(r => setTimeout(r, RATE_LIMIT_DELAY));
   }
   return all;
@@ -58,13 +103,13 @@ function filterDonations(txs) {
 
 // ---------- DefiLlama pricing ----------
 async function getHistoricalPolPrice(unixTs) {
-  if (priceAtTime.has(unixTs)) return priceAtTime.get(unixTs); // cache hit, no network
+  if (priceAtTime.has(unixTs)) return priceAtTime.get(unixTs);
   try {
     const res = await fetch(`https://coins.llama.fi/prices/historical/${unixTs}/${COIN}?searchWidth=4h`);
     const price = (await res.json())?.coins?.[COIN]?.price;
-    if (price > 0) { priceAtTime.set(unixTs, price); return price; } // cache only on success
+    if (price > 0) { priceAtTime.set(unixTs, price); return price; }
   } catch {}
-  return 0; // failure not cached -> retries next pass
+  return 0;
 }
 
 async function fetchCurrentPolPrice() {
@@ -99,11 +144,11 @@ async function priceDonations(donations) {
   }));
 }
 
-// ---------- shape the payload the client consumes ----------
+// ---------- payload ----------
 function computePayload(rows, polPriceNow) {
   const totalPOL = rows.reduce((s, r) => s + r.amountPOL, 0);
   const totalUsd = rows.reduce((s, r) => s + r.usdAtTime, 0);
-  const trees = Math.floor(totalUsd);                 // floor the sum, not per-row
+  const trees = Math.floor(totalUsd);
   const co2MetricTons = (trees * CO2_KG_PER_TREE) / 1000;
 
   const byDonor = new Map();
@@ -118,7 +163,7 @@ function computePayload(rows, polPriceNow) {
     polPriceNow,
     totals: { count: rows.length, totalPOL, totalUsd, trees, co2MetricTons },
     topDonors,
-    donations: rows, // full priced list; client filters by `from` for per-user history
+    donations: rows,
   };
 }
 
@@ -137,16 +182,25 @@ module.exports = async (req, res) => {
 
   const now = Date.now();
 
-  // 1) fresh enough in memory -> serve immediately
+  // 1) fresh in memory -> serve immediately
   if (memory.data && now - memory.ts < TTL_MS) {
     return res.status(200).json({ ...memory.data, cached: true });
   }
 
-  // 2) stale -> rebuild once (guard prevents this instance double-building)
+  // 2) memory stale/cold -> try the shared Drive copy (another instance may have refreshed)
+  const fromDrive = await readDriveCache();
+  if (fromDrive && now - fromDrive.ts < TTL_MS) {
+    memory = fromDrive;
+    return res.status(200).json({ ...fromDrive.data, cached: true });
+  }
+
+  // 3) stale everywhere -> rebuild once (guarded), then persist to Drive
   if (!refreshing) {
     refreshing = true;
     try {
-      memory = { data: await buildFresh(), ts: Date.now() };
+      const data = await buildFresh();
+      memory = { data, ts: Date.now() };
+      await writeDriveCache(memory);
     } catch (e) {
       console.error('donations build failed:', e);
     } finally {
@@ -154,9 +208,11 @@ module.exports = async (req, res) => {
     }
   }
 
-  // 3) return whatever we have (fresh, or last-good if a rebuild was in flight / failed)
-  if (memory.data) {
-    return res.status(200).json({ ...memory.data, cached: Date.now() - memory.ts >= TTL_MS });
+  // 4) return the best copy we have
+  const best = memory.data || fromDrive?.data;
+  if (best) {
+    const ts = memory.data ? memory.ts : fromDrive.ts;
+    return res.status(200).json({ ...best, cached: now - ts >= TTL_MS });
   }
   return res.status(502).json({ error: 'Failed to build donation ledger' });
 };
