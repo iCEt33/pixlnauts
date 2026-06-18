@@ -47,15 +47,15 @@ const SystemCheck = ({ onComplete }) => {
   }, [showInitialInfo, startMainSequence, onComplete]);
   
   const initialSystemInfo = useMemo(() => [
-    "PIXL-OS v2.5.7 - Environmental Monitoring System",
-    "Copyright (C) 2021-2025, PIXLNAUTS Foundation",
+    "PIXL-OS v2.5.9 - Environmental Monitoring System",
+    "Copyright (C) 2021-2026, PIXLNAUTS Foundation",
     "--------------------------------------------",
     "CPU Type    : PIXL-CORE 1024 @ 3800 MHz",
     "Memory      : 8192 MB OK",
     "Storage     : 1024 TB OK",
     "\u00A0", // Non-breaking space for empty line
     "Boot Sequence Initialized - Application v0.0.1",
-    "Copyright (C) 2025 PIXLNAUTS",
+    "Copyright (C) 2026 PIXLNAUTS",
     "   Detecting Core Components",
     "   Initializing Plant Monitoring Modules",
     "   Activating Environmental Sensors OK",
@@ -1173,7 +1173,7 @@ const QuirkiestAppTab = ({ focusKey }) => {
         <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v4.2 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v4.3 NOW!!!</p>
       </div>
       <div className="app-download">
         <a href="/downloads/smartclockv4.3.apk" download className="pixel-button">
@@ -1314,14 +1314,14 @@ const PxPFlipTab = ({ focusKey }) => {
         </p>
         <p>
           <ScrambleText 
-            text="Your keys never touch the internet. Ever." 
+            text="Calls, texts, the satisfying snap shut." 
             speed={10} 
             key={`pxp-3-${focusKey}`}
           />
         </p>
         <p className="pxp-tagline">
           <ScrambleText 
-            text="The future of crypto security is stuck in 2005." 
+            text="The phone you wanted back. The future is stuck in 2005." 
             speed={10} 
             key={`pxp-4-${focusKey}`}
           />
@@ -1523,7 +1523,7 @@ const TabsManager = ({ openCustomizer, currentUsdValue, focusKey }) => {
         <SocialsTab focusKey={focusKey} />
       </Tab>
       <Tab 
-        title="GAMES" 
+        title="ASTRONAUT TRAINING PROGRAM" 
         isOpen={openTab === 2} 
         toggleTab={() => toggleTab(2)}
         focusKey={focusKey}
@@ -1739,28 +1739,34 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
   const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
   const ETHERSCAN_API_KEY = 'VP2R2EY1PK7YXE6HI2WTHG5D7K117WYRNS';
 
-  // Fetch POL price with CoinGecko primary, CryptoCompare fallback
+  // Fetch POL price: DefiLlama primary, Coinbase fallback, last-known-good on failure
   const fetchPolPrice = useCallback(async () => {
+    // 1) DefiLlama — keyless, CORS-open, the active POL id post-migration
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=polygon&vs_currencies=usd');
-      const data = await response.json();
-      if (data?.polygon?.usd > 0) {
-        setPolPrice(parseFloat(data.polygon.usd));
+      const res = await fetch('https://coins.llama.fi/prices/current/coingecko:polygon-ecosystem-token');
+      const data = await res.json();
+      const price = data?.coins?.['coingecko:polygon-ecosystem-token']?.price;
+      if (price > 0) {
+        setPolPrice(parseFloat(price));
         return;
       }
     } catch {}
 
+    // 2) Coinbase — keyless fallback
     try {
-      const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=MATIC&tsyms=USD');
-      const data = await response.json();
-      if (data?.USD > 0) {
-        setPolPrice(parseFloat(data.USD));
+      const res = await fetch('https://api.coinbase.com/v2/prices/POL-USD/spot');
+      const data = await res.json();
+      const price = parseFloat(data?.data?.amount);
+      if (price > 0) {
+        setPolPrice(parseFloat(price));
         return;
       }
     } catch {}
 
-    console.warn('All price APIs failed, using fallback price');
-    setPolPrice(0.4);
+    // 3) Both failed: keep the last known good price. React state already holds it,
+    //    so we just don't overwrite it. No magic number. If we've never had a price,
+    //    polPrice stays 0 and the panels stay in their LOADING state until next refresh.
+    console.warn('POL price sources unavailable; keeping last known good value');
   }, []);
 
   // Single Etherscan call — returns everything needed for both global and user stats
