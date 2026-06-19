@@ -1,9 +1,10 @@
-/* global BigInt */
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react';
+import { createPortal } from 'react-dom';
 // Import RainbowKit hooks
 import { useAccount, useBalance, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, formatUnits } from 'viem';
+import QRCode from 'qrcode';
 import { WalletProvider } from './WalletProvider';
 
 const isMobileDevice = () => {
@@ -488,7 +489,7 @@ const SystemCheck = ({ onComplete }) => {
 };
 
 // Component for the text scrambling animation
-const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, color }) => {
+const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, color, compact = false }) => {
   const [displayText, setDisplayText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -503,11 +504,17 @@ const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, co
   
   // Memoize the character selection function
   const getRandomChar = useCallback(() => {
+    // Compact mode scrambles with letters/numbers only. The wide block and
+    // symbol glyphs make the line wider than the final text, which can force
+    // an extra wrap mid-animation and shove the content below up and down.
+    if (compact) {
+      return primaryChars.charAt(Math.floor(Math.random() * primaryChars.length));
+    }
     const r = Math.random();
     if (r < 0.6) return primaryChars.charAt(Math.floor(Math.random() * primaryChars.length));
     if (r < 0.8) return symbolChars.charAt(Math.floor(Math.random() * symbolChars.length));
     return pixelChars.charAt(Math.floor(Math.random() * pixelChars.length));
-  }, []);
+  }, [compact]);
 
   useEffect(() => {
     if (!cleanText) return;
@@ -695,6 +702,86 @@ const Logo = ({ focusKey }) => {
   );
 };
 
+// Donation history overlay (drawn over everything, paginated 10/page)
+const DonationHistoryOverlay = ({ rows, walletAddress, onClose }) => {
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const start = safePage * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+  return createPortal(
+    <div className="history-overlay" onClick={onClose}>
+      <div className="history-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="history-header">
+          <span className="history-title">
+            <span className="prompt">&gt;&gt;&gt;</span> YOUR DONATION HISTORY
+          </span>
+          <button className="history-close-btn" onClick={onClose}>[CLOSE]</button>
+        </div>
+        <div className="history-wallet">
+          WALLET: {walletAddress.substring(0, 6)}...{walletAddress.substring(38)}
+        </div>
+
+        {rows.length === 0 ? (
+          <div className="history-empty">NO DONATIONS FOUND FOR THIS WALLET.</div>
+        ) : (
+          <>
+            <div className="history-list">
+              {pageRows.map((row) => (
+                <div key={row.hash} className={`history-row ${row.optimistic ? 'pending' : ''}`}>
+                  <div className="history-row-top">
+                    <span className="history-date">{new Date(row.date).toLocaleDateString()}</span>
+                    <span className="history-amount">{row.amountPOL.toFixed(5)} POL</span>
+                  </div>
+                  <div className="history-row-bottom">
+                    <span className="history-usd">
+                      ${row.usdAtTime.toFixed(2)}{row.optimistic ? ' (EST)' : ''}
+                    </span>
+                    <a
+                      className="tx-link"
+                      href={row.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {row.hash.substring(0, 10)}...{row.hash.substring(56)}
+                    </a>
+                  </div>
+                  {row.optimistic && (
+                    <div className="history-pending-tag">PENDING CONFIRMATION</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="history-pagination">
+                <button
+                  className="page-btn"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={safePage === 0}
+                >
+                  [PREV]
+                </button>
+                <span className="page-indicator">PAGE {safePage + 1} / {totalPages}</span>
+                <button
+                  className="page-btn"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage >= totalPages - 1}
+                >
+                  [NEXT]
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // Wallet connection component with RainbowKit
 const WalletDonation = () => {
   const { address, isConnected } = useAccount();
@@ -717,6 +804,11 @@ const WalletDonation = () => {
       enabled: !!txData,
     },
   });
+  const { data: donationsData } = useDonations();
+  const polPriceNow = donationsData?.polPriceNow || 0;
+  const [pendingDonations, setPendingDonations] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const lastSentAmountRef = useRef(null);
 
   // Handle transaction success/error with useEffect
   useEffect(() => {
@@ -726,6 +818,28 @@ const WalletDonation = () => {
       alert(`Transaction successful! Hash: ${txData}\n\nYou can view it on Polygonscan: https://polygonscan.com/tx/${txData}`);
     }
   }, [txData, isWaitingForTx]);
+
+  // Optimistic row: show the just-sent donation the instant we have a hash
+  useEffect(() => {
+    if (!txData) return;
+    const amt = lastSentAmountRef.current || 0;
+    if (amt <= 0) return;
+    setPendingDonations((prev) => {
+      if (prev.some((p) => p.hash.toLowerCase() === txData.toLowerCase())) return prev;
+      return [
+        {
+          hash: txData,
+          from: (address || '').toLowerCase(),
+          date: new Date().toISOString(),
+          amountPOL: amt,
+          usdAtTime: amt * polPriceNow,
+          link: `https://polygonscan.com/tx/${txData}`,
+          optimistic: true,
+        },
+        ...prev,
+      ];
+    });
+  }, [txData, address, polPriceNow]);
   
   // Disconnect function that reloads page but skips boot sequence
   const handleDisconnect = () => {
@@ -748,6 +862,8 @@ const WalletDonation = () => {
   // Handle donation transaction
   const handleDonate = async () => {
     if (!isConnected || parseFloat(donationAmount) <= 0) return;
+
+    lastSentAmountRef.current = parseFloat(donationAmount);
     
     try {
       await sendTransaction({
@@ -820,6 +936,15 @@ const WalletDonation = () => {
     );
   }
   
+  // Merge ledger rows for this wallet with optimistic pending, deduped by hash
+  const me = (address || '').toLowerCase();
+  const ledgerRows = (donationsData?.donations || []).filter((d) => d.from === me);
+  const ledgerHashes = new Set(ledgerRows.map((r) => r.hash.toLowerCase()));
+  const mergedHistory = [
+    ...pendingDonations.filter((p) => !ledgerHashes.has(p.hash.toLowerCase())),
+    ...ledgerRows,
+  ];
+
   // Render donation interface if connected
   return (
     <div className="wallet-donation">
@@ -876,6 +1001,18 @@ const WalletDonation = () => {
         <div className="available-balance">
           AVAILABLE: {parseFloat(balanceFormatted).toFixed(4)} POL
         </div>
+
+        <button onClick={() => setShowHistory(true)} className="history-open-btn">
+          [VIEW DONATION HISTORY]
+        </button>
+
+        {showHistory && (
+          <DonationHistoryOverlay
+            rows={mergedHistory}
+            walletAddress={address || ''}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
         
         {txHash && (
           <div className="transaction-hash">
@@ -1131,14 +1268,75 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
   );
 };
 
+// Receive-POL QR for direct donations (no wallet connection needed)
+const DONATION_WALLET = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
+
+const PolDonationQR = () => {
+  const canvasRef = useRef(null);
+  const [qrError, setQrError] = useState(false);
+
+  const isValidAddress = /^0x[0-9a-fA-F]{40}$/.test(DONATION_WALLET);
+
+  useEffect(() => {
+    if (!isValidAddress || !canvasRef.current) {
+      setQrError(true);
+      return;
+    }
+    QRCode.toCanvas(
+      canvasRef.current,
+      DONATION_WALLET,
+      {
+        width: 260,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#00ff00', light: '#000000' },
+      },
+      (err) => {
+        if (err) {
+          console.error('QR render failed:', err);
+          setQrError(true);
+        } else {
+          setQrError(false);
+        }
+      }
+    );
+  }, [isValidAddress]);
+
+  return (
+    <div className="pol-qr">
+      <div className="pol-qr-title">
+        <span className="prompt">&gt;&gt;&gt;</span> SCAN TO DONATE POL
+      </div>
+
+      <div className="pol-qr-frame">
+        {qrError ? (
+          <div className="pol-qr-fallback">QR UNAVAILABLE</div>
+        ) : (
+          <canvas ref={canvasRef} className="pol-qr-canvas" />
+        )}
+      </div>
+
+      <div className="pol-qr-warning">
+        <div className="pol-qr-warning-main">⚠ POLYGON NETWORK ONLY</div>
+        <div className="pol-qr-warning-sub">
+          Only send POL on the Polygon network (chain 137). Other tokens or networks may be lost permanently.
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Support Us tab content
 const SupportUsTab = ({ focusKey }) => {
   return (
     <div className="support-us">
+      <PolDonationQR />
+
       <p>
         <ScrambleText 
           text="Support PIXLNAUTS environmental initiatives through these platforms:" 
           speed={10} 
+          compact
           key={`support-1-${focusKey}`}
         />
       </p>
@@ -1707,187 +1905,55 @@ const CustomizerView = ({ onClose }) => {
 
 // Enhanced Global Dashboard Component with Dynamic Views
 const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
-  const [stats, setStats] = useState({
-    totalDonations: 0,
-    totalAmount: 0,
-    carbonOffset: 0,
-    topDonors: [],
-    loading: true
-  });
-  const [userStats, setUserStats] = useState({
-    userDonations: 0,
-    userAmount: 0,
-    userRank: 0,
-    loading: true
-  });
-  const [polPrice, setPolPrice] = useState(0);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  
-  // Dashboard state management
+  const { data } = useDonations();
+  const { address, isConnected } = useAccount();
+
+  // Display state for the cycling panels (unchanged behaviour)
   const [leftViewIndex, setLeftViewIndex] = useState(0);
   const [rightViewIndex, setRightViewIndex] = useState(0);
   const [isLeftHighlighted, setIsLeftHighlighted] = useState(false);
   const [isRightHighlighted, setIsRightHighlighted] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isLeftHovered, setIsLeftHovered] = useState(false);
   const [isRightHovered, setIsRightHovered] = useState(false);
-  
   const cycleIntervalRef = useRef(null);
-  const refreshIntervalRef = useRef(null);
-  
-  const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
-  const ETHERSCAN_API_KEY = 'VP2R2EY1PK7YXE6HI2WTHG5D7K117WYRNS';
 
-  // Fetch POL price: DefiLlama primary, Coinbase fallback, last-known-good on failure
-  const fetchPolPrice = useCallback(async () => {
-    // 1) DefiLlama — keyless, CORS-open, the active POL id post-migration
-    try {
-      const res = await fetch('https://coins.llama.fi/prices/current/coingecko:polygon-ecosystem-token');
-      const data = await res.json();
-      const price = data?.coins?.['coingecko:polygon-ecosystem-token']?.price;
-      if (price > 0) {
-        setPolPrice(parseFloat(price));
-        return;
-      }
-    } catch {}
+  const walletAddress = address || '';
+  const polPrice = data?.polPriceNow || 0;
+  const lastUpdated = data ? new Date(data.updatedAt) : 'LOADING...';
 
-    // 2) Coinbase — keyless fallback
-    try {
-      const res = await fetch('https://api.coinbase.com/v2/prices/POL-USD/spot');
-      const data = await res.json();
-      const price = parseFloat(data?.data?.amount);
-      if (price > 0) {
-        setPolPrice(parseFloat(price));
-        return;
-      }
-    } catch {}
-
-    // 3) Both failed: keep the last known good price. React state already holds it,
-    //    so we just don't overwrite it. No magic number. If we've never had a price,
-    //    polPrice stays 0 and the panels stay in their LOADING state until next refresh.
-    console.warn('POL price sources unavailable; keeping last known good value');
-  }, []);
-
-  // Single Etherscan call — returns everything needed for both global and user stats
-  const fetchTransactions = useCallback(async () => {
-    try {
-      const url = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=txlist&address=${targetAddress}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.status === '1' && Array.isArray(data.result)) {
-        const donations = data.result.filter(tx =>
-          tx.to?.toLowerCase() === targetAddress.toLowerCase() &&
-          tx.value && tx.value !== '0' &&
-          tx.isError === '0' &&
-          tx.from !== targetAddress.toLowerCase()
-        );
-
-        const donorMap = new Map();
-        let totalAmount = 0;
-
-        donations.forEach(tx => {
-          try {
-            const amountInPol = Number(BigInt(tx.value)) / Math.pow(10, 18);
-            if (!isNaN(amountInPol) && amountInPol > 0 && amountInPol < 1000000) {
-              totalAmount += amountInPol;
-              donorMap.set(tx.from, (donorMap.get(tx.from) || 0) + amountInPol);
-            }
-          } catch (e) {
-            console.warn('Error parsing tx value:', tx.value, e);
-          }
-        });
-
-        const topDonors = Array.from(donorMap.entries())
-          .map(([address, amount]) => ({ address, amount }))
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 3);
-
-        return { totalDonations: donations.length, totalAmount, topDonors, donorMap };
-      }
-
-      console.warn('Etherscan API response:', data);
-      return { totalDonations: 0, totalAmount: 0, topDonors: [], donorMap: new Map() };
-    } catch (error) {
-      console.error('Failed to fetch transactions:', error);
-      return { totalDonations: 0, totalAmount: 0, topDonors: [], donorMap: new Map() };
-    }
-  }, [targetAddress]);
-
-  // Fetch global stats — reuses the single Etherscan call
-  const fetchGlobalStats = useCallback(async () => {
-    const data = await fetchTransactions();
-    const carbonOffset = polPrice > 0 ? (data.totalAmount * polPrice * 10) / 1000 : 0;
-    setStats({
-      totalDonations: data.totalDonations,
-      totalAmount: data.totalAmount,
-      carbonOffset,
-      topDonors: data.topDonors,
-      loading: false
-    });
-  }, [fetchTransactions, polPrice]);
-
-  // Fetch user stats — reuses the same Etherscan call
-  const fetchUserStats = useCallback(async (userAddress) => {
-    if (!userAddress) return;
-    setUserStats({ userDonations: 0, userAmount: 0, userRank: 0, loading: true });
-
-    const data = await fetchTransactions();
-    const userAmount = data.donorMap.get(userAddress.toLowerCase()) || 0;
-    const sortedDonors = Array.from(data.donorMap.entries()).sort((a, b) => b[1] - a[1]);
-    const userRank = sortedDonors.findIndex(([addr]) => addr.toLowerCase() === userAddress.toLowerCase()) + 1;
-
-    setUserStats({
-      userDonations: userAmount > 0 ? 1 : 0,
-      userAmount,
-      userRank: userRank || 0,
-      loading: false
-    });
-  }, [fetchTransactions]);
-
-  // Check wallet connection
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-            setIsConnected(true);
-            fetchUserStats(accounts[0]);
-          } else {
-            setIsConnected(false);
-            setWalletAddress('');
-            setLeftViewIndex(0);
-          }
-        } catch {
-          setIsConnected(false);
-          setWalletAddress('');
-          setLeftViewIndex(0);
-        }
-      }
+  // Global stats, shaped exactly how the render code below already expects
+  const stats = useMemo(() => {
+    if (!data) return { totalDonations: 0, totalAmount: 0, totalUsd: 0, carbonOffset: 0, topDonors: [], loading: true };
+    return {
+      totalDonations: data.totals.count,
+      totalAmount: data.totals.totalPOL,
+      totalUsd: data.totals.totalUsd,
+      carbonOffset: data.totals.co2MetricTons,
+      topDonors: data.topDonors.map(d => ({ address: d.address, amount: d.amountPOL })),
+      loading: false,
     };
+  }, [data]);
 
-    checkWalletConnection();
+  // Per-user stats, derived from the same payload filtered to the connected wallet
+  const userStats = useMemo(() => {
+    if (!data || !address) return { userAmount: 0, userUsd: 0, userCo2: 0, userRank: 0, loading: !data };
+    const me = address.toLowerCase();
+    const myRows = data.donations.filter(d => d.from === me);
+    const userAmount = myRows.reduce((s, r) => s + r.amountPOL, 0);
+    const userUsd = myRows.reduce((s, r) => s + r.usdAtTime, 0);
+    const userTrees = Math.floor(userUsd);
+    const userCo2 = (userTrees * 10) / 1000; // keep 10 in sync with CO2_KG_PER_TREE on the server
 
-    if (window.ethereum) {
-      const handleAccountsChanged = (accounts) => {
-        if (accounts.length === 0) {
-          setIsConnected(false);
-          setWalletAddress('');
-          setLeftViewIndex(0);
-          setUserStats({ userDonations: 0, userAmount: 0, userRank: 0, loading: false });
-        } else {
-          setWalletAddress(accounts[0]);
-          setIsConnected(true);
-          fetchUserStats(accounts[0]);
-        }
-      };
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      return () => window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-    }
-  }, [fetchUserStats]);
+    const byDonor = new Map();
+    for (const d of data.donations) byDonor.set(d.from, (byDonor.get(d.from) || 0) + d.amountPOL);
+    const sorted = [...byDonor.entries()].sort((a, b) => b[1] - a[1]);
+    const userRank = sorted.findIndex(([addr]) => addr === me) + 1;
+
+    return { userAmount, userUsd, userCo2, userRank, loading: false };
+  }, [data, address]);
+
+  // When disconnected, the left panel only shows the global view
+  useEffect(() => { if (!isConnected) setLeftViewIndex(0); }, [isConnected]);
 
   // Auto-cycle panels every 10 seconds
   useEffect(() => {
@@ -1910,33 +1976,13 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
         }
       }, delay);
     }, 10000);
-
     return () => clearInterval(cycleIntervalRef.current);
   }, [isConnected, isLeftHovered, isRightHovered]);
 
-  // Refresh every 2 minutes
+  // Emit total donated USD (historical) to the parent, for the milestones tab
   useEffect(() => {
-    refreshIntervalRef.current = setInterval(() => {
-      setLastUpdated('LOADING...');
-      fetchPolPrice();
-      fetchGlobalStats();
-      if (isConnected && walletAddress) fetchUserStats(walletAddress);
-      setTimeout(() => setLastUpdated(new Date()), 2000);
-    }, 120000);
-
-    return () => clearInterval(refreshIntervalRef.current);
-  }, [isConnected, walletAddress, fetchPolPrice, fetchGlobalStats, fetchUserStats]);
-
-  // Initial data fetch
-  useEffect(() => { fetchPolPrice(); }, [fetchPolPrice]);
-  useEffect(() => { if (polPrice > 0) fetchGlobalStats(); }, [polPrice, fetchGlobalStats]);
-
-  // Emit USD value to parent
-  useEffect(() => {
-    if (onUsdValueChange && !stats.loading && polPrice > 0) {
-      onUsdValueChange(stats.totalAmount * polPrice);
-    }
-  }, [stats.totalAmount, polPrice, stats.loading, onUsdValueChange]);
+    if (onUsdValueChange && data) onUsdValueChange(data.totals.totalUsd);
+  }, [data, onUsdValueChange]);
 
   const handleLeftPanelClick = () => {
     if (isConnected) {
@@ -1983,7 +2029,7 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
               </div>
               <div className="stat-item">
                 <span className="stat-label">USD VALUE:</span>
-                <span className="stat-value">{isLoading ? 'LOADING...' : `$${(stats.totalAmount * polPrice).toFixed(2)}`}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `$${stats.totalUsd.toFixed(2)}`}</span>
               </div>
               <div className="stat-item carbon-impact">
                 <span className="stat-label">CO2 OFFSET:</span>
@@ -2002,11 +2048,11 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
               </div>
               <div className="stat-item">
                 <span className="stat-label">USD VALUE:</span>
-                <span className="stat-value">{isLoading ? 'LOADING...' : `$${(userStats.userAmount * polPrice).toFixed(2)}`}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `$${userStats.userUsd.toFixed(2)}`}</span>
               </div>
               <div className="stat-item carbon-impact">
                 <span className="stat-label">YOUR CO2 OFFSET:</span>
-                <span className="stat-value">{isLoading ? 'LOADING...' : `${(userStats.userAmount * polPrice * 10 / 1000).toFixed(3)} METRIC TONS`}</span>
+                <span className="stat-value">{isLoading ? 'LOADING...' : `${userStats.userCo2.toFixed(3)} METRIC TONS`}</span>
               </div>
             </>
           )}
@@ -2017,7 +2063,6 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
 
   const renderRightPanel = () => {
     const isPriceView = rightViewIndex === 0;
-
     return (
       <div
         className={`stats-panel right-panel ${isPriceView ? 'price-panel' : 'leaderboard-panel'} ${isRightHighlighted ? 'highlighted' : ''} clickable`}
@@ -2863,7 +2908,7 @@ const styles = `
   .disconnect-btn {
     background: none;
     border: none;
-    color: #0f0;
+    color: #f55;
     cursor: pointer;
     font-family: monospace;
     font-size: 14px;
@@ -2871,8 +2916,8 @@ const styles = `
   }
 
   .disconnect-btn:hover {
-    color: #5f5;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    color: #f88;
+    text-shadow: 0 0 5px rgba(255, 85, 85, 0.6);
   }
 
   .donation-panel {
@@ -3831,6 +3876,7 @@ const styles = `
     .impact-message {
       font-size: 12px;
     }
+
   }
 
   /* Mobile responsiveness for milestones */
@@ -4078,6 +4124,274 @@ const styles = `
       padding-bottom: 20px;
     }
   }
+
+  /* Donation history button + overlay */
+  .history-open-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    background: none;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .history-open-btn:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+  }
+
+  .history-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.92);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .history-modal {
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    background-color: #000;
+    border: 4px solid #0f0;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    font-family: monospace;
+    color: #0f0;
+  }
+
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #0f0;
+  }
+
+  .history-title {
+    font-weight: bold;
+    font-size: 16px;
+  }
+
+  .history-close-btn {
+    background: none;
+    border: none;
+    color: #f55;
+    font-family: monospace;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .history-close-btn:hover {
+    color: #f88;
+    text-shadow: 0 0 5px rgba(255, 85, 85, 0.6);
+  }
+
+  .history-wallet {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 15px;
+    word-break: break-all;
+  }
+
+  .history-empty {
+    text-align: center;
+    padding: 40px 0;
+    opacity: 0.7;
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .history-row {
+    border: 1px solid #333;
+    border-left: 3px solid #0f0;
+    padding: 10px 12px;
+    background-color: #0a0a0a;
+  }
+
+  .history-row.pending {
+    border-left-color: #ff5;
+    background-color: rgba(40, 40, 0, 0.2);
+  }
+
+  .history-row-top,
+  .history-row-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .history-row-top {
+    margin-bottom: 6px;
+  }
+
+  .history-date {
+    color: #0f0;
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .history-amount {
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .history-usd {
+    color: #5f5;
+    font-size: 13px;
+  }
+
+  .history-pending-tag {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #ff5;
+    opacity: 0.9;
+  }
+
+  .history-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #333;
+  }
+
+  .page-btn {
+    background: none;
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+
+  .page-btn:hover:not(:disabled) {
+    background-color: rgba(0, 255, 0, 0.1);
+  }
+
+  .page-btn:disabled {
+    border-color: #444;
+    color: #444;
+    cursor: not-allowed;
+  }
+
+  .page-indicator {
+    font-size: 13px;
+  }
+
+  /* Receive-POL QR (direct donation, no wallet connect) */
+  .pol-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 30px;
+    padding: 25px 20px;
+    border: 4px solid #0f0;
+    background-color: rgba(0, 20, 0, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  }
+
+  .pol-qr-title {
+    color: #0f0;
+    font-weight: bold;
+    font-size: 18px;
+    font-family: monospace;
+    letter-spacing: 1px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+  }
+
+  .pol-qr-frame {
+    background-color: #000;
+    padding: 12px;
+    border: 2px solid #0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 284px;
+    min-height: 284px;
+  }
+
+  .pol-qr-canvas {
+    display: block;
+  }
+
+  .pol-qr-fallback {
+    color: #0f0;
+    font-family: monospace;
+    font-weight: bold;
+    width: 260px;
+    height: 260px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .pol-qr-warning {
+    text-align: center;
+    padding: 12px 14px;
+    border: 2px solid #f55;
+    background-color: rgba(50, 0, 0, 0.4);
+    max-width: 380px;
+  }
+
+  .pol-qr-warning-main {
+    color: #f55;
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 5px rgba(255, 85, 85, 0.6);
+    margin-bottom: 8px;
+  }
+
+  .pol-qr-warning-sub {
+    color: #f88;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 600px) {
+    .pol-qr-frame {
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .pol-qr-canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-width: 260px;
+    }
+  }
 `;
 
 // Add the styles to the document
@@ -4085,12 +4399,81 @@ const StyleSheet = () => {
   return <style>{styles}</style>;
 };
 
+// ---- Donations data layer: one fetch of /api/donations, shared app-wide ----
+const DonationsContext = createContext({ data: null, loading: true, error: null, refetch: () => {} });
+const useDonations = () => useContext(DonationsContext);
+
+// Rich sample data for local UI work (npm start can't run the api/ function). Shape matches /api/donations.
+const MOCK_DONATIONS = {
+  updatedAt: Date.now(),
+  polPriceNow: 0.077,
+  totals: { count: 5, totalPOL: 195, totalUsd: 47.35, trees: 47, co2MetricTons: 0.987 },
+  topDonors: [
+    { address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', amountPOL: 100 },
+    { address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', amountPOL: 62 },
+    { address: '0xcccccccccccccccccccccccccccccccccccccccc', amountPOL: 33 },
+  ],
+  donations: [
+    { hash: '0xmock1', from: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', date: '2025-08-01T10:00:00.000Z', amountPOL: 50, usdAtTime: 12.5, trees: 12, link: 'https://polygonscan.com/tx/0xmock1' },
+    { hash: '0xmock2', from: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', date: '2025-07-15T10:00:00.000Z', amountPOL: 100, usdAtTime: 24, trees: 24, link: 'https://polygonscan.com/tx/0xmock2' },
+    { hash: '0xmock3', from: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', date: '2025-06-10T10:00:00.000Z', amountPOL: 12, usdAtTime: 3.1, trees: 3, link: 'https://polygonscan.com/tx/0xmock3' },
+    { hash: '0xmock4', from: '0xcccccccccccccccccccccccccccccccccccccccc', date: '2025-05-20T10:00:00.000Z', amountPOL: 25, usdAtTime: 5.75, trees: 5, link: 'https://polygonscan.com/tx/0xmock4' },
+    { hash: '0xmock5', from: '0xcccccccccccccccccccccccccccccccccccccccc', date: '2025-04-02T10:00:00.000Z', amountPOL: 8, usdAtTime: 2.0, trees: 2, link: 'https://polygonscan.com/tx/0xmock5' },
+  ],
+};
+
+const FORCE_MOCK = false; // flip to true to force the mock locally; ignored in production builds
+
+const DonationsProvider = ({ children }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const refetch = useCallback(async () => {
+    if (process.env.NODE_ENV === 'development' && FORCE_MOCK) {
+      setData(MOCK_DONATIONS); setError(null); setLoading(false); return;
+    }
+    try {
+      const res = await fetch('/api/donations');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setData(await res.json());
+      setError(null);
+    } catch (e) {
+      // npm start doesn't run api/ functions, so /api/donations returns index.html and res.json() throws.
+      // In dev, fall back to the mock instead of spinning forever.
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Using mock donations (dev fallback):', e.message);
+        setData(MOCK_DONATIONS); setError(null);
+      } else {
+        console.error('Failed to load /api/donations:', e);
+        setError(e);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refetch();
+    const id = setInterval(refetch, 60_000);
+    return () => clearInterval(id);
+  }, [refetch]);
+
+  return (
+    <DonationsContext.Provider value={{ data, loading, error, refetch }}>
+      {children}
+    </DonationsContext.Provider>
+  );
+};
+
 // Wrap everything together
 const PixlnautsWebsite = () => {
   return (
     <WalletProvider>
       <StyleSheet />
-      <App />
+      <DonationsProvider>
+        <App />
+      </DonationsProvider>
     </WalletProvider>
   );
 };

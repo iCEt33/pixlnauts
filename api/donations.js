@@ -13,7 +13,7 @@ const TARGET = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
 const COIN = 'coingecko:polygon-ecosystem-token';
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 const TTL_MS = 60_000;
-const CO2_KG_PER_TREE = 21; // TODO: set your real figure (trees -> CO2)
+const CO2_KG_PER_TREE = 10; // TODO: set your real figure (trees -> CO2)
 
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
