@@ -149,7 +149,10 @@ function computePayload(rows, polPriceNow) {
   const totalPOL = rows.reduce((s, r) => s + r.amountPOL, 0);
   const totalUsd = rows.reduce((s, r) => s + r.usdAtTime, 0);
   const trees = Math.floor(totalUsd);
-  const co2MetricTons = (trees * CO2_KG_PER_TREE) / 1000;
+  // CO2 from the unrounded USD (1 USD worth = 1 tree-equivalent), so totals under
+  // a whole dollar still produce CO2 instead of flooring to zero. trees stays
+  // floored for the (currently unused) display count.
+  const co2MetricTons = (totalUsd * CO2_KG_PER_TREE) / 1000;
 
   const byDonor = new Map();
   for (const r of rows) byDonor.set(r.from, (byDonor.get(r.from) || 0) + r.amountPOL);

@@ -9,7 +9,7 @@ import { http, fallback } from 'wagmi';
 // Create wagmi config with new v2 API
 const config = getDefaultConfig({
   appName: 'PIXLNAUTS',
-  projectId: process.env.REACT_APP_WALLET_CONNECT_ID || 'placeholder',
+  projectId: process.env.REACT_APP_WALLET_CONNECT_ID || 'ae42ea8a436575f7d8709612cd256dc6',
   chains: [polygon],
   transports: {
     [polygon.id]: fallback([

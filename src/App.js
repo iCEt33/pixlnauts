@@ -843,7 +843,11 @@ const WalletDonation = () => {
   
   // Disconnect function that reloads page but skips boot sequence
   const handleDisconnect = () => {
-    localStorage.setItem('skipBootSequence', 'true');
+    // Some wallets (notably Coinbase Wallet SDK) reload the page themselves on
+    // disconnect, which stacks with the reload below. A one-shot flag gets
+    // consumed by the first reload, so the second reload replays the boot
+    // screen. A short time window instead makes every reload within it skip boot.
+    localStorage.setItem('skipBootUntil', String(Date.now() + 10000));
     disconnect();
     window.location.reload();
   };
@@ -1305,7 +1309,7 @@ const PolDonationQR = () => {
   return (
     <div className="pol-qr">
       <div className="pol-qr-title">
-        <span className="prompt">&gt;&gt;&gt;</span> SCAN TO DONATE POL
+        <span>&gt;&gt;&gt;</span> SCAN TO DONATE POL
       </div>
 
       <div className="pol-qr-frame">
@@ -1319,7 +1323,7 @@ const PolDonationQR = () => {
       <div className="pol-qr-warning">
         <div className="pol-qr-warning-main">⚠ POLYGON NETWORK ONLY</div>
         <div className="pol-qr-warning-sub">
-          Only send POL on the Polygon network (chain 137). Other tokens or networks may be lost permanently.
+          Other tokens or networks may be lost permanently.
         </div>
       </div>
     </div>
@@ -1941,8 +1945,10 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
     const myRows = data.donations.filter(d => d.from === me);
     const userAmount = myRows.reduce((s, r) => s + r.amountPOL, 0);
     const userUsd = myRows.reduce((s, r) => s + r.usdAtTime, 0);
-    const userTrees = Math.floor(userUsd);
-    const userCo2 = (userTrees * 10) / 1000; // keep 10 in sync with CO2_KG_PER_TREE on the server
+    // CO2 is computed from the unrounded USD (1 USD worth = 1 tree-equivalent),
+    // not the floored tree count, so sub-dollar donations still show CO2 instead
+    // of rounding to zero. Keep 10 in sync with CO2_KG_PER_TREE on the server.
+    const userCo2 = (userUsd * 10) / 1000;
 
     const byDonor = new Map();
     for (const d of data.donations) byDonor.set(d.from, (byDonor.get(d.from) || 0) + d.amountPOL);
@@ -2137,10 +2143,17 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
 // Main component
 const App = () => {
   const [currentState, setCurrentState] = useState(() => {
-    // Check if we should skip boot sequence
-    if (localStorage.getItem('skipBootSequence') === 'true') {
-      localStorage.removeItem('skipBootSequence'); // Clean up the flag
-      return 'content'; // Skip directly to content
+    // Skip the boot sequence if we disconnected within the last few seconds.
+    // A timestamp window (not a one-shot flag) survives wallets that reload the
+    // page more than once on disconnect, so the boot screen doesn't replay.
+    try {
+      const skipUntil = parseInt(localStorage.getItem('skipBootUntil') || '0', 10);
+      if (Date.now() < skipUntil) {
+        return 'content'; // within the window — keep the flag so extra reloads skip too
+      }
+      if (skipUntil) localStorage.removeItem('skipBootUntil'); // stale — clean up
+    } catch (e) {
+      // localStorage unavailable; just boot normally
     }
     return 'systemCheck'; // Normal boot sequence
   });
@@ -3203,11 +3216,11 @@ const styles = `
   }
 
   .global-dashboard .right-panel.price-panel {
-    border-left: 4px solid #5f5;
+    border-left: 4px solid #aa00ff;
   }
 
   .global-dashboard .right-panel.leaderboard-panel {
-    border-left: 4px solid #f5f;
+    border-left: 4px solid #fff;
   }
 
   .global-dashboard .stats-header {
@@ -4320,12 +4333,12 @@ const styles = `
   }
 
   .pol-qr-title {
-    color: #0f0;
+    color: #aa00ff;
     font-weight: bold;
     font-size: 18px;
     font-family: monospace;
     letter-spacing: 1px;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    text-shadow: 0 0 5px rgba(170, 0, 255, 0.5);
   }
 
   .pol-qr-frame {
