@@ -798,7 +798,8 @@ const WalletDonation = () => {
   
   const targetAddress = '0xC3d6fA212211Ae1feE31054363130c69984698Ae';
   
-  const { data: txData, sendTransaction, isPending: isTransacting } = useSendTransaction();
+  const { sendTransactionAsync, isPending: isTransacting } = useSendTransaction();
+  const [txData, setTxData] = useState(null);
   const { isLoading: isWaitingForTx } = useWaitForTransactionReceipt({
     hash: txData,
     query: {
@@ -875,11 +876,12 @@ const WalletDonation = () => {
     lastSentAmountRef.current = parseFloat(donationAmount);
     
     try {
-      await sendTransaction({
+      const hash = await sendTransactionAsync({
         chainId: polygon.id,
         to: targetAddress,
         value: parseEther(donationAmount),
       });
+      setTxData(hash);
     } catch (error) {
       console.error('Transaction failed:', error);
       
@@ -1042,11 +1044,10 @@ const WalletDonation = () => {
   );
 };
 
-// Tab component — CSS-grid accordion. The browser sizes it to its content,
-// so it expands to fit anything inside (incl. the wallet panel) with no JS measuring.
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const tabRef = useRef(null);
 
+  // Only job left: scroll the opened header into view. CSS handles open/close.
   useEffect(() => {
     if (!isOpen || !tabRef.current) return;
     const t = setTimeout(() => {
@@ -1147,6 +1148,7 @@ const GamesTab = ({ focusKey }) => {
         <ScrambleText 
           text="Try our concept beta games! Experience these exciting PIXLNAUTS titles:" 
           speed={10} 
+          compact
           key={`games-1-${focusKey}`}
         />
       </p>
@@ -2428,6 +2430,13 @@ const styles = `
   .tab-content {
     padding: 20px;
     background-color: #111;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .tab.open .tab-content {
+    opacity: 1;
+    transition: opacity 0.25s ease 0.4s;   /* the 0.4s delay = wait for the frame to finish opening */
   }
 
   .whitepaper-button-text {
