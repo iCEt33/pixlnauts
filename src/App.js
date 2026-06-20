@@ -1042,51 +1042,11 @@ const WalletDonation = () => {
   );
 };
 
-// Tab component — fully collapses when closed, fits content dynamically when open
-// (locks to height:auto after opening, so it never clips on desktop or mobile)
+// Tab component — CSS-grid accordion. The browser sizes it to its content,
+// so it expands to fit anything inside (incl. the wallet panel) with no JS measuring.
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const tabRef = useRef(null);
-  const wrapperRef = useRef(null);
-  const contentRef = useRef(null);
 
-  // Open/close animation via the wrapper height
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    const content = contentRef.current;
-    if (!wrapper || !content) return;
-
-    if (isOpen) {
-      wrapper.style.height = content.scrollHeight + 'px';
-      const onEnd = (e) => {
-        if (e.propertyName === 'height') wrapper.style.height = 'auto'; // lock open
-      };
-      wrapper.addEventListener('transitionend', onEnd);
-      return () => wrapper.removeEventListener('transitionend', onEnd);
-    } else {
-      if (wrapper.style.height === 'auto') {
-        wrapper.style.height = content.scrollHeight + 'px';
-        wrapper.getBoundingClientRect(); // force reflow so the collapse animates
-      }
-      wrapper.style.height = '0px';
-    }
-  }, [isOpen]);
-
-  // If content changes while open (e.g. wallet connects): once locked to 'auto'
-  // it fits automatically; only re-measure if we're still mid-open.
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    const content = contentRef.current;
-    if (!wrapper || !content) return;
-    const ro = new ResizeObserver(() => {
-      if (isOpen && wrapper.style.height !== 'auto' && wrapper.style.height !== '0px') {
-        wrapper.style.height = content.scrollHeight + 'px';
-      }
-    });
-    ro.observe(content);
-    return () => ro.disconnect();
-  }, [isOpen]);
-
-  // Scroll the opened tab's header into a comfortable position
   useEffect(() => {
     if (!isOpen || !tabRef.current) return;
     const t = setTimeout(() => {
@@ -1106,9 +1066,9 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
         <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
       </div>
-      <div className="tab-content-wrapper" ref={wrapperRef} style={{ height: '0px' }}>
-        <div className="tab-content" ref={contentRef}>
-          {children}
+      <div className="tab-content-wrapper">
+        <div className="tab-content-clip">
+          <div className="tab-content">{children}</div>
         </div>
       </div>
     </div>
@@ -2445,8 +2405,10 @@ const styles = `
   }
   
   .tab-content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s ease-in-out;
     overflow: hidden;
-    transition: height 0.3s ease-in-out;
     background-color: #111;
     border-left: 4px solid #555;
     border-right: 4px solid #555;
@@ -2454,7 +2416,13 @@ const styles = `
   }
 
   .tab.open .tab-content-wrapper {
+    grid-template-rows: 1fr;
     border-color: #0f0;
+  }
+
+  .tab-content-clip {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .tab-content {
@@ -4134,7 +4102,7 @@ const styles = `
     
     /* Improve tab transition on mobile */
     .tab-content-wrapper {
-      transition: height 0.4s ease-in-out;
+      transition: grid-template-rows 0.4s ease-in-out;
     }
     
     /* Add some extra space at the bottom of tab content on mobile */
