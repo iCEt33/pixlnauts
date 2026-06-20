@@ -49,7 +49,7 @@ const SystemCheck = ({ onComplete }) => {
   }, [showInitialInfo, startMainSequence, onComplete]);
   
   const initialSystemInfo = useMemo(() => [
-    "PIXL-OS v2.5.9 - Environmental Monitoring System",
+    "PIXL-OS v2.6.9 - Environmental Monitoring System",
     "Copyright (C) 2021-2026, PIXLNAUTS Foundation",
     "--------------------------------------------",
     "CPU Type    : PIXL-CORE 1024 @ 3800 MHz",
@@ -1038,7 +1038,6 @@ const WalletDonation = () => {
   );
 };
 
-// Improved Tab component with better bottom scrolling
 // Improved Tab component with better bottom scrolling
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const [height, setHeight] = useState(0);
