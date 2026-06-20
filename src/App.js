@@ -1549,9 +1549,9 @@ const PxPFlipTab = ({ focusKey }) => {
 const DonationMilestonesTab = ({ currentUsdValue, focusKey }) => {
   const milestones = [
     { name: "3D Printer", amount: 500, selfFunded: 500, description: "Physical prototyping capabilities" },
-    { name: "NFT Customizer", amount: 450, selfFunded: 0, description: "Smart contract for actually minting your very own custom B-b0s" },
-    { name: "PxP Flip Phone", amount: 650, selfFunded: 0, description: "Air-gapped hardware wallet in a flip phone" },
-    { name: "Project: Cosmos alpha release", amount: 3200, selfFunded: 0, description: "Blockchain integration, multiplayer and performance optimizations" },
+    { name: "Flip Phone", amount: 30, selfFunded: 0, description: "PCB & turnkey cost TBD" },
+    { name: "Mango Cube", amount: 150, selfFunded: 0, description: "Portable AI cube" },
+    { name: "Project: Cosmos alpha release", amount: 3200, selfFunded: 0, description: "Blockchain integration, multiplayer, UGS backend, performance optimizations" },
     { name: "Coming Soon", amount: null, selfFunded: 0, description: "Future milestone to be announced" }
   ];
 
