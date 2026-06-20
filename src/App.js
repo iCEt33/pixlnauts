@@ -786,7 +786,7 @@ const DonationHistoryOverlay = ({ rows, walletAddress, onClose }) => {
 // Wallet connection component with RainbowKit
 const WalletDonation = () => {
   const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { disconnectAsync } = useDisconnect();
   const { data: balance } = useBalance({
     address: address,
   });
@@ -843,13 +843,17 @@ const WalletDonation = () => {
   }, [txData, address, polPriceNow]);
   
   // Disconnect function that reloads page but skips boot sequence
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     // Some wallets (notably Coinbase Wallet SDK) reload the page themselves on
     // disconnect, which stacks with the reload below. A one-shot flag gets
     // consumed by the first reload, so the second reload replays the boot
     // screen. A short time window instead makes every reload within it skip boot.
     localStorage.setItem('skipBootUntil', String(Date.now() + 10000));
-    disconnect();
+    try {
+      await disconnectAsync();   // wait for the wallet session to actually tear down (this is the mobile fix)
+    } catch (e) {
+      console.error('Disconnect failed:', e);
+    }
     window.location.reload();
   };
   
@@ -1038,72 +1042,63 @@ const WalletDonation = () => {
   );
 };
 
-// Improved Tab component with better bottom scrolling
+// Tab component — fully collapses when closed, fits content dynamically when open
+// (locks to height:auto after opening, so it never clips on desktop or mobile)
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
-  const [height, setHeight] = useState(0);
-  const contentRef = useRef(null);
   const tabRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const contentRef = useRef(null);
 
-  // Measure after layout settles (rAF), so async content like the wallet
-  // panel, balance, QR canvas and fonts are included.
-  const updateHeight = useCallback(() => {
-    if (isOpen && contentRef.current) {
-      requestAnimationFrame(() => {
-        if (contentRef.current) setHeight(contentRef.current.scrollHeight);
-      });
+  // Open/close animation via the wrapper height
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
+
+    if (isOpen) {
+      wrapper.style.height = content.scrollHeight + 'px';
+      const onEnd = (e) => {
+        if (e.propertyName === 'height') wrapper.style.height = 'auto'; // lock open
+      };
+      wrapper.addEventListener('transitionend', onEnd);
+      return () => wrapper.removeEventListener('transitionend', onEnd);
     } else {
-      setHeight(0);
+      if (wrapper.style.height === 'auto') {
+        wrapper.style.height = content.scrollHeight + 'px';
+        wrapper.getBoundingClientRect(); // force reflow so the collapse animates
+      }
+      wrapper.style.height = '0px';
     }
   }, [isOpen]);
 
-  // Watch for content size changes, plus re-measure when the page becomes
-  // visible again (mobile drops ResizeObserver callbacks while backgrounded,
-  // e.g. while you're approving in Trust Wallet).
+  // If content changes while open (e.g. wallet connects): once locked to 'auto'
+  // it fits automatically; only re-measure if we're still mid-open.
   useEffect(() => {
-    if (!contentRef.current) return;
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
+    const ro = new ResizeObserver(() => {
+      if (isOpen && wrapper.style.height !== 'auto' && wrapper.style.height !== '0px') {
+        wrapper.style.height = content.scrollHeight + 'px';
+      }
+    });
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [isOpen]);
 
-    const resizeObserver = new ResizeObserver(() => updateHeight());
-    resizeObserver.observe(contentRef.current);
-
-    const onVisible = () => { if (!document.hidden) updateHeight(); };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', updateHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', updateHeight);
-    };
-  }, [updateHeight]);
-
+  // Scroll the opened tab's header into a comfortable position
   useEffect(() => {
-    updateHeight();
-
-    // Re-measure a few times as async content settles after open/connect.
-    const timers = [120, 350, 700].map((t) => setTimeout(updateHeight, t));
-
-    if (isOpen && contentRef.current) {
-      // Simple scrolling logic focused on tab header positioning
-      setTimeout(() => {
-        if (tabRef.current) {
-          const tabRect = tabRef.current.getBoundingClientRect();
-          const topOffset = 140; // Space for logo at top - nice comfortable margin
-
-          const headerTop = tabRect.top;
-          const needsScrolling = headerTop < topOffset || headerTop > window.innerHeight * 0.3;
-
-          if (needsScrolling) {
-            window.scrollTo({
-              top: window.scrollY + headerTop - topOffset,
-              behavior: 'smooth'
-            });
-          }
-        }
-      }, 250);
-    }
-
-    return () => timers.forEach(clearTimeout);
-  }, [isOpen, updateHeight]);
+    if (!isOpen || !tabRef.current) return;
+    const t = setTimeout(() => {
+      if (!tabRef.current) return;
+      const rect = tabRef.current.getBoundingClientRect();
+      const topOffset = 140;
+      if (rect.top < topOffset || rect.top > window.innerHeight * 0.3) {
+        window.scrollTo({ top: window.scrollY + rect.top - topOffset, behavior: 'smooth' });
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [isOpen]);
 
   return (
     <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
@@ -1111,10 +1106,7 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
         <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
       </div>
-      <div
-        className="tab-content-wrapper"
-        style={{ height: `${height}px` }}
-      >
+      <div className="tab-content-wrapper" ref={wrapperRef} style={{ height: '0px' }}>
         <div className="tab-content" ref={contentRef}>
           {children}
         </div>
@@ -2460,7 +2452,7 @@ const styles = `
     border-right: 4px solid #555;
     border-bottom: 4px solid #555;
   }
-  
+
   .tab.open .tab-content-wrapper {
     border-color: #0f0;
   }
