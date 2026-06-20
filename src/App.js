@@ -1039,69 +1039,81 @@ const WalletDonation = () => {
 };
 
 // Improved Tab component with better bottom scrolling
+// Improved Tab component with better bottom scrolling
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
   const tabRef = useRef(null);
-  
-  // Function to update height
+
+  // Measure after layout settles (rAF), so async content like the wallet
+  // panel, balance, QR canvas and fonts are included.
   const updateHeight = useCallback(() => {
     if (isOpen && contentRef.current) {
-      setHeight(contentRef.current.scrollHeight);
+      requestAnimationFrame(() => {
+        if (contentRef.current) setHeight(contentRef.current.scrollHeight);
+      });
     } else {
       setHeight(0);
     }
   }, [isOpen]);
-  
-  // Use ResizeObserver to watch for content changes
+
+  // Watch for content size changes, plus re-measure when the page becomes
+  // visible again (mobile drops ResizeObserver callbacks while backgrounded,
+  // e.g. while you're approving in Trust Wallet).
   useEffect(() => {
     if (!contentRef.current) return;
-    
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeight();
-    });
-    
+
+    const resizeObserver = new ResizeObserver(() => updateHeight());
     resizeObserver.observe(contentRef.current);
-    
+
+    const onVisible = () => { if (!document.hidden) updateHeight(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', updateHeight);
+
     return () => {
       resizeObserver.disconnect();
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', updateHeight);
     };
   }, [updateHeight]);
-  
+
   useEffect(() => {
     updateHeight();
-    
+
+    // Re-measure a few times as async content settles after open/connect.
+    const timers = [120, 350, 700].map((t) => setTimeout(updateHeight, t));
+
     if (isOpen && contentRef.current) {
       // Simple scrolling logic focused on tab header positioning
       setTimeout(() => {
         if (tabRef.current) {
           const tabRect = tabRef.current.getBoundingClientRect();
           const topOffset = 140; // Space for logo at top - nice comfortable margin
-          
-          // Check if tab header is well-positioned
+
           const headerTop = tabRect.top;
           const needsScrolling = headerTop < topOffset || headerTop > window.innerHeight * 0.3;
-          
+
           if (needsScrolling) {
-            // Always position the tab header at the topOffset for consistency
             window.scrollTo({
               top: window.scrollY + headerTop - topOffset,
               behavior: 'smooth'
             });
           }
         }
-      }, 250); // Small delay to allow for DOM updates
+      }, 250);
     }
+
+    return () => timers.forEach(clearTimeout);
   }, [isOpen, updateHeight]);
-  
+
   return (
     <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
       <div className="tab-header" onClick={toggleTab}>
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
         <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
       </div>
-      <div 
-        className="tab-content-wrapper" 
+      <div
+        className="tab-content-wrapper"
         style={{ height: `${height}px` }}
       >
         <div className="tab-content" ref={contentRef}>
