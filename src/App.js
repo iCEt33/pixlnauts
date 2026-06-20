@@ -6,6 +6,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, formatUnits } from 'viem';
 import QRCode from 'qrcode';
 import { WalletProvider } from './WalletProvider';
+import { polygon } from 'wagmi/chains';
 
 const isMobileDevice = () => {
   return (
@@ -871,6 +872,7 @@ const WalletDonation = () => {
     
     try {
       await sendTransaction({
+        chainId: polygon.id,
         to: targetAddress,
         value: parseEther(donationAmount),
       });
