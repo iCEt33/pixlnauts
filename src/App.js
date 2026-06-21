@@ -878,6 +878,7 @@ const WalletDonation = () => {
       const hash = await sendTransactionAsync({
         to: targetAddress,
         value: parseEther(donationAmount),
+        data: '0x',
       });
       setTxData(hash);
     } catch (error) {
@@ -1044,8 +1045,29 @@ const WalletDonation = () => {
 
 const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const tabRef = useRef(null);
+  const clipRef = useRef(null);
+  const contentRef = useRef(null);
 
-  // Only job left: scroll the opened header into view. CSS handles open/close.
+  // Drive height from the actual content, and re-sync whenever it changes
+  // size (QR canvas drawing, wallet connecting, text reflowing). This is the
+  // part the pure-CSS grid trick can't do on iOS Safari.
+  useEffect(() => {
+    const clip = clipRef.current;
+    const content = contentRef.current;
+    if (!clip || !content) return;
+
+    const sync = () => {
+      clip.style.height = isOpen ? `${content.scrollHeight}px` : '0px';
+    };
+    sync();
+
+    if (!isOpen) return;
+    const ro = new ResizeObserver(sync);
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [isOpen]);
+
+  // Scroll the opened header into view.
   useEffect(() => {
     if (!isOpen || !tabRef.current) return;
     const t = setTimeout(() => {
@@ -1066,8 +1088,8 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
         <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
       </div>
       <div className="tab-content-wrapper">
-        <div className="tab-content-clip">
-          <div className="tab-content">{children}</div>
+        <div className="tab-content-clip" ref={clipRef}>
+          <div className="tab-content" ref={contentRef}>{children}</div>
         </div>
       </div>
     </div>
@@ -2405,9 +2427,6 @@ const styles = `
   }
   
   .tab-content-wrapper {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.4s ease-in-out;
     background-color: #111;
     border-left: 4px solid #555;
     border-right: 4px solid #555;
@@ -2415,13 +2434,13 @@ const styles = `
   }
 
   .tab.open .tab-content-wrapper {
-    grid-template-rows: 1fr;
-    border-color: #0f0;
+    border-color: #0f0;   /* keep your green-when-open border; drop grid-template-rows: 1fr */
   }
 
   .tab-content-clip {
-    min-height: 0;
+    height: 0;
     overflow: hidden;
+    transition: height 0.4s ease-in-out;
   }
 
   .tab-content {
