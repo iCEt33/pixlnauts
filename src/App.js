@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 // Import RainbowKit hooks
-import { useAccount, useBalance, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useBalance, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { polygon } from 'wagmi/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, formatUnits } from 'viem';
 import QRCode from 'qrcode';
@@ -784,8 +785,9 @@ const DonationHistoryOverlay = ({ rows, walletAddress, onClose }) => {
 
 // Wallet connection component with RainbowKit
 const WalletDonation = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { disconnectAsync } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
   const { data: balance } = useBalance({
     address: address,
   });
@@ -842,19 +844,17 @@ const WalletDonation = () => {
     });
   }, [txData, address, polPriceNow]);
   
-  // Disconnect function that reloads page but skips boot sequence
+  // Disconnect: tear down the wagmi connection and let the UI react (standard).
   const handleDisconnect = async () => {
-    // Some wallets (notably Coinbase Wallet SDK) reload the page themselves on
-    // disconnect, which stacks with the reload below. A one-shot flag gets
-    // consumed by the first reload, so the second reload replays the boot
-    // screen. A short time window instead makes every reload within it skip boot.
-    localStorage.setItem('skipBootUntil', String(Date.now() + 10000));
+    // No page reload — reloading remounts the app and wagmi then auto-reconnects
+    // any still-authorized injected wallet (MetaMask/Coinbase), which is exactly
+    // why they "wouldn't disconnect" on mobile while WalletConnect did.
+    // disconnectAsync() flips isConnected to false, returning to the Connect view.
     try {
-      await disconnectAsync();   // wait for the wallet session to actually tear down (this is the mobile fix)
+      await disconnectAsync();
     } catch (e) {
       console.error('Disconnect failed:', e);
     }
-    window.location.reload();
   };
   
   // Set preset amount
@@ -875,6 +875,14 @@ const WalletDonation = () => {
     lastSentAmountRef.current = parseFloat(donationAmount);
     
     try {
+      // If the wallet is on the wrong network, switch it to Polygon first.
+      // Already on Polygon? This whole block is skipped — no prompt, no blocking.
+      // If the switch is declined/fails, the catch below stops the send, so we
+      // never fire on the wrong chain AND never block a user already on Polygon.
+      if (chainId !== polygon.id) {
+        await switchChainAsync({ chainId: polygon.id });
+      }
+
       const hash = await sendTransactionAsync({
         to: targetAddress,
         value: parseEther(donationAmount),
@@ -883,11 +891,13 @@ const WalletDonation = () => {
       setTxData(hash);
     } catch (error) {
       console.error('Transaction failed:', error);
-      
-      if (error.message?.includes('rejected')) {
+
+      if (error.message?.includes('rejected') || error.name === 'UserRejectedRequestError') {
         alert('Transaction was rejected by user.');
       } else if (error.message?.includes('insufficient funds')) {
         alert('Transaction failed. You may have insufficient funds for gas fees.');
+      } else if (error.message?.toLowerCase().includes('chain') || error.message?.toLowerCase().includes('network')) {
+        alert('Please switch your wallet to the Polygon network and try again.');
       } else {
         alert(`Transaction failed: ${error.message || 'Unknown error'}`);
       }
@@ -1048,23 +1058,47 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
   const clipRef = useRef(null);
   const contentRef = useRef(null);
 
-  // Drive height from the actual content, and re-sync whenever it changes
-  // size (QR canvas drawing, wallet connecting, text reflowing). This is the
-  // part the pure-CSS grid trick can't do on iOS Safari.
+  // Animate open/close with a measured height, then RELEASE the open panel to
+  // height:auto + overflow:visible. Once it's auto/visible there is no clipping
+  // mechanism left, so when content grows (QR drawing, wallet connecting) the
+  // panel just grows with it — no re-measuring, which is what failed on mobile.
   useEffect(() => {
     const clip = clipRef.current;
     const content = contentRef.current;
     if (!clip || !content) return;
 
-    const sync = () => {
-      clip.style.height = isOpen ? `${content.scrollHeight}px` : '0px';
-    };
-    sync();
+    if (isOpen) {
+      clip.style.overflow = 'hidden';
+      clip.style.height = `${content.scrollHeight}px`;
 
-    if (!isOpen) return;
-    const ro = new ResizeObserver(sync);
-    ro.observe(content);
-    return () => ro.disconnect();
+      let fallback;
+      const release = (e) => {
+        // ignore bubbled transitions from children (e.g. the content fade)
+        if (e && (e.target !== clip || e.propertyName !== 'height')) return;
+        clip.style.height = 'auto';      // now immune to later content changes
+        clip.style.overflow = 'visible';
+        clip.removeEventListener('transitionend', release);
+        clearTimeout(fallback);
+      };
+      clip.addEventListener('transitionend', release);
+      fallback = setTimeout(release, 500); // hard guarantee if transitionend misfires
+
+      return () => {
+        clip.removeEventListener('transitionend', release);
+        clearTimeout(fallback);
+      };
+    }
+
+    // closing
+    const wasOpen = clip.style.height && clip.style.height !== '0px';
+    clip.style.overflow = 'hidden';
+    if (wasOpen) {
+      clip.style.height = `${content.scrollHeight}px`; // auto/px -> explicit px
+      void clip.offsetHeight;                           // force reflow so it can animate
+      clip.style.height = '0px';
+    } else {
+      clip.style.height = '0px'; // initial render: closed, no animation
+    }
   }, [isOpen]);
 
   // Scroll the opened header into view.
@@ -1775,6 +1809,7 @@ const Footer = ({ focusKey }) => {
           text="This is the one and only authentic website of PIXLNAUTS project" 
           speed={20}
           intensity={1.0}
+          compact
           key={`footer-auth-${focusKey}`}
         />
       </div>
@@ -2119,6 +2154,7 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
             text="Every donation helps fund environmental initiatives and carbon offset projects."
             speed={15}
             intensity={0.8}
+            compact
             key={`dashboard-impact-${focusKey}`}
           />
         </div>
