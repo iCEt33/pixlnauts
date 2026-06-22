@@ -846,10 +846,11 @@ const WalletDonation = () => {
   
   // Disconnect: tear down the wagmi connection and let the UI react (standard).
   const handleDisconnect = async () => {
-    // No page reload — reloading remounts the app and wagmi then auto-reconnects
-    // any still-authorized injected wallet (MetaMask/Coinbase), which is exactly
-    // why they "wouldn't disconnect" on mobile while WalletConnect did.
-    // disconnectAsync() flips isConnected to false, returning to the Connect view.
+    // Set skip-boot flag before disconnecting. We never reload ourselves, but
+    // Coinbase reloads on its own — this makes that reload skip the boot screen.
+    try {
+      localStorage.setItem('skipBootUntil', String(Date.now() + 10000));
+    } catch (e) {}
     try {
       await disconnectAsync();
     } catch (e) {
@@ -1073,15 +1074,14 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
 
       let fallback;
       const release = (e) => {
-        // ignore bubbled transitions from children (e.g. the content fade)
         if (e && (e.target !== clip || e.propertyName !== 'height')) return;
-        clip.style.height = 'auto';      // now immune to later content changes
+        // Stay at explicit px height (not auto) so ResizeObserver can animate changes
         clip.style.overflow = 'visible';
         clip.removeEventListener('transitionend', release);
         clearTimeout(fallback);
       };
       clip.addEventListener('transitionend', release);
-      fallback = setTimeout(release, 500); // hard guarantee if transitionend misfires
+      fallback = setTimeout(release, 500);
 
       return () => {
         clip.removeEventListener('transitionend', release);
@@ -1093,12 +1093,37 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
     const wasOpen = clip.style.height && clip.style.height !== '0px';
     clip.style.overflow = 'hidden';
     if (wasOpen) {
-      clip.style.height = `${content.scrollHeight}px`; // auto/px -> explicit px
-      void clip.offsetHeight;                           // force reflow so it can animate
+      clip.style.height = `${content.scrollHeight}px`;
+      void clip.offsetHeight;
       clip.style.height = '0px';
     } else {
-      clip.style.height = '0px'; // initial render: closed, no animation
+      clip.style.height = '0px';
     }
+  }, [isOpen]);
+
+  // Animate content height changes while the tab is already open
+  useEffect(() => {
+    const clip = clipRef.current;
+    const content = contentRef.current;
+    if (!clip || !content || !isOpen) return;
+
+    const observer = new ResizeObserver(() => {
+      // Only animate if we're in the "settled open" state (overflow is visible)
+      if (clip.style.overflow === 'visible') {
+        clip.style.overflow = 'hidden';
+        clip.style.height = `${content.scrollHeight}px`;
+        // Release back to visible after the transition
+        const onDone = (e) => {
+          if (e && (e.target !== clip || e.propertyName !== 'height')) return;
+          clip.style.overflow = 'visible';
+          clip.removeEventListener('transitionend', onDone);
+        };
+        clip.addEventListener('transitionend', onDone);
+      }
+    });
+
+    observer.observe(content);
+    return () => observer.disconnect();
   }, [isOpen]);
 
   // Scroll the opened header into view.
@@ -1717,7 +1742,13 @@ const DonationMilestonesTab = ({ currentUsdValue, focusKey }) => {
 
 // TabsManager to control which tab is open
 const TabsManager = ({ openCustomizer, currentUsdValue, focusKey }) => {
-  const [openTab, setOpenTab] = useState(0);
+  const [openTab, setOpenTab] = useState(null);
+
+  // Open the Introduction tab with a short delay so the animation plays visibly
+  useEffect(() => {
+    const t = setTimeout(() => setOpenTab(0), 400);
+    return () => clearTimeout(t);
+  }, []);
   
   const toggleTab = (index) => {
     if (openTab === index) {
@@ -2732,7 +2763,7 @@ const styles = `
   
   /* Tabs section animations */
   .tabs-section {
-    max-height: 2000px;
+    max-height: 6969px;
     overflow: hidden;
     transition: max-height 0.5s ease-in-out;
   }
