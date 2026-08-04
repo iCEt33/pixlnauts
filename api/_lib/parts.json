@@ -1,0 +1,940 @@
+{
+  "categories": [
+    {
+      "index": 0,
+      "label": "Body",
+      "parts": [
+        {
+          "id": 0,
+          "name": "White",
+          "pricePOL": "5",
+          "modelKey": "body_white"
+        },
+        {
+          "id": 1,
+          "name": "Red",
+          "pricePOL": "6",
+          "modelKey": "body_red"
+        },
+        {
+          "id": 2,
+          "name": "Orange",
+          "pricePOL": "6",
+          "modelKey": "body_orange"
+        },
+        {
+          "id": 3,
+          "name": "Yellow",
+          "pricePOL": "6",
+          "modelKey": "body_yellow"
+        },
+        {
+          "id": 4,
+          "name": "Green",
+          "pricePOL": "6",
+          "modelKey": "body_green"
+        },
+        {
+          "id": 5,
+          "name": "Blue",
+          "pricePOL": "6",
+          "modelKey": "body_blue"
+        },
+        {
+          "id": 6,
+          "name": "Purple",
+          "pricePOL": "6",
+          "modelKey": "body_purple"
+        },
+        {
+          "id": 7,
+          "name": "Black",
+          "pricePOL": "6",
+          "modelKey": "body_black"
+        },
+        {
+          "id": 8,
+          "name": "Pirate",
+          "pricePOL": "9",
+          "modelKey": "body_pirate"
+        },
+        {
+          "id": 9,
+          "name": "Welded",
+          "pricePOL": "10",
+          "modelKey": "body_welded"
+        },
+        {
+          "id": 10,
+          "name": "Heart",
+          "pricePOL": "10",
+          "modelKey": "body_heart"
+        },
+        {
+          "id": 11,
+          "name": "Star",
+          "pricePOL": "10",
+          "modelKey": "body_star"
+        },
+        {
+          "id": 12,
+          "name": "Tryan",
+          "pricePOL": "10",
+          "modelKey": "body_tryan"
+        },
+        {
+          "id": 13,
+          "name": "Pinhead",
+          "pricePOL": "15",
+          "modelKey": "body_pinhead"
+        },
+        {
+          "id": 14,
+          "name": "Creeper",
+          "pricePOL": "25",
+          "modelKey": "body_creeper"
+        },
+        {
+          "id": 15,
+          "name": "Skeleton",
+          "pricePOL": "50",
+          "modelKey": "body_skeleton"
+        },
+        {
+          "id": 16,
+          "name": "Zombie",
+          "pricePOL": "50",
+          "modelKey": "body_zombie"
+        },
+        {
+          "id": 17,
+          "name": "Circuit Board",
+          "pricePOL": "20",
+          "modelKey": "body_circuitboard"
+        },
+        {
+          "id": 18,
+          "name": "Camo",
+          "pricePOL": "15",
+          "modelKey": "body_camo"
+        },
+        {
+          "id": 19,
+          "name": "Devil",
+          "pricePOL": "666",
+          "modelKey": "body_devil"
+        },
+        {
+          "id": 20,
+          "name": "Gold",
+          "pricePOL": "1000",
+          "modelKey": "body_gold"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "label": "Face",
+      "parts": [
+        {
+          "id": 0,
+          "name": "Smile",
+          "pricePOL": "1",
+          "modelKey": "face_smile"
+        },
+        {
+          "id": 1,
+          "name": "Eyes",
+          "pricePOL": "1",
+          "modelKey": "face_eyes"
+        },
+        {
+          "id": 2,
+          "name": "Tryan",
+          "pricePOL": "2",
+          "modelKey": "face_tryan"
+        },
+        {
+          "id": 3,
+          "name": "Cat",
+          "pricePOL": "3",
+          "modelKey": "face_cat"
+        },
+        {
+          "id": 4,
+          "name": "Chill",
+          "pricePOL": "2",
+          "modelKey": "face_chill"
+        },
+        {
+          "id": 5,
+          "name": "Angry",
+          "pricePOL": "2",
+          "modelKey": "face_angry"
+        },
+        {
+          "id": 6,
+          "name": "Bored",
+          "pricePOL": "2",
+          "modelKey": "face_bored"
+        },
+        {
+          "id": 7,
+          "name": "Buckteeth",
+          "pricePOL": "2",
+          "modelKey": "face_buckteeth"
+        },
+        {
+          "id": 8,
+          "name": "Creeper",
+          "pricePOL": "10",
+          "modelKey": "face_creeper"
+        },
+        {
+          "id": 9,
+          "name": "Drool",
+          "pricePOL": "2",
+          "modelKey": "face_drool"
+        },
+        {
+          "id": 10,
+          "name": "GM",
+          "pricePOL": "5",
+          "modelKey": "face_gm"
+        },
+        {
+          "id": 11,
+          "name": "Happy",
+          "pricePOL": "2",
+          "modelKey": "face_happy"
+        },
+        {
+          "id": 12,
+          "name": "Hmm",
+          "pricePOL": "2",
+          "modelKey": "face_hmm"
+        },
+        {
+          "id": 13,
+          "name": "Joyful",
+          "pricePOL": "2",
+          "modelKey": "face_joyful"
+        },
+        {
+          "id": 14,
+          "name": "Laughing",
+          "pricePOL": "2",
+          "modelKey": "face_laughing"
+        },
+        {
+          "id": 15,
+          "name": "Neutral",
+          "pricePOL": "2",
+          "modelKey": "face_neutral"
+        },
+        {
+          "id": 16,
+          "name": "OK",
+          "pricePOL": "2",
+          "modelKey": "face_ok"
+        },
+        {
+          "id": 17,
+          "name": "Pig",
+          "pricePOL": "2",
+          "modelKey": "face_pig"
+        },
+        {
+          "id": 18,
+          "name": "Scary",
+          "pricePOL": "50",
+          "modelKey": "face_scary"
+        },
+        {
+          "id": 19,
+          "name": "Skelly",
+          "pricePOL": "5",
+          "modelKey": "face_skelly"
+        },
+        {
+          "id": 20,
+          "name": "Snout",
+          "pricePOL": "2",
+          "modelKey": "face_snout"
+        },
+        {
+          "id": 21,
+          "name": "Spider",
+          "pricePOL": "20",
+          "modelKey": "face_spider"
+        },
+        {
+          "id": 22,
+          "name": "Tripping",
+          "pricePOL": "2",
+          "modelKey": "face_tripping"
+        },
+        {
+          "id": 23,
+          "name": "Vampire",
+          "pricePOL": "5",
+          "modelKey": "face_vampire"
+        },
+        {
+          "id": 24,
+          "name": "Wink",
+          "pricePOL": "2",
+          "modelKey": "face_wink"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "label": "Screen",
+      "parts": [
+        {
+          "id": 0,
+          "name": "Green",
+          "pricePOL": "2",
+          "modelKey": "screen_green"
+        },
+        {
+          "id": 1,
+          "name": "Red",
+          "pricePOL": "3",
+          "modelKey": "screen_red"
+        },
+        {
+          "id": 2,
+          "name": "Orange",
+          "pricePOL": "3",
+          "modelKey": "screen_orange"
+        },
+        {
+          "id": 3,
+          "name": "Yellow",
+          "pricePOL": "3",
+          "modelKey": "screen_yellow"
+        },
+        {
+          "id": 4,
+          "name": "Blue",
+          "pricePOL": "3",
+          "modelKey": "screen_blue"
+        },
+        {
+          "id": 5,
+          "name": "Purple",
+          "pricePOL": "3",
+          "modelKey": "screen_purple"
+        },
+        {
+          "id": 6,
+          "name": "Black",
+          "pricePOL": "3",
+          "modelKey": "screen_black"
+        },
+        {
+          "id": 7,
+          "name": "Broken",
+          "pricePOL": "5",
+          "modelKey": "screen_broken"
+        },
+        {
+          "id": 8,
+          "name": "Scratched",
+          "pricePOL": "3",
+          "modelKey": "screen_scratched"
+        },
+        {
+          "id": 9,
+          "name": "Freckles",
+          "pricePOL": "3",
+          "modelKey": "screen_freckles"
+        },
+        {
+          "id": 10,
+          "name": "Tryan",
+          "pricePOL": "4",
+          "modelKey": "screen_tryan"
+        },
+        {
+          "id": 11,
+          "name": "Heisenberg",
+          "pricePOL": "5",
+          "modelKey": "screen_heisenberg"
+        },
+        {
+          "id": 12,
+          "name": "Pinhead",
+          "pricePOL": "10",
+          "modelKey": "screen_pinhead"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "label": "Specs",
+      "parts": [
+        {
+          "id": 0,
+          "name": "1 Core 2GB",
+          "pricePOL": "1",
+          "modelKey": "specs_1core2gb"
+        },
+        {
+          "id": 1,
+          "name": "2 Core 4GB",
+          "pricePOL": "2",
+          "modelKey": "specs_2core4gb"
+        },
+        {
+          "id": 2,
+          "name": "4 Core 8GB",
+          "pricePOL": "4",
+          "modelKey": "specs_4core8gb"
+        },
+        {
+          "id": 3,
+          "name": "6 Core 16GB",
+          "pricePOL": "6",
+          "modelKey": "specs_6core16gb"
+        },
+        {
+          "id": 4,
+          "name": "8 Core 32GB",
+          "pricePOL": "8",
+          "modelKey": "specs_8core32gb"
+        },
+        {
+          "id": 5,
+          "name": "12 Core 64GB",
+          "pricePOL": "12",
+          "modelKey": "specs_12core64gb"
+        },
+        {
+          "id": 6,
+          "name": "18 Core 128GB",
+          "pricePOL": "18",
+          "modelKey": "specs_18core128gb"
+        },
+        {
+          "id": 7,
+          "name": "32 Core 256GB",
+          "pricePOL": "32",
+          "modelKey": "specs_32core256gb"
+        },
+        {
+          "id": 8,
+          "name": "64 Core 512GB",
+          "pricePOL": "64",
+          "modelKey": "specs_64core512gb"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "label": "Clothes",
+      "parts": [
+        {
+          "id": 0,
+          "name": "None",
+          "pricePOL": "0",
+          "modelKey": null
+        },
+        {
+          "id": 1,
+          "name": "Dr Strange",
+          "pricePOL": "20",
+          "modelKey": "accessories_clothes_drstrange"
+        },
+        {
+          "id": 2,
+          "name": "Link",
+          "pricePOL": "20",
+          "modelKey": "accessories_clothes_link"
+        },
+        {
+          "id": 3,
+          "name": "Shell",
+          "pricePOL": "10",
+          "modelKey": "accessories_clothes_shell"
+        },
+        {
+          "id": 4,
+          "name": "Sweater",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_sweater"
+        },
+        {
+          "id": 5,
+          "name": "Backpack",
+          "pricePOL": "1",
+          "modelKey": "accessories_clothes_backpack"
+        },
+        {
+          "id": 6,
+          "name": "Backpack XL",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_bigbackpack"
+        },
+        {
+          "id": 7,
+          "name": "Radio",
+          "pricePOL": "5",
+          "modelKey": "accessories_clothes_radio"
+        },
+        {
+          "id": 8,
+          "name": "Rasta",
+          "pricePOL": "10",
+          "modelKey": "accessories_clothes_rasta"
+        },
+        {
+          "id": 9,
+          "name": "Flight Suit",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_tshirt2"
+        },
+        {
+          "id": 10,
+          "name": "T-Shirt",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_tshirt"
+        },
+        {
+          "id": 11,
+          "name": "Lab Coat",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_labcoat"
+        },
+        {
+          "id": 12,
+          "name": "Nerd",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_nerd"
+        },
+        {
+          "id": 13,
+          "name": "Ripped Cloths",
+          "pricePOL": "1",
+          "modelKey": "accessories_clothes_rippedcloths"
+        },
+        {
+          "id": 14,
+          "name": "Coat",
+          "pricePOL": "4",
+          "modelKey": "accessories_clothes_coat"
+        },
+        {
+          "id": 15,
+          "name": "Disco",
+          "pricePOL": "5",
+          "modelKey": "accessories_clothes_disco"
+        },
+        {
+          "id": 16,
+          "name": "Suit",
+          "pricePOL": "20",
+          "modelKey": "accessories_clothes_suit"
+        },
+        {
+          "id": 17,
+          "name": "Hoodie",
+          "pricePOL": "3",
+          "modelKey": "accessories_clothes_hoodie"
+        },
+        {
+          "id": 18,
+          "name": "Leprechaun",
+          "pricePOL": "3",
+          "modelKey": "accessories_clothes_leprechaun"
+        },
+        {
+          "id": 19,
+          "name": "Goku",
+          "pricePOL": "7",
+          "modelKey": "accessories_clothes_goku"
+        },
+        {
+          "id": 20,
+          "name": "Cloak",
+          "pricePOL": "9",
+          "modelKey": "accessories_clothes_cloak"
+        },
+        {
+          "id": 21,
+          "name": "Santa",
+          "pricePOL": "5",
+          "modelKey": "accessories_clothes_santa"
+        },
+        {
+          "id": 22,
+          "name": "Pinhead",
+          "pricePOL": "15",
+          "modelKey": "accessories_clothes_pinhead"
+        },
+        {
+          "id": 23,
+          "name": "Scarecrow",
+          "pricePOL": "10",
+          "modelKey": "accessories_clothes_scarecrow"
+        },
+        {
+          "id": 24,
+          "name": "Vampire",
+          "pricePOL": "15",
+          "modelKey": "accessories_clothes_vampire"
+        },
+        {
+          "id": 25,
+          "name": "Dress",
+          "pricePOL": "10",
+          "modelKey": "accessories_clothes_dress"
+        },
+        {
+          "id": 26,
+          "name": "Sub-Zero",
+          "pricePOL": "32",
+          "modelKey": "accessories_clothes_subzero"
+        },
+        {
+          "id": 27,
+          "name": "Argentine",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_argentine"
+        },
+        {
+          "id": 28,
+          "name": "Brazil",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_brazil"
+        },
+        {
+          "id": 29,
+          "name": "France",
+          "pricePOL": "2",
+          "modelKey": "accessories_clothes_france"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "label": "Face Accessory",
+      "parts": [
+        {
+          "id": 0,
+          "name": "None",
+          "pricePOL": "0",
+          "modelKey": null
+        },
+        {
+          "id": 1,
+          "name": "Mask",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_mask"
+        },
+        {
+          "id": 2,
+          "name": "Mask 2",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_mask1"
+        },
+        {
+          "id": 3,
+          "name": "Mask 3",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_mask2"
+        },
+        {
+          "id": 4,
+          "name": "Mask 4",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_mask3"
+        },
+        {
+          "id": 5,
+          "name": "Eye Patch",
+          "pricePOL": "2",
+          "modelKey": "accessories_face_eyepatch"
+        },
+        {
+          "id": 6,
+          "name": "Ski Goggles",
+          "pricePOL": "5",
+          "modelKey": "accessories_face_skigoggles"
+        },
+        {
+          "id": 7,
+          "name": "Beard",
+          "pricePOL": "2",
+          "modelKey": "accessories_face_beard"
+        },
+        {
+          "id": 8,
+          "name": "Nerd Glasses",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_nerd"
+        },
+        {
+          "id": 9,
+          "name": "Leprechaun Beard",
+          "pricePOL": "2",
+          "modelKey": "accessories_face_leprechaunbeard"
+        },
+        {
+          "id": 10,
+          "name": "Moustache",
+          "pricePOL": "1",
+          "modelKey": "accessories_face_moustache"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "label": "Head Accessory",
+      "parts": [
+        {
+          "id": 0,
+          "name": "None",
+          "pricePOL": "0",
+          "modelKey": null
+        },
+        {
+          "id": 1,
+          "name": "Afro",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_afro"
+        },
+        {
+          "id": 2,
+          "name": "Dr Strange",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_drstrange"
+        },
+        {
+          "id": 3,
+          "name": "John Wick",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_johnwick"
+        },
+        {
+          "id": 4,
+          "name": "Rasta",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_rasta"
+        },
+        {
+          "id": 5,
+          "name": "Painter Hat",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_painterhat"
+        },
+        {
+          "id": 6,
+          "name": "Morty",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_morty"
+        },
+        {
+          "id": 7,
+          "name": "Rick",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_rick"
+        },
+        {
+          "id": 8,
+          "name": "Pirate",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_piratehat"
+        },
+        {
+          "id": 9,
+          "name": "Harley Quinn",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_harleyquinn"
+        },
+        {
+          "id": 10,
+          "name": "Leprechaun",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_leprechaunhat"
+        },
+        {
+          "id": 11,
+          "name": "Razer Kraken",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_razerkraken"
+        },
+        {
+          "id": 12,
+          "name": "Razer Kraken Kitty",
+          "pricePOL": "20",
+          "modelKey": "accessories_head_razerkrakenkitty"
+        },
+        {
+          "id": 13,
+          "name": "Goku",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_goku"
+        },
+        {
+          "id": 14,
+          "name": "SSJ",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_gokussj"
+        },
+        {
+          "id": 15,
+          "name": "SSJ Blue",
+          "pricePOL": "20",
+          "modelKey": "accessories_head_gokussjblue"
+        },
+        {
+          "id": 16,
+          "name": "SSJ God",
+          "pricePOL": "100",
+          "modelKey": "accessories_head_gokussjgod"
+        },
+        {
+          "id": 17,
+          "name": "Ultra Instinct",
+          "pricePOL": "1000",
+          "modelKey": "accessories_head_gokuultrainstinct"
+        },
+        {
+          "id": 18,
+          "name": "Beanie",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_beanie"
+        },
+        {
+          "id": 19,
+          "name": "Hockey Mask",
+          "pricePOL": "13",
+          "modelKey": "accessories_head_hockeymask"
+        },
+        {
+          "id": 20,
+          "name": "Wolf Ears",
+          "pricePOL": "4",
+          "modelKey": "accessories_head_wolfears"
+        },
+        {
+          "id": 21,
+          "name": "Antlers",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_antlers"
+        },
+        {
+          "id": 22,
+          "name": "Pumpkin",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_pumpkin"
+        },
+        {
+          "id": 23,
+          "name": "Straw Hat",
+          "pricePOL": "1",
+          "modelKey": "accessories_head_scarecrow"
+        },
+        {
+          "id": 24,
+          "name": "Horns",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_horns"
+        },
+        {
+          "id": 25,
+          "name": "Link",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_link"
+        },
+        {
+          "id": 26,
+          "name": "Headband",
+          "pricePOL": "1",
+          "modelKey": "accessories_head_headband"
+        },
+        {
+          "id": 27,
+          "name": "Googly Eyes",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_googlyeyes"
+        },
+        {
+          "id": 28,
+          "name": "Helmet",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_helmet"
+        },
+        {
+          "id": 29,
+          "name": "Christmas Hat",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_christmashat"
+        },
+        {
+          "id": 30,
+          "name": "Gandalf",
+          "pricePOL": "2",
+          "modelKey": "accessories_head_gandalfhat"
+        },
+        {
+          "id": 31,
+          "name": "Pork Pie",
+          "pricePOL": "3",
+          "modelKey": "accessories_head_porkpie"
+        },
+        {
+          "id": 32,
+          "name": "Wizard Hat",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_wizardhat"
+        },
+        {
+          "id": 33,
+          "name": "Skurpy",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_skurpy"
+        },
+        {
+          "id": 34,
+          "name": "Bird Nest",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_birdnest"
+        },
+        {
+          "id": 35,
+          "name": "Cup o Joe",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_coffee"
+        },
+        {
+          "id": 36,
+          "name": "Taco",
+          "pricePOL": "10",
+          "modelKey": "accessories_head_taco"
+        },
+        {
+          "id": 37,
+          "name": "Lemon",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_lemon"
+        },
+        {
+          "id": 38,
+          "name": "Chompie",
+          "pricePOL": "5",
+          "modelKey": "accessories_head_chompie"
+        },
+        {
+          "id": 39,
+          "name": "Anubis",
+          "pricePOL": "20",
+          "modelKey": "accessories_head_anubis"
+        }
+      ]
+    }
+  ]
+}

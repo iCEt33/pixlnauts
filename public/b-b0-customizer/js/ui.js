@@ -82,6 +82,11 @@ const updatePrices = () => {
   
   const total = bodyModel.price + faceModel.price + screenModel.price + specsModel.price + accessoriesTotal;
   document.getElementById('total-price').textContent = `${total.toFixed(2)} POL`;
+  
+  // Say that the panel has just been redrawn. Nothing in the customizer
+  // listens; the upgrade screen uses it to replace these mint prices with
+  // what the upgrade actually costs, without having to poll for changes.
+  if (typeof window.BB0_onPricesUpdated === 'function') window.BB0_onPricesUpdated();
 };
 
 // Update carousel display

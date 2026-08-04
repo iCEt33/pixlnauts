@@ -1289,7 +1289,7 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
       {/* Keep the Discord invite button for all devices */}
       <div className={`beebo-links ${isMobile ? 'mobile-only-links' : 'secondary-links'}`}>
         <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button discord-button">
-          <span className="whitepaper-button-text">INVITE BEEBO TO YOUR DISCORD SERVER!</span>
+          <span className="whitepaper-button-text">INVITE B-b0 TO YOUR DISCORD SERVER!</span>
         </a>
       </div>
       
@@ -1785,7 +1785,7 @@ const TabsManager = ({ openCustomizer, currentUsdValue, focusKey }) => {
         <GamesTab focusKey={focusKey} />
       </Tab>
       <Tab 
-        title="BUILD-A-BEEBO" 
+        title="BUILD-A-BOT: B-b0 Builder" 
         isOpen={openTab === 3} 
         toggleTab={() => toggleTab(3)}
         focusKey={focusKey}

@@ -4,6 +4,19 @@
 let gltfTransform;
 let gltfFunctions;
 let isCurrentlyLoading = false; // Prevent multiple simultaneous loads
+let reloadQueued = false;       // A load was asked for while one was already running
+
+// Single place where a load ends. If anything asked for a reload while we were
+// busy, run it now instead of losing it. Without this, a request that arrives
+// mid-merge is silently dropped -- which is how an accessory could clear its
+// collision, be counted in the price, and still not appear on the robot.
+const finishLoading = () => {
+  isCurrentlyLoading = false;
+  if (reloadQueued) {
+    reloadQueued = false;
+    loadAllModels();
+  }
+};
 
 // Initialize loader and gltf-transform
 const initLoader = async () => {
@@ -28,8 +41,10 @@ const initLoader = async () => {
 
 // Load and merge all selected models using gltf-transform
 const loadAllModels = async () => {
-  // If already loading, skip this request
+  // If already loading, REMEMBER this request and run it when the current
+  // merge finishes. Returning outright loses it (see finishLoading above).
   if (isCurrentlyLoading) {
+    reloadQueued = true;
     return;
   }
   
@@ -47,7 +62,7 @@ const loadAllModels = async () => {
     if (!gltfTransform || !gltfFunctions || !window.gltfExtensions) {
       log("ERROR: gltf-transform or extensions not loaded yet! Waiting...");
       hideLoadingOverlay();
-      isCurrentlyLoading = false;
+      finishLoading();
       return;
     }
     
@@ -157,11 +172,24 @@ const loadAllModels = async () => {
         URL.revokeObjectURL(oldGLB);
       }
       hideLoadingOverlay();
-      isCurrentlyLoading = false;
+      finishLoading();
     };
     
-    // Set up one-time listener
-    modelViewer.addEventListener('load', loadHandler, { once: true });
+    // Set up one-time listener.
+    // ALSO listen for 'error': if the merged GLB fails to display, 'load' never
+    // fires, isCurrentlyLoading would stay true forever and the customizer would
+    // stop loading anything (and the MINT button would stay greyed out).
+    const errorHandler = () => {
+      log('ERROR: the merged model failed to display');
+      modelViewer.removeEventListener('load', loadHandler);
+      hideLoadingOverlay();
+      finishLoading();
+    };
+    modelViewer.addEventListener('error', errorHandler, { once: true });
+    modelViewer.addEventListener('load', () => {
+      modelViewer.removeEventListener('error', errorHandler);
+      loadHandler();
+    }, { once: true });
     
     // NOW load the new model - old one stays visible until this completes
     modelViewer.src = url;
@@ -191,7 +219,7 @@ const loadAllModels = async () => {
     log(`ERROR: Failed to merge models - ${error.message}`);
     console.error('Merge error:', error);
     hideLoadingOverlay();
-    isCurrentlyLoading = false;
+    finishLoading();
   }
 };
 

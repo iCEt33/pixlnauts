@@ -1,0 +1,294 @@
+/* css/collection.css — My Collection + upgrade mode.
+   Same green-terminal language as mint.css. styles.css is NOT touched. */
+
+/* --------------------------------------------------------------------------
+   THE BUTTON STACK — top-right. Every button we add from here on (My
+   Collection now, Admin next) goes into this one column so they line up and
+   stack downward instead of each file picking its own corner.
+
+   The look is copied deliberately from the site's RETURN TO PIXLNAUTS button
+   (green fill, black text, offset shadow, clipped corner). That button lives
+   in the React app OUTSIDE this iframe, so its .pixel-button class cannot be
+   reused in here.
+   -------------------------------------------------------------------------- */
+.bb0-button-stack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* every button ends up the same width as the widest */
+  gap: 10px;
+}
+
+.bb0-collection-button {
+  padding: 15px 30px;
+  background-color: #0f0;
+  color: #000;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 1px;
+  border: 2px solid #000;
+  cursor: pointer;
+  text-align: center;
+  image-rendering: pixelated;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.7), 4px 4px 0 #086;
+  transition: all 0.2s ease;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+}
+.bb0-collection-button:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.9), 4px 4px 0 #086;
+  transform: translate(-2px, 2px);
+}
+.bb0-collection-button:active {
+  box-shadow: 0 0 25px rgba(0, 255, 0, 1), 2px 2px 0 #086;
+  transform: translate(-4px, 0);
+}
+
+/* --------------------------------------------------------------------------
+   THE PANEL
+   -------------------------------------------------------------------------- */
+.bb0-col-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.85);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.bb0-col-overlay.bb0-open { display: flex; }
+
+.bb0-col-panel {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #010a01;
+  border: 2px solid #0f0;
+  box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+  color: #0f0;
+  font-family: monospace;
+  padding: 22px 26px 26px;
+}
+.bb0-col-close {
+  position: absolute;
+  top: 8px; right: 12px;
+  background: none;
+  border: none;
+  color: #0a0;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bb0-col-close:hover { color: #fff; }
+
+.bb0-col-title {
+  margin: 0 0 12px;
+  font-size: 19px;
+  letter-spacing: 2px;
+}
+.bb0-col-wallet { font-size: 12px; margin-bottom: 10px; min-height: 20px; }
+.bb0-col-status { font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+.bb0-col-empty { color: #6c6; font-size: 13px; padding: 18px 0; text-align: center; }
+
+/* the grid of robots ------------------------------------------------------- */
+.bb0-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+.bb0-col-card {
+  background: #000;
+  border: 1px solid #0a0;
+  color: #0f0;
+  font-family: monospace;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.bb0-col-card:focus-visible { outline: 2px solid #0f0; outline-offset: 2px; }
+.bb0-col-card:hover {
+  border-color: #0f0;
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.45);
+}
+.bb0-col-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #020;
+  overflow: hidden;
+}
+.bb0-col-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.bb0-col-nopic { color: #575; font-size: 11px; }
+
+/* Two actions that rise from the bottom of the picture on hover. Hidden by
+   translate rather than display:none so they animate, and so keyboard focus
+   can still bring them up on a device with no pointer. */
+.bb0-col-actions {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.0));
+  transform: translateY(101%);
+  transition: transform 0.18s ease;
+}
+.bb0-col-card:hover .bb0-col-actions,
+.bb0-col-card:focus-within .bb0-col-actions { transform: translateY(0); }
+
+.bb0-col-act {
+  width: 100%;
+  background: #000;
+  border: 1px solid #0f0;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 5px 0;
+  cursor: pointer;
+}
+.bb0-col-act:hover { background: #0f0; color: #000; }
+.bb0-col-cardname { margin-top: 6px; font-size: 13px; text-align: center; }
+
+/* the detail view ---------------------------------------------------------- */
+.bb0-col-back { margin-bottom: 10px; display: inline-block; }
+.bb0-col-detail { display: flex; gap: 20px; flex-wrap: wrap; }
+.bb0-col-stage { flex: 1 1 260px; min-width: 240px; }
+.bb0-col-big {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #020;
+  border: 1px solid #0a0;
+  display: block;
+}
+.bb0-col-3d {
+  margin-top: 8px;
+  width: 100%;
+  background: #111;
+  border: 1px solid #0a0;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 8px;
+  cursor: pointer;
+}
+.bb0-col-3d:hover { background: #0c3; color: #000; }
+
+.bb0-col-facts { flex: 1 1 280px; min-width: 260px; font-size: 13px; }
+.bb0-col-attrs { border-top: 1px solid #0f0; padding-top: 8px; }
+.bb0-col-owner { margin-top: 10px; font-size: 12px; color: #6c6; }
+.bb0-col-owner a, .bb0-col-links a { color: #0f0; }
+.bb0-col-links { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.bb0-col-upgrade {
+  margin-top: 14px;
+  width: 100%;
+  background: #0a0;
+  border: 2px solid #0f0;
+  color: #000;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 11px;
+  cursor: pointer;
+}
+.bb0-col-upgrade:hover { background: #0f0; }
+
+/* --------------------------------------------------------------------------
+   UPGRADE MODE
+   -------------------------------------------------------------------------- */
+
+/* While upgrading, the customizer's own price panel is rewritten in place to
+   show what the UPGRADE costs rather than what a fresh mint would. Two panels
+   of numbers side by side was too crowded, and showing 34.00 POL next to a
+   3.00 POL bill was the confusing part. These three classes colour the values
+   it gets rewritten with. */
+.price-value.bb0-pv-equipped { color: #0a0; }
+.price-value.bb0-pv-owned    { color: #4af; }
+.price-value.bb0-pv-new      { color: #fc6; }
+
+.bb0-upgrade-bar {
+  width: 100%;
+  margin-top: 10px;
+  background: #010a01;
+  border: 2px solid #0f0;
+  box-shadow: 0 0 14px rgba(0, 255, 0, 0.35);
+  color: #0f0;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+.bb0-up-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bb0-up-token { font-weight: bold; letter-spacing: 1px; }
+.bb0-up-lines { font-size: 11px; color: #6c6; min-height: 0; }
+.bb0-up-lines:empty { display: none; }
+.bb0-up-warn {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px dashed #ff0;
+  background: rgba(60, 60, 0, 0.25);
+  color: #ff0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.bb0-up-go {
+  width: 100%;
+  margin-top: 10px;
+  background: #0a0;
+  border: 2px solid #0f0;
+  color: #000;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 11px;
+  cursor: pointer;
+}
+.bb0-up-go:hover:not(:disabled) { background: #0f0; }
+.bb0-up-go:disabled {
+  background: #030;
+  border-color: #060;
+  color: #060;
+  cursor: not-allowed;
+}
+.bb0-up-status { font-size: 12px; min-height: 16px; margin-top: 8px; }
+.bb0-up-result:empty { display: none; }
+
+.bb0-owned { color: #4af; }
+
+/* tags beside the carousels ------------------------------------------------ */
+.bb0-tag-row {
+  margin: 3px 0 0;
+  font-family: monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 2px 0;
+  border: 1px solid transparent;
+}
+/* Blue = this robot already bought it; putting it back on is free forever. */
+.bb0-tag-owned    { color: #4af; border-color: #24a; background: rgba(20, 50, 90, 0.35); }
+/* Green = what the robot is wearing on-chain right now. Not greyed out —
+   staying as you are is a perfectly valid choice, not a blocked one. */
+.bb0-tag-equipped { color: #0f0; border-color: #0a0; background: rgba(0, 60, 0, 0.35); }
+/* Amber = never owned by this robot, so it costs money. */
+.bb0-tag-new      { color: #fc6; border-color: #a72; background: rgba(80, 50, 0, 0.3); }
