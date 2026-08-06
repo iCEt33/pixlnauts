@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B-b0</title>
+
+<style>
+  /* Fill whatever frame we are given. NO background colour anywhere -- the
+     marketplace supplies its own. (The customizer's styles.css sets #000 on
+     .model-viewer; that is deliberately NOT copied here.) */
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+  }
+  model-viewer {
+    width: 100%; height: 100%; display: block;
+    background-color: transparent;
+    --poster-color: transparent;   /* model-viewer's poster defaults to white */
+  }
+  /* Diagnostic overlay. Delete this rule and the <pre> below for production. */
+  #status {
+    position: fixed; top: 0; left: 0; margin: 0; padding: 6px 8px;
+    font: 10px/1.45 ui-monospace, Menlo, Consolas, monospace;
+    color: #0f0; background: rgba(0,0,0,.55);
+    white-space: pre-wrap; pointer-events: none; max-width: 100%;
+  }
+  #status.ok { color: #6f6; opacity: .55; }
+  #status.err { color: #f66; }
+</style>
+
+<!-- Same version the customizer uses. -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+</head>
+
+<body>
+
+<model-viewer
+  id="mv"
+  alt="B-b0"
+  camera-controls
+  auto-rotate
+  auto-rotate-delay="0"
+  rotation-per-second="30deg"
+  camera-orbit="-28deg 90deg auto"
+  interaction-prompt="none"
+  touch-action="pan-y"
+  shadow-intensity="1"
+  environment-image="neutral"
+  exposure="1"
+></model-viewer>
+
+<pre id="status"></pre>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * B-b0 renderer.  Reads ?config=n,n,n,n,n,n,n and rebuilds the robot.
+ * Merge logic is loader.js loadAllModels(), with all UI/state removed.
+ * ------------------------------------------------------------------ */
+
+/* ---- 1. THE PARTS TABLE -------------------------------------------
+ * Position in each array == the part id on-chain. APPEND ONLY -- add
+ * new parts at the END of a category, never insert or reorder.
+ * null == "None" (the accessory categories' index 0).
+ * ------------------------------------------------------------------ */
+  const PARTS = {
+    BODY: [
+      "body_white.glb",
+      "body_red.glb",
+      "body_orange.glb",
+      "body_yellow.glb",
+      "body_green.glb",
+      "body_blue.glb",
+      "body_purple.glb",
+      "body_black.glb",
+      "body_pirate.glb",
+      "body_welded.glb",
+      "body_heart.glb",
+      "body_star.glb",
+      "body_tryan.glb",
+      "body_pinhead.glb",
+      "body_creeper.glb",
+      "body_skeleton.glb",
+      "body_zombie.glb",
+      "body_circuitboard.glb",
+      "body_camo.glb",
+      "body_devil.glb",
+      "body_gold.glb"
+    ],
+    FACE: [
+      "face_smile.glb",
+      "face_eyes.glb",
+      "face_tryan.glb",
+      "face_cat.glb",
+      "face_chill.glb",
+      "face_angry.glb",
+      "face_bored.glb",
+      "face_buckteeth.glb",
+      "face_creeper.glb",
+      "face_drool.glb",
+      "face_gm.glb",
+      "face_happy.glb",
+      "face_hmm.glb",
+      "face_joyful.glb",
+      "face_laughing.glb",
+      "face_neutral.glb",
+      "face_ok.glb",
+      "face_pig.glb",
+      "face_scary.glb",
+      "face_skelly.glb",
+      "face_snout.glb",
+      "face_spider.glb",
+      "face_tripping.glb",
+      "face_vampire.glb",
+      "face_wink.glb"
+    ],
+    SCREEN: [
+      "screen_green.glb",
+      "screen_red.glb",
+      "screen_orange.glb",
+      "screen_yellow.glb",
+      "screen_blue.glb",
+      "screen_purple.glb",
+      "screen_black.glb",
+      "screen_broken.glb",
+      "screen_scratched.glb",
+      "screen_freckles.glb",
+      "screen_tryan.glb",
+      "screen_heisenberg.glb",
+      "screen_pinhead.glb"
+    ],
+    SPECS: [
+      "specs_1core2gb.glb",
+      "specs_2core4gb.glb",
+      "specs_4core8gb.glb",
+      "specs_6core16gb.glb",
+      "specs_8core32gb.glb",
+      "specs_12core64gb.glb",
+      "specs_18core128gb.glb",
+      "specs_32core256gb.glb",
+      "specs_64core512gb.glb"
+    ],
+    CLOTHES: [
+      null,
+      "accessories_clothes_drstrange.glb",
+      "accessories_clothes_link.glb",
+      "accessories_clothes_shell.glb",
+      "accessories_clothes_sweater.glb",
+      "accessories_clothes_backpack.glb",
+      "accessories_clothes_bigbackpack.glb",
+      "accessories_clothes_radio.glb",
+      "accessories_clothes_rasta.glb",
+      "accessories_clothes_tshirt2.glb",
+      "accessories_clothes_tshirt.glb",
+      "accessories_clothes_labcoat.glb",
+      "accessories_clothes_nerd.glb",
+      "accessories_clothes_rippedcloths.glb",
+      "accessories_clothes_coat.glb",
+      "accessories_clothes_disco.glb",
+      "accessories_clothes_suit.glb",
+      "accessories_clothes_hoodie.glb",
+      "accessories_clothes_leprechaun.glb",
+      "accessories_clothes_goku.glb",
+      "accessories_clothes_cloak.glb",
+      "accessories_clothes_santa.glb",
+      "accessories_clothes_pinhead.glb",
+      "accessories_clothes_scarecrow.glb",
+      "accessories_clothes_vampire.glb",
+      "accessories_clothes_dress.glb",
+      "accessories_clothes_subzero.glb",
+      "accessories_clothes_argentine.glb",
+      "accessories_clothes_brazil.glb",
+      "accessories_clothes_france.glb"
+    ],
+    ACC_FACE: [
+      null,
+      "accessories_face_mask.glb",
+      "accessories_face_mask1.glb",
+      "accessories_face_mask2.glb",
+      "accessories_face_mask3.glb",
+      "accessories_face_eyepatch.glb",
+      "accessories_face_skigoggles.glb",
+      "accessories_face_beard.glb",
+      "accessories_face_nerd.glb",
+      "accessories_face_leprechaunbeard.glb",
+      "accessories_face_moustache.glb"
+    ],
+    ACC_HEAD: [
+      null,
+      "accessories_head_afro.glb",
+      "accessories_head_drstrange.glb",
+      "accessories_head_johnwick.glb",
+      "accessories_head_rasta.glb",
+      "accessories_head_painterhat.glb",
+      "accessories_head_morty.glb",
+      "accessories_head_rick.glb",
+      "accessories_head_piratehat.glb",
+      "accessories_head_harleyquinn.glb",
+      "accessories_head_leprechaunhat.glb",
+      "accessories_head_razerkraken.glb",
+      "accessories_head_razerkrakenkitty.glb",
+      "accessories_head_goku.glb",
+      "accessories_head_gokussj.glb",
+      "accessories_head_gokussjblue.glb",
+      "accessories_head_gokussjgod.glb",
+      "accessories_head_gokuultrainstinct.glb",
+      "accessories_head_beanie.glb",
+      "accessories_head_hockeymask.glb",
+      "accessories_head_wolfears.glb",
+      "accessories_head_antlers.glb",
+      "accessories_head_pumpkin.glb",
+      "accessories_head_scarecrow.glb",
+      "accessories_head_horns.glb",
+      "accessories_head_link.glb",
+      "accessories_head_headband.glb",
+      "accessories_head_googlyeyes.glb",
+      "accessories_head_helmet.glb",
+      "accessories_head_christmashat.glb",
+      "accessories_head_gandalfhat.glb",
+      "accessories_head_porkpie.glb",
+      "accessories_head_wizardhat.glb",
+      "accessories_head_skurpy.glb",
+      "accessories_head_birdnest.glb",
+      "accessories_head_coffee.glb",
+      "accessories_head_taco.glb",
+      "accessories_head_lemon.glb",
+      "accessories_head_chompie.glb",
+      "accessories_head_anubis.glb"
+    ]
+  };
+
+/* Contract category order, from mint-adapter.js ORDER. */
+const ORDER = [
+  { label: "Body",           list: PARTS.BODY     },
+  { label: "Face",           list: PARTS.FACE     },
+  { label: "Screen",         list: PARTS.SCREEN   },
+  { label: "Specs",          list: PARTS.SPECS    },
+  { label: "Clothes",        list: PARTS.CLOTHES  },
+  { label: "Face Accessory", list: PARTS.ACC_FACE },
+  { label: "Head Accessory", list: PARTS.ACC_HEAD },
+];
+
+/* ---- 2. STATUS LINE ------------------------------------------------
+ * Visible on the page, not the console: inside a marketplace frame there
+ * is no console to open. A blank robot and a blank config must look
+ * different. Remove for production.
+ * ------------------------------------------------------------------ */
+const statusEl = document.getElementById("status");
+const mv = document.getElementById("mv");
+const log = [];
+const say = (t) => { log.push(t); statusEl.textContent = log.join("\n"); };
+const done = (t) => { statusEl.className = "ok"; statusEl.textContent = t; };
+const die = (t) => { statusEl.className = "err"; say("FAILED: " + t); throw new Error(t); };
+
+/* ---- 3. READ THE CONFIG ------------------------------------------- */
+say("url    " + location.search);
+
+const raw = new URLSearchParams(location.search).get("config");
+if (raw === null) die("no ?config= in the address");
+say("config " + raw);
+
+const nums = raw.split(",").map((s) => s.trim());
+if (nums.length !== 7) die("expected 7 numbers, got " + nums.length);
+
+const chosen = nums.map((s, i) => {
+  const n = Number(s);
+  if (!Number.isInteger(n) || n < 0) die(`${ORDER[i].label}: "${s}" is not a whole number`);
+  if (n >= ORDER[i].list.length) die(`${ORDER[i].label}: ${n} is out of range (0-${ORDER[i].list.length - 1})`);
+  return n;
+});
+
+/* Skip the nulls -- generic, exactly loader.js's guard. Not a special
+   case for index 0. Collisions are ALREADY resolved on-chain; this page
+   renders what it is given and runs no collision check. */
+const files = [];
+chosen.forEach((n, i) => {
+  const f = ORDER[i].list[n];
+  say(`  ${ORDER[i].label.padEnd(14)} ${String(n).padStart(2)}  ${f ?? "(none)"}`);
+  if (f) files.push(f);
+});
+if (files.length === 0) die("nothing to load");
+
+/* ---- 4. WAIT FOR THE LIBRARIES ------------------------------------ */
+say("loading libraries...");
+
+await Promise.race([
+  customElements.whenDefined("model-viewer"),
+  new Promise((_, rej) => setTimeout(() => rej(), 20000)),
+]).catch(() => die("<model-viewer> never loaded (CDN blocked?)"));
+
+/* Same three packages, same version, same CDN as loader.js initLoader(). */
+let core, fns, ext;
+try {
+  [core, fns, ext] = await Promise.all([
+    import("https://esm.sh/@gltf-transform/core@4.2.1"),
+    import("https://esm.sh/@gltf-transform/functions@4.2.1"),
+    import("https://esm.sh/@gltf-transform/extensions@4.2.1"),
+  ]);
+} catch (e) {
+  die("glTF-Transform did not load from esm.sh - " + e.message);
+}
+
+/* ---- 5. THE MERGE -------------------------------------------------- */
+const io = new core.WebIO();
+
+/* MUST come before reading anything, or transparency and emissives break. */
+io.registerExtensions([
+  ext.KHRMaterialsTransmission,
+  ext.KHRMaterialsIOR,
+  ext.KHRMaterialsEmissiveStrength,
+]);
+
+const scaleDown = (doc) => {
+  doc.getRoot().listNodes().forEach((node) => {
+    const s = node.getScale();
+    node.setScale([s[0] * 0.1, s[1] * 0.1, s[2] * 0.1]);
+  });
+};
+
+const readPart = async (filename) => {
+  const res = await fetch("models/" + filename);
+  if (!res.ok) die(`models/${filename} -> HTTP ${res.status}`);
+  return io.readBinary(new Uint8Array(await res.arrayBuffer()));
+};
+
+try {
+  say(`merging ${files.length} part(s)...`);
+
+  const baseDoc = await readPart(files[0]);
+  scaleDown(baseDoc);
+
+  for (let i = 1; i < files.length; i++) {
+    const doc = await readPart(files[i]);
+    scaleDown(doc);
+    await fns.mergeDocuments(baseDoc, doc);
+  }
+
+  /* Fold every extra scene into scene 0. */
+  const scenes = baseDoc.getRoot().listScenes();
+  if (scenes.length > 1) {
+    const main = scenes[0];
+    for (let i = 1; i < scenes.length; i++) {
+      scenes[i].listChildren().forEach((n) => main.addChild(n));
+      scenes[i].dispose();
+    }
+  }
+
+  /* One buffer instead of many. */
+  await baseDoc.transform(fns.unpartition());
+
+  const glb = await io.writeBinary(baseDoc);
+  const url = URL.createObjectURL(new Blob([glb], { type: "model/gltf-binary" }));
+
+  mv.addEventListener("load",  () => done(`${raw} - ${files.length} parts - ${(glb.byteLength / 1024).toFixed(0)} KB`), { once: true });
+  mv.addEventListener("error", () => die("the merged model failed to display"), { once: true });
+
+  mv.src = url;
+} catch (e) {
+  if (statusEl.className !== "err") die(e.message);
+}
+</script>
+
+</body>
+</html>

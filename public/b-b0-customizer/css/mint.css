@@ -103,13 +103,18 @@
 
 .bb0-total {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
   border-top: 2px solid #0f0;
   margin-top: 10px;
   padding-top: 8px;
   font-size: 18px;
   font-weight: bold;
 }
+/* One line inside the total block. The block used to BE a single row; it is
+   a column now so a discount and a revised total can sit under the estimate. */
+.bb0-total-row { display: flex; justify-content: space-between; }
+.bb0-total-row.bb0-discount { color: #fc6; font-size: 15px; }
 
 /* ---- promo ---- */
 .bb0-promo { display: flex; gap: 8px; margin-top: 14px; }

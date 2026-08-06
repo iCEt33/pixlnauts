@@ -1,6 +1,3 @@
-// Global variables
-let performanceMode = false;
-
 // Keep track of loaded models by category (for tracking only)
 const loadedModels = {
   body: null,

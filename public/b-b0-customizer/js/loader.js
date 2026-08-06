@@ -181,15 +181,21 @@ const loadAllModels = async () => {
     // stop loading anything (and the MINT button would stay greyed out).
     const errorHandler = () => {
       log('ERROR: the merged model failed to display');
-      modelViewer.removeEventListener('load', loadHandler);
+      modelViewer.removeEventListener('load', loadWrapper);
       hideLoadingOverlay();
       finishLoading();
     };
-    modelViewer.addEventListener('error', errorHandler, { once: true });
-    modelViewer.addEventListener('load', () => {
+    // Named on purpose. removeEventListener matches on function IDENTITY, so
+    // an anonymous wrapper here could never be removed: after an error the
+    // load listener would stay attached, and a late 'load' would then run the
+    // PREVIOUS merge's loadHandler — clearing isCurrentlyLoading while this
+    // merge is still running, which un-greys MINT mid-update.
+    const loadWrapper = () => {
       modelViewer.removeEventListener('error', errorHandler);
       loadHandler();
-    }, { once: true });
+    };
+    modelViewer.addEventListener('error', errorHandler, { once: true });
+    modelViewer.addEventListener('load', loadWrapper, { once: true });
     
     // NOW load the new model - old one stays visible until this completes
     modelViewer.src = url;

@@ -79,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sideButtons = [
       { id: 'auto-rotate-side', text: 'Auto Rotate', active: false, clickTarget: 'auto-rotate-toggle' },
       { id: 'camera-reset-side', text: 'Reset Camera', clickTarget: 'camera-reset' },
-      { id: 'performance-side', text: 'Performance', clickTarget: 'performance-toggle' },
       { id: 'snapshot-side', text: 'Snapshot', onClick: () => takeHighResSnapshot() },
       { id: 'export-side', text: 'Export GLB', onClick: () => exportCurrentModel() },
       { id: 'reset-side', text: 'Reset B-b0', style: { backgroundColor: '#500', borderColor: '#f00' }, clickTarget: 'reset-button' }

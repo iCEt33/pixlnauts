@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>renderer sandbox test</title>
+<style>
+  body {
+    margin: 0; padding: 16px; background: #111; color: #ddd;
+    font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  }
+  h1 { font-size: 15px; margin: 0 0 4px; color: #0f0; }
+  .sub { color: #888; margin: 0 0 18px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .panel { flex: 1 1 300px; min-width: 280px; }
+  .panel h2 { font-size: 13px; margin: 0 0 2px; color: #fff; }
+  .panel .tag { color: #888; font-size: 11px; margin: 0 0 6px; min-height: 30px; }
+  iframe {
+    width: 100%; height: 340px; border: 1px solid #333;
+    background: #000; display: block;
+  }
+  .verdict { margin-top: 6px; font-size: 11px; color: #777; }
+  .key { margin-top: 22px; padding: 12px 14px; border: 1px solid #333; background: #191919; }
+  .key b { color: #0f0; }
+  .key .bad { color: #f66; }
+</style>
+</head>
+<body>
+
+<h1>renderer.html — sandbox test</h1>
+<p class="sub" id="what"></p>
+
+<div class="row">
+
+  <div class="panel">
+    <h2>A · no sandbox</h2>
+    <p class="tag">A normal browser tab. The control. If this is broken,
+      nothing else here means anything.</p>
+    <iframe id="a"></iframe>
+  </div>
+
+  <div class="panel">
+    <h2>B · sandbox="allow-scripts"</h2>
+    <p class="tag">The harsh case. The page loses its identity and counts as
+      coming from nobody, so its own models/ folder becomes a stranger.</p>
+    <iframe id="b" sandbox="allow-scripts"></iframe>
+  </div>
+
+  <div class="panel">
+    <h2>C · allow-scripts allow-same-origin</h2>
+    <p class="tag">The lenient case. The page keeps its identity, so fetching
+      its own models/ folder is uncontroversial.</p>
+    <iframe id="c" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+
+</div>
+
+<div class="key">
+  <div><b>A, B and C all show the robot</b> &nbsp;→&nbsp; nothing left to worry
+    about. Go do the OpenSea test.</div>
+  <div style="margin-top:6px"><b>A and C work, B is blank or errors</b>
+    &nbsp;→&nbsp; this is the one the vercel.json header fixes. Add it, redeploy,
+    reload this page. Do <span class="bad">not</span> spend a transaction until B
+    is green — it would fail and tell you nothing.</div>
+  <div style="margin-top:6px"><b class="bad">A is broken</b> &nbsp;→&nbsp; the
+    renderer itself is wrong. Read the green text inside panel A; it says which
+    step died.</div>
+</div>
+
+<script>
+  // Same config for all three. Override with ?config=… on this page's own URL.
+  const cfg = new URLSearchParams(location.search).get("config") || "7,24,4,0,0,0,0";
+  const src = "renderer.html?config=" + encodeURIComponent(cfg);
+  document.getElementById("what").textContent =
+    "config " + cfg + "  —  same page, three levels of restriction";
+  for (const id of ["a", "b", "c"]) document.getElementById(id).src = src;
+</script>
+
+</body>
+</html>

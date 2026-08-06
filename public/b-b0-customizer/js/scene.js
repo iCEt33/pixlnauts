@@ -62,13 +62,6 @@ const initScene = () => {
     log(`Auto-rotation ${autoRotateEnabled ? 'enabled' : 'disabled'}`);
   });
   
-  // Handle performance mode toggle
-  const performanceToggle = document.getElementById('performance-toggle');
-  
-  performanceToggle.addEventListener('click', () => {
-    togglePerformanceMode();
-  });
-  
   log("Model-viewer initialized successfully");
 };
 

@@ -88,6 +88,7 @@ let busy = false;
 let upgrade = null;             // { tokenId, onChainConfig, wardrobe, parts }
 let upgradeBar = null;
 let tagPoll = null;
+let justUpgraded = false;       // success panel is standing in for the button
 
 // --------------------------------------------------------------------------
 // the panel shell
@@ -145,7 +146,7 @@ function drawWallet() {
     walletLine.append(swap);
     return;
   }
-  const b = el("button", "bb0-connect", "Connect wallet to see your B-b0s");
+  const b = el("button", "bb0-connect", "Connect wallet");
   b.onclick = tryConnect;
   walletLine.append(b);
 }
@@ -209,7 +210,7 @@ async function drawGrid() {
 
   if (!IS_DEPLOYED) { panelBody.innerHTML = ""; return; }
   if (!account) {
-    panelBody.innerHTML = `<div class="bb0-col-empty">Connect a wallet above to see the B-b0s it owns.</div>`;
+    panelBody.innerHTML = `<div class="bb0-col-empty">Connect a wallet above to see your B-b0s.</div>`;
     return;
   }
 
@@ -303,12 +304,10 @@ async function drawDetail(tokenId) {
           </div>
           <div class="bb0-col-links">
             <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
-            <a href="${addressURL(robot.owner)}" target="_blank" rel="noopener">Owner on ${esc(CHAIN.name)}</a>
           </div>
           ${isMine
             ? `<button class="bb0-col-upgrade">UPGRADE THIS B-b0</button>
                <div class="bb0-fineprint">
-                 Its build loads into the carousels. It keeps its number —
                  #${tokenId} stays #${tokenId} forever. You only pay for parts
                  it has never owned.
                </div>`
@@ -324,11 +323,17 @@ async function drawDetail(tokenId) {
       // down a row of robots would download every one of them.
       btn3d.onclick = () => {
         const stage = panelBody.querySelector(".bb0-col-stage");
+        // NO field-of-view here, deliberately. index.html pins it to 40deg for
+        // the 500px viewer, but that value disables model-viewer's own
+        // aspect-ratio-aware framing — and 40deg is narrower than the 45deg
+        // default, so everything renders larger. In this much smaller box that
+        // clipped the robot, and no radius could compensate. Only the ANGLE is
+        // ours; model-viewer decides how far back to stand.
         stage.innerHTML =
           `<model-viewer class="bb0-col-big" src="${esc(robot.model)}"
              poster="${esc(robot.image)}" camera-controls touch-action="pan-y"
              shadow-intensity="1" environment-image="neutral" exposure="1"
-             camera-orbit="-28deg 90deg 6.5m" field-of-view="40deg"></model-viewer>`;
+             camera-orbit="-28deg 90deg auto"></model-viewer>`;
       };
     }
 
@@ -372,12 +377,21 @@ async function enterUpgradeMode(tokenId, onChainConfig) {
 
 function exitUpgradeMode() {
   upgrade = null;
+  justUpgraded = false;
   stopTagPoll();
   removeTags();
   releasePricePanel();
   if (upgradeBar) { upgradeBar.remove(); upgradeBar = null; }
   const mintBtn = document.getElementById("mint-side");
   if (mintBtn) mintBtn.style.display = "";
+
+  // Hand the top-right button back its normal job.
+  const colBtn = document.getElementById("bb0-collection-side");
+  if (colBtn) {
+    colBtn.textContent = "MY COLLECTION";
+    colBtn.classList.remove("bb0-cancel-upgrade");
+    colBtn.onclick = openPanel;
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -480,7 +494,6 @@ function showUpgradeBar() {
   upgradeBar.innerHTML = `
     <div class="bb0-up-head">
       <span class="bb0-up-token">UPGRADING B-b0 #${upgrade.tokenId}</span>
-      <button class="bb0-link bb0-up-cancel">Cancel</button>
     </div>
     <div class="bb0-up-lines"></div>
     <div class="bb0-up-warn"></div>
@@ -489,11 +502,18 @@ function showUpgradeBar() {
     <div class="bb0-up-result"></div>`;
   pricePanel.insertAdjacentElement("afterend", upgradeBar);
 
-  upgradeBar.querySelector(".bb0-up-cancel").onclick = () => {
-    if (busy) return;
-    exitUpgradeMode();
-  };
   upgradeBar.querySelector(".bb0-up-go").onclick = onApply;
+
+  // The big top-right button becomes the way out. It is the most visible
+  // control on screen, and during an upgrade "MY COLLECTION" offers a panel
+  // that isn't useful — while the actual exit hides in a small link. Same
+  // handler as that link, so there is only one way out to keep working.
+  const colBtn = document.getElementById("bb0-collection-side");
+  if (colBtn) {
+    colBtn.textContent = "CANCEL UPGRADE";
+    colBtn.classList.add("bb0-cancel-upgrade");
+    colBtn.onclick = () => { if (!busy) exitUpgradeMode(); };
+  }
 }
 
 /**
@@ -550,7 +570,7 @@ function collisionNotice() {
   if (!notices.length) return "";
   return `${notices.map(esc).join(" and ")} ${notices.length > 1 ? "are" : "is"} ` +
          `hidden by something else on the robot, so ${notices.length > 1 ? "they" : "it"} ` +
-         `won't be equipped. Nothing is lost — anything this B-b0 has ever owned ` +
+         `won't be equipped. Nothing is lost. Anything this B-b0 has ever owned ` +
          `stays in its wardrobe and costs nothing to put back on later.`;
 }
 
@@ -569,7 +589,7 @@ function drawUpgradeBar() {
     }
   });
   upgradeBar.querySelector(".bb0-up-lines").innerHTML = removed.length
-    ? `Taking off: ${removed.map(esc).join(", ")} — kept in this B-b0's wardrobe.`
+    ? `Taking off: ${removed.map(esc).join(", ")} moved to B-b0's wardrobe.`
     : "";
 
   const warn = upgradeBar.querySelector(".bb0-up-warn");
@@ -578,6 +598,19 @@ function drawUpgradeBar() {
   warn.style.display = notice ? "" : "none";
 
   const go = upgradeBar.querySelector(".bb0-up-go");
+
+  // After a successful upgrade the build MATCHES the chain again, so this
+  // button correctly reads NO CHANGES YET — sitting directly above a panel
+  // announcing the robot was rebuilt. Both statements are true, and together
+  // they read as a contradiction. So the panel speaks instead and the button
+  // steps aside, until the first new part clears both.
+  if (justUpgraded) {
+    if (unchanged) { go.style.display = "none"; return; }
+    justUpgraded = false;
+    go.style.display = "";
+    upgradeBar.querySelector(".bb0-up-result").innerHTML = "";
+  }
+
   if (busy) {
     go.disabled = true;
   } else if (unchanged) {
@@ -627,9 +660,13 @@ function drawTags() {
     const part = cat.parts.find((p) => p.id === shown);
     const price = Number(part?.pricePOL || 0);
 
+    // Only speak when there is something to say. A part the robot already
+    // wears gets NO tag: the price panel says EQUIPPED, and a blue label on
+    // every carousel at once is noise you learn to ignore. Blank while you
+    // match the robot, so the tags read as a live list of what you've changed.
     if (equipped) {
-      node.className = "bb0-tag-row bb0-tag-equipped";
-      node.textContent = "EQUIPPED";
+      node.className = "bb0-tag-row";
+      node.textContent = "";
     } else if (owned) {
       node.className = "bb0-tag-row bb0-tag-owned";
       node.textContent = "OWNED · free to re-equip";
@@ -666,6 +703,67 @@ function stopTagPoll() {
 // --------------------------------------------------------------------------
 // applying the upgrade
 // --------------------------------------------------------------------------
+
+/**
+ * The wallet picker, drawn INSIDE the upgrade bar.
+ *
+ * showWalletPicker() above draws into .bb0-col-wallet, which lives in the My
+ * Collection panel — and enterUpgradeMode() closes that panel. Using it during
+ * an upgrade would put the picker somewhere nobody can see.
+ *
+ * .bb0-up-result is the one slot in the bar that drawUpgradeBar() never
+ * rewrites, so a picker placed here survives the 250 ms poll.
+ */
+async function showUpgradeWalletPicker() {
+  if (!upgradeBar) return;
+  const result = upgradeBar.querySelector(".bb0-up-result");
+  const status = upgradeBar.querySelector(".bb0-up-status");
+  if (!result) return;
+
+  result.innerHTML = "";
+  const box = el("div", "bb0-wallet-list", '<div class="bb0-wallet-head">Choose a wallet</div>');
+  result.append(box);
+
+  const wallets = await listWallets();
+  if (!wallets.length) {
+    box.append(el("div", "bb0-bad", "No wallet extension found. Install MetaMask, then reload."));
+    return;
+  }
+
+  wallets.forEach((w) => {
+    const row = el("button", "bb0-wallet-option");
+    if (w.icon) {
+      const img = document.createElement("img");
+      img.src = w.icon; img.alt = ""; img.className = "bb0-wallet-icon";
+      row.append(img);
+    }
+    row.append(el("span", null, w.name));
+    row.onclick = async () => {
+      box.querySelectorAll("button").forEach((x) => (x.disabled = true));
+      status.className = "bb0-up-status";
+      status.textContent = `Opening ${w.name}…`;
+      try {
+        await connectWallet(w.rdns);
+        result.innerHTML = "";
+        status.textContent = "Wallet connected! Press UPGRADE NOW again.";
+      } catch (e) {
+        if (e.code === "CANCELLED") {
+          status.textContent = "";
+        } else {
+          status.className = "bb0-up-status bb0-bad";
+          status.textContent = e.message;
+        }
+        box.querySelectorAll("button").forEach((x) => (x.disabled = false));
+      }
+    };
+    box.append(row);
+  });
+
+  const cancel = el("button", "bb0-link", "Cancel");
+  cancel.onclick = () => { result.innerHTML = ""; status.textContent = ""; };
+  box.append(cancel);
+}
+
 async function onApply() {
   if (busy || !upgrade) return;
   busy = true;
@@ -688,18 +786,31 @@ async function onApply() {
         <a href="${txURL(hash)}" target="_blank" rel="noopener">View the transaction</a>
         <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
         <div class="bb0-fineprint">
-          ${cost === 0n ? "A free swap — you only paid the network fee. " : ""}
+          ${cost === 0n ? "A free swap, you only paid the network fee. " : ""}
           The new picture can take a minute to appear on marketplaces.
         </div>
       </div>`;
+    // The panel now stands in for the button — see drawUpgradeBar. Set BEFORE
+    // the two awaits below, so a slow wardrobe read can't leave the success
+    // panel showing with NO CHANGES YET still above it.
+    justUpgraded = true;
 
     // The robot's on-chain build and wardrobe have both moved on. Re-read them
     // so the bar and tags describe reality rather than the state we started in.
     upgrade.onChainConfig = window.BB0.getConfigArray().map(Number);
     upgrade.wardrobe = await loadWardrobe(upgrade.tokenId);
   } catch (e) {
-    status.className = "bb0-up-status bb0-bad";
-    status.textContent = e.shortMessage || e.message || "Something went wrong.";
+    // Two wallet extensions installed and none chosen: wallet.js throws
+    // CHOOSE_WALLET rather than guessing. The panel's own picker is no use
+    // here — enterUpgradeMode() closed that panel — so use the bar's.
+    if (e.code === "CHOOSE_WALLET") {
+      status.className = "bb0-up-status";
+      status.textContent = "Pick which wallet owns this B-b0.";
+      showUpgradeWalletPicker();
+    } else {
+      status.className = "bb0-up-status bb0-bad";
+      status.textContent = e.shortMessage || e.message || "Something went wrong.";
+    }
   } finally {
     busy = false;
     drawUpgradeBar();

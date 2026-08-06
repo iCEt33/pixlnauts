@@ -8,7 +8,7 @@
 // The price is never computed here. Decision #9: the contract is the only
 // thing allowed to say what a build costs.
 
-import { parseEventLogs } from "https://esm.sh/viem@2.37.5";
+import { parseEventLogs, formatEther } from "https://esm.sh/viem@2.37.5";
 import { API, IS_DEPLOYED } from "./chain-config.js";
 import { publicClient, walletClient, account, contract, connectWallet, ensureChain } from "./wallet.js";
 
@@ -63,7 +63,7 @@ export async function mintCurrentRobot(promoCode = "", onStatus = console.log) {
   // can't add an unknown testnet should still be able to connect and look.
   await ensureChain();
   if (window.BB0.isBusy()) {
-    throw new Error("Hold on — the robot is still updating. Try again in a second.");
+    throw new Error("Hold on! The robot is still updating. Try again in a second.");
   }
 
   const cfg = getCurrentConfigArray();
@@ -121,6 +121,21 @@ export async function mintCurrentRobot(promoCode = "", onStatus = console.log) {
 
   onStatus(`Minted! Say hello to B-b0 #${tokenId}`);
   return { tokenId, hash };
+}
+
+/**
+ * What does this build cost according to the CONTRACT, with this code applied?
+ * Read-only, signs nothing, costs nothing. Pass "" for no code.
+ *
+ * Decision #9: the contract is the only thing allowed to say what a build
+ * costs. The panel must never work a discount out in JavaScript.
+ */
+export async function quoteMintFor(promoCode = "", wallet) {
+  const cfg = getCurrentConfigArray();
+  const [finalPrice, promoOk] = await publicClient.readContract({
+    ...contract, functionName: "quoteMint", args: [cfg, promoCode, wallet],
+  });
+  return { wei: finalPrice, pol: Number(formatEther(finalPrice)), promoOk };
 }
 
 /** Read-only promo check for the "Check code" button — costs nothing, signs nothing. */

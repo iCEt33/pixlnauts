@@ -8,7 +8,7 @@
 // Snapshot / Export GLB / Reset, and opens a panel styled to match the
 // customizer's terminal look.
 
-import { mintCurrentRobot, checkPromo, mintStatus } from "./mint.js";
+import { mintCurrentRobot, checkPromo, mintStatus, quoteMintFor } from "./mint.js";
 import {
   account, activeWallet, chainOk, connectWallet, onWalletChange,
   listWallets, forgetWallet, ensureChain,
@@ -128,10 +128,10 @@ function buildPanel() {
       <div class="bb0-status"></div>
       <div class="bb0-result"></div>
       <div class="bb0-fineprint">
-        The price is calculated by the contract itself, not by this page.
+        The price is calculated by the contract itself.
         ${CHAIN.testnet
           ? `You also pay a network fee — free test POL on ${CHAIN.name}.`
-          : `You also pay the network's own fee, usually a few cents.`}
+          : `You also pay the network's gas fee.`}
       </div>
     </div>`;
   document.body.appendChild(panel);
@@ -253,7 +253,7 @@ async function drawBuild() {
       <span class="bb0-price">${Number(r.price).toFixed(2)}</span>
     </div>`).join("");
   totalLine.innerHTML =
-    `<span>ESTIMATED TOTAL</span><span>${total.toFixed(2)} POL</span>`;
+    `<div class="bb0-total-row"><span>ESTIMATED TOTAL</span><span>${total.toFixed(2)} POL</span></div>`;
 }
 
 async function drawBatch() {
@@ -274,17 +274,35 @@ function setStatus(msg, kind = "") {
   statusLine.textContent = msg || "";
 }
 
+// Put the total block back to the plain estimate — no code, or a rejected one.
+function resetTotal() {
+  drawBuild().catch(() => {});
+}
+
+// The revised total after a VALID code. BOTH numbers are quoteMint reads, and
+// the discount is the difference between them — never a percentage applied in
+// JavaScript (Decision #9).
+async function drawDiscount(code, percent) {
+  const full = await quoteMintFor("", account);
+  const now  = await quoteMintFor(code, account);
+  const saved = full.pol - now.pol;
+  totalLine.innerHTML = `
+    <div class="bb0-total-row"><span>ESTIMATED TOTAL</span><span>${full.pol.toFixed(2)} POL</span></div>
+    <div class="bb0-total-row bb0-discount"><span>Discount (${percent}%)</span><span>-${saved.toFixed(2)} POL</span></div>
+    <div class="bb0-total-row"><span>YOU PAY</span><span>${now.pol.toFixed(2)} POL</span></div>`;
+}
+
 async function onCheckPromo() {
   const code = promoInput.value.trim().toUpperCase();
   promoInput.value = code;
   promoNote.className = "bb0-promo-note";
-  if (!code) { promoNote.textContent = ""; return; }
+  if (!code) { promoNote.textContent = ""; resetTotal(); return; }
   if (!IS_DEPLOYED) {
     promoNote.textContent = "Can't check codes until the contract is deployed.";
     return;
   }
   if (!account) {
-    promoNote.textContent = "Connect your wallet first — codes are counted per wallet.";
+    promoNote.textContent = "Connect your wallet first, codes are counted per wallet.";
     return;
   }
   promoNote.textContent = "Checking…";
@@ -294,13 +312,16 @@ async function onCheckPromo() {
       promoNote.className = "bb0-promo-note bb0-ok";
       promoNote.textContent =
         `${r.discountPercent}% off · ${r.remainingForWallet} use(s) left for you`;
+      await drawDiscount(code, r.discountPercent);          // ← ADD THIS
     } else {
       promoNote.className = "bb0-promo-note bb0-bad";
       promoNote.textContent = "That code isn't usable (invalid, used up, or wallet limit reached).";
+      resetTotal();
     }
   } catch (e) {
     promoNote.className = "bb0-promo-note bb0-bad";
     promoNote.textContent = "Couldn't check that code right now.";
+    resetTotal(); 
   }
 }
 
@@ -321,14 +342,28 @@ async function onMint() {
         <a href="${txURL(hash)}" target="_blank" rel="noopener">View the transaction</a>
         <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
         <div class="bb0-fineprint">
-          The picture can take a minute to appear on marketplaces. Nothing is wrong if it does.
+          The picture can take a minute to appear on marketplaces.
         </div>
       </div>`;
+    // The mint is done — a live MINT button under a success panel reads as if
+    // it didn't work. Reopening the panel brings the button back (openPanel).
+    mintBtn.style.display = "none";
     drawBatch();
+    // The code has just been spent once. Re-read it so the "N use(s) left"
+    // line reflects the chain rather than the count from before the mint.
+    onCheckPromo();
   } catch (e) {
-    // viem puts the useful sentence in shortMessage; the contract's own
-    // reasons ("Current batch sold out", "Bad stamp") arrive there too.
-    setStatus(e.shortMessage || e.message || "Something went wrong.", "bad");
+    // Two wallet extensions installed and none chosen yet: wallet.js refuses
+    // to guess and throws CHOOSE_WALLET. Open the picker this file already
+    // has, instead of printing the code as a dead-end error.
+    if (e.code === "CHOOSE_WALLET") {
+      setStatus("Pick which wallet to mint from, then press MINT again.");
+      showWalletPicker();
+    } else {
+      // viem puts the useful sentence in shortMessage; the contract's own
+      // reasons ("Current batch sold out", "Bad stamp") arrive there too.
+      setStatus(e.shortMessage || e.message || "Something went wrong.", "bad");
+    }
   } finally {
     busy = false;
     mintBtn.disabled = !IS_DEPLOYED;
@@ -340,6 +375,7 @@ async function openPanel() {
   panel.classList.add("bb0-open");
   setStatus("");
   resultBox.innerHTML = "";
+  mintBtn.style.display = "";
   mintBtn.disabled = !IS_DEPLOYED;
   drawWallet();
   try {

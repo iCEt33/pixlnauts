@@ -47,6 +47,20 @@
   transform: translate(-4px, 0);
 }
 
+/* While an upgrade is in progress this button becomes the way OUT of it.
+   Red, because it abandons work rather than opening something. Two classes
+   deep so it beats the green rules above without !important. */
+.bb0-collection-button.bb0-cancel-upgrade {
+  background-color: #f44;
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.7), 4px 4px 0 #800;
+}
+.bb0-collection-button.bb0-cancel-upgrade:hover {
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.9), 4px 4px 0 #800;
+}
+.bb0-collection-button.bb0-cancel-upgrade:active {
+  box-shadow: 0 0 25px rgba(255, 68, 68, 1), 2px 2px 0 #800;
+}
+
 /* --------------------------------------------------------------------------
    THE PANEL
    -------------------------------------------------------------------------- */
@@ -167,6 +181,10 @@
 .bb0-col-stage { flex: 1 1 260px; min-width: 240px; }
 .bb0-col-big {
   width: 100%;
+  /* <model-viewer> ships its own default size (300x150). aspect-ratio is only
+     honoured when height is auto, so without this line that 150px wins and the
+     stage renders as a wide, short strip instead of a square. */
+  height: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
   background: #020;
@@ -285,6 +303,9 @@
   padding: 2px 0;
   border: 1px solid transparent;
 }
+/* An equipped part gets no tag at all. Collapse the empty row so it doesn't
+   leave a dead band of padding and border under every carousel. */
+.bb0-tag-row:empty { display: none; }
 /* Blue = this robot already bought it; putting it back on is free forever. */
 .bb0-tag-owned    { color: #4af; border-color: #24a; background: rgba(20, 50, 90, 0.35); }
 /* Green = what the robot is wearing on-chain right now. Not greyed out —
@@ -292,3 +313,17 @@
 .bb0-tag-equipped { color: #0f0; border-color: #0a0; background: rgba(0, 60, 0, 0.35); }
 /* Amber = never owned by this robot, so it costs money. */
 .bb0-tag-new      { color: #fc6; border-color: #a72; background: rgba(80, 50, 0, 0.3); }
+/* --------------------------------------------------------------------------
+   The customizer's controls panel is capped at 90vh with its own scrollbar,
+   and the un-upgraded content sits just under that ceiling. Adding a single
+   tag row tips it over, so the scrollbar appears and disappears as tags come
+   and go — the panel jumping while you spin a carousel.
+
+   Lifting the cap lets the panel be as tall as it needs. The page scrolls
+   instead of a box inside the page, which is one scrollbar rather than two.
+   styles.css is NOT edited; this overrides it from our own file.
+   -------------------------------------------------------------------------- */
+.controls-panel {
+  max-height: none;
+  overflow-y: visible;
+}
