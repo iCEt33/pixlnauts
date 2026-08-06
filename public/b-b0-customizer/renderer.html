@@ -18,8 +18,12 @@
     background-color: transparent;
     --poster-color: transparent;   /* model-viewer's poster defaults to white */
   }
-  /* Diagnostic overlay. Delete this rule and the <pre> below for production. */
-  #status {
+  /* Diagnostic overlay. OFF unless the address ends with &debug -- see
+     "THE STATUS LINE" below. Invisible in normal use; still there when a
+     robot fails to appear and you need to know which step died. */
+  #status { display: none; }
+  #status.on {
+    display: block;
     position: fixed; top: 0; left: 0; margin: 0; padding: 6px 8px;
     font: 10px/1.45 ui-monospace, Menlo, Consolas, monospace;
     color: #0f0; background: rgba(0,0,0,.55);
@@ -39,8 +43,6 @@
   id="mv"
   alt="B-b0"
   camera-controls
-  auto-rotate
-  auto-rotate-delay="0"
   rotation-per-second="30deg"
   camera-orbit="-28deg 90deg auto"
   interaction-prompt="none"
@@ -245,12 +247,23 @@ const ORDER = [
  * is no console to open. A blank robot and a blank config must look
  * different. Remove for production.
  * ------------------------------------------------------------------ */
+const DEBUG = new URLSearchParams(location.search).has("debug");
 const statusEl = document.getElementById("status");
 const mv = document.getElementById("mv");
+if (DEBUG) statusEl.classList.add("on");
+
 const log = [];
-const say = (t) => { log.push(t); statusEl.textContent = log.join("\n"); };
-const done = (t) => { statusEl.className = "ok"; statusEl.textContent = t; };
-const die = (t) => { statusEl.className = "err"; say("FAILED: " + t); throw new Error(t); };
+let failed = false;
+const paint = () => { if (DEBUG) statusEl.textContent = log.join("\n"); };
+const say  = (t) => { log.push(t); paint(); };
+const done = (t) => { if (DEBUG) { statusEl.classList.add("ok"); statusEl.textContent = t; } };
+const die  = (t) => {
+  failed = true;
+  log.push("FAILED: " + t);
+  if (DEBUG) statusEl.classList.add("err");
+  paint();
+  throw new Error(t);
+};
 
 /* ---- 3. READ THE CONFIG ------------------------------------------- */
 say("url    " + location.search);
@@ -356,7 +369,7 @@ try {
 
   mv.src = url;
 } catch (e) {
-  if (statusEl.className !== "err") die(e.message);
+  if (!failed) die(e.message);
 }
 </script>
 

@@ -70,7 +70,9 @@
 <script>
   // Same config for all three. Override with ?config=… on this page's own URL.
   const cfg = new URLSearchParams(location.search).get("config") || "7,24,4,0,0,0,0";
-  const src = "renderer.html?config=" + encodeURIComponent(cfg);
+  // &debug forces the status line on -- this page exists to diagnose,
+  // and blank panels with no explanation would defeat the point.
+  const src = "renderer.html?config=" + encodeURIComponent(cfg) + "&debug";
   document.getElementById("what").textContent =
     "config " + cfg + "  —  same page, three levels of restriction";
   for (const id of ["a", "b", "c"]) document.getElementById(id).src = src;
