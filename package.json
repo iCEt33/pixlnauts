@@ -2,6 +2,11 @@
   "name": "pixlnauts-website",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "rpc-websockets": {
+      "uuid": "9.0.1"
+    }
+  },
   "dependencies": {
     "@ardrive/turbo-sdk": "^1.42.0",
     "@rainbow-me/rainbowkit": "^2.2.8",
