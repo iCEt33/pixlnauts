@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/upload.mjs": { "maxDuration": 60 }
+  },
   "headers": [
     {
       "source": "/b-b0-customizer/models/(.*)",

@@ -12,7 +12,7 @@ import { polygonAmoy, polygon } from "https://esm.sh/viem@2.37.5/chains";
 // 1. The contract's address. Printed by deploy.js in Phase 4.
 //    Leave it as the zeros until then — the UI detects that and says
 //    "not deployed yet" instead of throwing confusing errors.
-export const CONTRACT_ADDRESS = "0xe1C3E449E8bF787f23614403C4e19acFCF46FC22";
+export const CONTRACT_ADDRESS = "0x1b6d515ee015a8e850cbaab1bc9b039b273352fB";
 
 // 2. Which chain. Amoy for the PROTOTYPE round, polygon at launch.
 // const BASE_CHAIN = polygonAmoy;     // ← TESTING
@@ -20,7 +20,7 @@ const BASE_CHAIN = polygon;            // ← LAUNCH (swap the two comment marks
 
 // 3. The block the contract was deployed in. Also printed by deploy.js.
 //    Only admin.html uses it (to know where to start scanning promo codes).
-export const DEPLOY_BLOCK = 91366479n;
+export const DEPLOY_BLOCK = 91792897n;
 
 // 4. The RPC endpoint. NOT OPTIONAL ANY MORE.
 //
@@ -154,19 +154,35 @@ export function openSeaURL(tokenId) {
 }
 
 // The contract's public interface, human-readable form.
-// Verified 2026-07-22 entry-by-entry against the compiled artifact: all 30
-// match on selector, return types, payable flag and indexed event params.
-// setPartInfo / repairAssets / setSigner / setRoyalty are omitted ON PURPOSE
-// (§6.6 — those stay on Polygonscan).
+// Re-verified for v2.8 by computing every selector from these strings and
+// comparing against the compiled artifact — not by reading them.
+//
+// v2.8 changes:
+//   * mint / upgrade lose their model-address argument (one file per mint now)
+//   * modelURI(uint256) becomes modelURIOverride(uint256) — normally "" —
+//     because animation_url is BUILT from rendererURI + the config
+//   * description() / tokenNote() / rendererURI() are readable
+//   * setDescription / setTokenNote / setRendererURI are included because the
+//     admin panel (UI-6) drives them. setPartInfo / repairAssets / setSigner /
+//     setRoyalty are still omitted ON PURPOSE (§6.6 — Polygonscan only). When
+//     the panel is built, that split needs revisiting: the spec expects it to
+//     drive those too.
 export const ABI = parseAbi([
-  "function mint((uint8,uint8,uint8,uint8,uint8,uint8,uint8), string, string, uint256, bytes, string) payable returns (uint256)",
-  "function upgrade(uint256, (uint8,uint8,uint8,uint8,uint8,uint8,uint8), string, string, uint256, bytes) payable",
+  "function mint((uint8,uint8,uint8,uint8,uint8,uint8,uint8), string, uint256, bytes, string) payable returns (uint256)",
+  "function upgrade(uint256, (uint8,uint8,uint8,uint8,uint8,uint8,uint8), string, uint256, bytes) payable",
   "function quoteMint((uint8,uint8,uint8,uint8,uint8,uint8,uint8), string, address) view returns (uint256, bool, uint256)",
   "function quoteUpgrade(uint256, (uint8,uint8,uint8,uint8,uint8,uint8,uint8)) view returns (uint256)",
   "function calculateConfigPrice((uint8,uint8,uint8,uint8,uint8,uint8,uint8)) view returns (uint256)",
   "function getConfig(uint256) view returns (uint8[7])",
   "function imageURI(uint256) view returns (string)",
-  "function modelURI(uint256) view returns (string)",
+  "function modelURIOverride(uint256) view returns (string)",
+  "function rendererURI() view returns (string)",
+  "function description() view returns (string)",
+  "function signer() view returns (address)",
+  "function collectionURI() view returns (string)",
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function tokenNote(uint256) view returns (string)",
   "function unlocked(uint256, uint8, uint8) view returns (bool)",
   "function checkPromoCode(string, address) view returns (bool, uint256, uint256, uint256)",
   "function currentTokenId() view returns (uint256)",
@@ -185,8 +201,14 @@ export const ABI = parseAbi([
   "function pause()",
   "function unpause()",
   "function withdraw()",
+  "function setDescription(string)",
+  "function setTokenNote(uint256, string)",
+  "function setRendererURI(string)",
   "event PromoCodeCreated(string code, uint256 discountPercent, uint256 maxUsesPerWallet, uint256 maxUsesGlobal)",
   "event PromoCodeDeactivated(string code)",
   "event TokenMinted(uint256 indexed tokenId, address indexed owner, uint8[7] config, uint256 pricePaid)",
   "event TokenUpgraded(uint256 indexed tokenId, uint8[7] newConfig, uint256 pricePaid)",
+  "event DescriptionUpdated()",
+  "event TokenNoteUpdated(uint256 indexed tokenId)",
+  "event RendererUpdated()",
 ]);

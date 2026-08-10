@@ -28,6 +28,7 @@ import {
   account, activeWallet, connectWallet, onWalletChange, listWallets, forgetWallet,
 } from "./wallet.js";
 import { IS_DEPLOYED, CHAIN, txURL, openSeaURL, addressURL } from "./chain-config.js";
+import { isOwner, openAdmin } from "./admin-ui.js";
 
 // --------------------------------------------------------------------------
 // helpers
@@ -144,6 +145,19 @@ function drawWallet() {
     const swap = el("button", "bb0-link", "Switch wallet");
     swap.onclick = async () => { await forgetWallet(); showWalletPicker(true); };
     walletLine.append(swap);
+
+    // The admin button, only for the address the CONTRACT says owns it.
+    // Asked live rather than hardcoded, so it cannot drift after an ownership
+    // transfer or a re-deploy. Not a security boundary -- every write behind
+    // it is onlyOwner on-chain -- just tidiness.
+    const shownFor = account;
+    isOwner().then((yes) => {
+      if (!yes || account !== shownFor) return;          // wallet changed mid-check
+      if (walletLine.querySelector(".bb0-admin-open")) return;
+      const adm = el("button", "bb0-link bb0-admin-open", "Admin panel");
+      adm.onclick = openAdmin;
+      walletLine.append(adm);
+    }).catch(() => {});
     return;
   }
   const b = el("button", "bb0-connect", "Connect wallet");
@@ -323,17 +337,28 @@ async function drawDetail(tokenId) {
       // down a row of robots would download every one of them.
       btn3d.onclick = () => {
         const stage = panelBody.querySelector(".bb0-col-stage");
-        // NO field-of-view here, deliberately. index.html pins it to 40deg for
-        // the 500px viewer, but that value disables model-viewer's own
-        // aspect-ratio-aware framing — and 40deg is narrower than the 45deg
-        // default, so everything renders larger. In this much smaller box that
-        // clipped the robot, and no radius could compensate. Only the ANGLE is
-        // ours; model-viewer decides how far back to stand.
-        stage.innerHTML =
-          `<model-viewer class="bb0-col-big" src="${esc(robot.model)}"
-             poster="${esc(robot.image)}" camera-controls touch-action="pan-y"
-             shadow-intensity="1" environment-image="neutral" exposure="1"
-             camera-orbit="-28deg 90deg auto"></model-viewer>`;
+        // v2.8: normally there is no GLB to load. The model is a renderer
+        // PAGE that rebuilds the robot from its config, so it goes in an
+        // iframe — the same page every marketplace shows, which means what
+        // you see here is exactly what a buyer sees.
+        //
+        // An override may still be a plain .glb, and collection.js says which
+        // kind this is. A page inside <model-viewer> renders nothing at all,
+        // so this must not guess.
+        stage.innerHTML = robot.modelIsPage
+          ? `<iframe class="bb0-col-big" src="${esc(robot.model)}"
+               loading="lazy" referrerpolicy="no-referrer"
+               sandbox="allow-scripts"
+               title="B-b0 #${tokenId} in 3D"></iframe>`
+          // NO field-of-view here, deliberately. index.html pins it to 40deg for
+          // the 500px viewer, but that value disables model-viewer's own
+          // aspect-ratio-aware framing — and 40deg is narrower than the 45deg
+          // default, so everything renders larger. In this much smaller box that
+          // clipped the robot, and no radius could compensate.
+          : `<model-viewer class="bb0-col-big" src="${esc(robot.model)}"
+               poster="${esc(robot.image)}" camera-controls touch-action="pan-y"
+               shadow-intensity="1" environment-image="neutral" exposure="1"
+               camera-orbit="-28deg 90deg auto"></model-viewer>`;
       };
     }
 

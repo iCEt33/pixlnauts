@@ -144,21 +144,39 @@ export async function loadRobots(ids) {
 export async function loadRobot(tokenId) {
   requireDeployed();
   const id = BigInt(tokenId);
-  const [owner, image, model, config] = await publicClient.multicall({
+  // v2.8: there is no per-token model any more. The 3D view is a RENDERER
+  // PAGE built from rendererURI + the seven config numbers, exactly as
+  // tokenURI builds animation_url. modelURIOverride is normally "" and only
+  // wins when someone has deliberately pointed one token elsewhere.
+  const [owner, image, override, renderer, config] = await publicClient.multicall({
     contracts: [
-      { ...contract, functionName: "ownerOf",   args: [id] },
-      { ...contract, functionName: "imageURI",  args: [id] },
-      { ...contract, functionName: "modelURI",  args: [id] },
-      { ...contract, functionName: "getConfig", args: [id] },
+      { ...contract, functionName: "ownerOf",          args: [id] },
+      { ...contract, functionName: "imageURI",         args: [id] },
+      { ...contract, functionName: "modelURIOverride", args: [id] },
+      { ...contract, functionName: "rendererURI" },
+      { ...contract, functionName: "getConfig",        args: [id] },
     ],
     allowFailure: false,
   });
+
+  const cfg = Array.from(config).map(Number);
+  const modelRef =
+    override && override.length ? override
+    : renderer && renderer.length ? `${renderer}?config=${cfg.join(",")}`
+    : "";
+
+  // An override MIGHT still be a plain .glb file, so say which kind this is
+  // rather than making the UI guess. A page goes in an iframe; a file goes in
+  // <model-viewer>. Putting a page into <model-viewer> renders nothing at all.
+  const modelIsPage = /\.html(\?|$)/i.test(modelRef) || modelRef.includes("?config=");
+
   return {
     tokenId: id,
     owner,
     image: toViewableURL(image),
-    model: toViewableURL(model),
-    config: Array.from(config).map(Number),
+    model: toViewableURL(modelRef),
+    modelIsPage,
+    config: cfg,
   };
 }
 

@@ -1,5 +1,11 @@
 // js/upgrade.js — plan §6.4 — changing the parts on a robot you already own.
 //
+// v2.8: the same ordering fix as mint.js. The picture is signed before the
+// wallet prompt and uploaded only after the transaction confirms, so a
+// cancelled upgrade stores nothing. And no GLB is produced at all -- the
+// renderer rebuilds the model from the new config the moment it lands, which
+// is why an upgrade now needs no model upload whatsoever.
+//
 // It is mint.js with four substitutions, and nothing else:
 //   * the price comes from quoteUpgrade(tokenId, cfg) instead of quoteMint
 //   * the stamp says action "upgrade" and carries the real token number
@@ -29,13 +35,25 @@ async function readError(res, fallback) {
   }
 }
 
-async function uploadFile(blob, name, type) {
+// Signs the picture without storing it, and returns its permanent address.
+async function prepareUpload(blob, name, type) {
   const res = await fetch(
-    `${API}/api/upload?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`,
+    `${API}/api/upload?mode=prepare&name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}` +
+    `&action=upgrade&wallet=${encodeURIComponent(account || "")}`,
     { method: "POST", body: blob }
   );
   if (!res.ok) throw new Error(await readError(res, "Upload failed"));
-  return (await res.json()).uri;
+  return await res.json();   // { uri, item }
+}
+
+// Stores the SAME signed bytes, once the chain says this token points at them.
+async function commitUpload(item, tokenId, uri) {
+  const res = await fetch(`${API}/api/upload?mode=commit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item, tokenId: Number(tokenId), uri }),
+  });
+  if (!res.ok) throw new Error(await readError(res, "Storing the picture failed"));
 }
 
 /** True when two 7-part builds are identical — the contract refuses that case. */
@@ -98,13 +116,13 @@ export async function upgradeRobot(tokenId, onStatus = console.log) {
   onStatus("Checking what's changed…");
   const cost = await quoteUpgradeFor(id, cfg);
 
-  // 2. Produce and store the new picture and model. The old ones are replaced.
+  // 2. Render the new picture and have it SIGNED — not stored. No model is
+  //    produced: animation_url is built from the config, so the 3D view
+  //    follows the upgrade by itself.
   onStatus("Rendering your B-b0…");
   const png = await window.BB0.getSnapshotBlob();
-  const glb = await window.BB0.getMergedGlbBlob();
-  onStatus("Storing files…");
-  const imageURI = await uploadFile(png, "preview.png", "image/png");
-  const modelURI = await uploadFile(glb, "robot.glb", "model/gltf-binary");
+  onStatus("Preparing…");
+  const { uri: imageURI, item } = await prepareUpload(png, "preview.png", "image/png");
 
   // 3. The stamp, binding files ↔ parts ↔ this wallet ↔ THIS token.
   onStatus("Stamping…");
@@ -113,7 +131,7 @@ export async function upgradeRobot(tokenId, onStatus = console.log) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "upgrade", tokenId: Number(id), wallet: account,
-      config: cfg, imageURI, modelURI,
+      config: cfg, imageURI,
     }),
   });
   if (!stampRes.ok) throw new Error(await readError(stampRes, "Stamping failed"));
@@ -124,7 +142,7 @@ export async function upgradeRobot(tokenId, onStatus = console.log) {
   const hash = await walletClient.writeContract({
     ...contract,
     functionName: "upgrade",
-    args: [id, cfg, imageURI, modelURI, BigInt(deadline), stamp],
+    args: [id, cfg, imageURI, BigInt(deadline), stamp],
     value: cost,
   });
 
@@ -138,6 +156,24 @@ export async function upgradeRobot(tokenId, onStatus = console.log) {
   });
   const pricePaid = ev ? ev.args.pricePaid : cost;
 
-  onStatus(`Done — B-b0 #${id} has been rebuilt.`);
-  return { tokenId: id, hash, cost: pricePaid };
+  // 5. Now store the new picture. The robot's 3D model already shows the new
+  //    build — only the thumbnail is outstanding, so a failure here is not
+  //    worth throwing at someone who has already paid.
+  let imageStored = true;
+  if (item) {
+    try {
+      onStatus("Storing your picture…");
+      await commitUpload(item, id, imageURI);
+    } catch (e) {
+      imageStored = false;
+      console.error("commitUpload failed - the upgrade is fine, the thumbnail is missing:", e);
+    }
+  }
+
+  onStatus(
+    imageStored
+      ? `Done — B-b0 #${id} has been rebuilt.`
+      : `Done — B-b0 #${id} has been rebuilt. The new picture is still uploading.`
+  );
+  return { tokenId: id, hash, cost: pricePaid, imageStored };
 }

@@ -1,7 +1,9 @@
 // api/stamp.js — POST JSON:
 // { action: "mint"|"upgrade", tokenId: 0, wallet: "0x…",
 //   config: [bodyId, faceId, screenId, specsId, clothesId, faceAccId, headAccId],
-//   imageURI: "ipfs://…", modelURI: "ipfs://…" }
+//   imageURI: "ipfs://…" }
+// v2.8: modelURI is GONE. The model is derived from the config, which this
+// stamp already binds, so there is only one file address to cover.
 import { keccak256, encodePacked, stringToBytes } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createRequire } from "node:module";
@@ -26,7 +28,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, tokenId, wallet, config, imageURI, modelURI } = req.body || {};
+    const { action, tokenId, wallet, config, imageURI } = req.body || {};
 
     // ---- refuse anything the customizer could not have produced ----
     if (!Array.isArray(config) || config.length !== 7) {
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
       if (!known) return res.status(400).json({ error: `Unknown part in category ${cat}` });
     }
     const okUri = u => typeof u === "string" && (u.startsWith("ipfs://") || u.startsWith("ar://"));
-    if (!okUri(imageURI) || !okUri(modelURI)) {
+    if (!okUri(imageURI)) {
       return res.status(400).json({ error: "Bad file address" });
     }
     const actionCode = action === "mint" ? 1 : action === "upgrade" ? 2 : 0;
@@ -60,9 +62,10 @@ export default async function handler(req, res) {
       ["uint8", "uint8", "uint8", "uint8", "uint8", "uint8", "uint8"],
       config
     ));
+    // MUST mirror the contract's _hashFiles EXACTLY. v2.8 hashes ONE address.
     const filesHash = keccak256(encodePacked(
-      ["bytes32", "bytes32"],
-      [keccak256(stringToBytes(imageURI)), keccak256(stringToBytes(modelURI))]
+      ["bytes32"],
+      [keccak256(stringToBytes(imageURI))]
     ));
     const digest = keccak256(encodePacked(
       ["address", "uint256", "uint8", "address", "uint256", "bytes32", "bytes32", "uint256"],

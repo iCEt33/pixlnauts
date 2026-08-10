@@ -22,6 +22,7 @@ const modelDefinitions = {
     { id: "body_camo", filename: "body_camo.glb", displayName: "Camo", price: 15 },
     { id: "body_devil", filename: "body_devil.glb", displayName: "Devil", price: 666 },
     { id: "body_gold", filename: "body_gold.glb", displayName: "Gold", price: 1000 },
+    { id: "body_transparent", filename: "body_transparent.glb", displayName: "Transparent", price: 30 },
   ],
   face: [
     { id: "face_smile", filename: "face_smile.glb", displayName: "Smile", price: 1 },

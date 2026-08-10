@@ -129,6 +129,12 @@
           "name": "Gold",
           "pricePOL": "1000",
           "modelKey": "body_gold"
+        },
+        {
+          "id": 21,
+          "name": "Transparent",
+          "pricePOL": "30",
+          "modelKey": "body_transparent"
         }
       ]
     },

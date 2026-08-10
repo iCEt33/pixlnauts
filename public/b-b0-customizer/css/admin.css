@@ -1,0 +1,107 @@
+/* css/admin.css — the owner's panel.
+   Deliberately plain: same green-on-black terminal look as the rest of the
+   customizer, no new palette. Load it after collection.css. */
+
+.bb0-adm-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0, 0, 0, .82);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+}
+.bb0-adm-overlay.bb0-open { display: flex; }
+
+.bb0-adm-panel {
+  position: relative;
+  width: min(880px, 100%);
+  background: #060a06;
+  border: 2px solid #0f0;
+  padding: 20px 22px 26px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  color: #cfe8cf;
+}
+
+.bb0-adm-close {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: 0; color: #0f0;
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.bb0-adm-title {
+  margin: 0 0 4px; color: #0f0; font-size: 17px; letter-spacing: 2px;
+}
+
+.bb0-adm-status { min-height: 20px; font-size: 12px; margin-bottom: 10px; color: #9c9; }
+.bb0-adm-status.bb0-ok  { color: #6f6; }
+.bb0-adm-status.bb0-err { color: #f66; }
+
+.bb0-adm-loading { color: #6a6; font-size: 13px; padding: 18px 0; }
+.bb0-adm-empty   { color: #6a6; font-size: 12px; padding: 4px 0 8px; }
+
+.bb0-adm-sec {
+  border-top: 1px solid #1c2a1c;
+  padding: 14px 0 4px;
+}
+.bb0-adm-h {
+  margin: 0 0 8px; color: #0f0;
+  font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+}
+
+/* key/value rows */
+.bb0-adm-row {
+  display: flex; gap: 12px; align-items: baseline;
+  font-size: 12px; padding: 2px 0;
+}
+.bb0-adm-k { color: #7a9a7a; min-width: 150px; flex: 0 0 auto; }
+.bb0-adm-v { color: #cfe8cf; word-break: break-all; }
+.bb0-mono  { font-family: inherit; }
+
+/* buttons and inputs */
+.bb0-adm-acts, .bb0-adm-form {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin: 10px 0 4px;
+}
+.bb0-adm-btn {
+  background: #0f0; color: #000; border: 0;
+  padding: 6px 12px; cursor: pointer;
+  font: bold 12px ui-monospace, Menlo, Consolas, monospace;
+  text-decoration: none; display: inline-block;
+}
+.bb0-adm-btn:hover { background: #4f4; }
+.bb0-adm-btn:disabled { background: #2a3a2a; color: #667; cursor: not-allowed; }
+.bb0-adm-btn.bb0-adm-small { padding: 4px 9px; font-size: 11px; }
+.bb0-adm-btn.bb0-adm-danger { background: #a22; color: #fff; }
+.bb0-adm-btn.bb0-adm-danger:hover { background: #d33; }
+
+.bb0-adm-in {
+  background: #000; color: #0f0; border: 1px solid #2a3a2a;
+  padding: 5px 7px; font: 12px ui-monospace, Menlo, Consolas, monospace;
+}
+.bb0-adm-area {
+  width: 100%; background: #000; color: #0f0;
+  border: 1px solid #2a3a2a; padding: 8px;
+  font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  margin: 6px 0;
+}
+
+.bb0-adm-note {
+  color: #7a9a7a; font-size: 11px; line-height: 1.55;
+  margin: 6px 0 2px;
+}
+.bb0-adm-note b { color: #cfe8cf; }
+
+/* promo table */
+.bb0-adm-table {
+  width: 100%; border-collapse: collapse; font-size: 12px; margin: 4px 0 8px;
+}
+.bb0-adm-table th {
+  text-align: left; color: #7a9a7a; font-weight: normal;
+  border-bottom: 1px solid #1c2a1c; padding: 4px 8px 4px 0;
+}
+.bb0-adm-table td { padding: 4px 8px 4px 0; border-bottom: 1px solid #101810; }
+.bb0-adm-table .bb0-ok  { color: #6f6; }
+.bb0-adm-table .bb0-dim { color: #667; }
+
+@media (max-width: 640px) {
+  .bb0-adm-k { min-width: 0; flex-basis: 100%; }
+  .bb0-adm-row { flex-wrap: wrap; gap: 2px; }
+  .bb0-adm-in { min-width: 0 !important; width: 100%; }
+}

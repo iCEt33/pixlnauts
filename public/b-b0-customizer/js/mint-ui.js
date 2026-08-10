@@ -331,7 +331,12 @@ async function onMint() {
   mintBtn.disabled = true;
   resultBox.innerHTML = "";
   try {
-    const { tokenId, hash } = await mintCurrentRobot(
+    // v2.8 returns a THIRD value. The robot is minted and its 3D model works
+    // the moment the transaction confirms — animation_url is built from the
+    // config, so nothing was waiting on an upload. Only the thumbnail is, and
+    // it is stored AFTER the mint. If that step fails the token is still
+    // perfectly valid, so say so plainly instead of showing a bare success.
+    const { tokenId, hash, imageStored } = await mintCurrentRobot(
       promoInput.value.trim().toUpperCase(),
       (m) => setStatus(m)
     );
@@ -342,7 +347,11 @@ async function onMint() {
         <a href="${txURL(hash)}" target="_blank" rel="noopener">View the transaction</a>
         <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
         <div class="bb0-fineprint">
-          The picture can take a minute to appear on marketplaces.
+          ${imageStored === false
+            ? "Your robot is minted and safe, and its 3D model already works. " +
+              "The picture did not finish uploading — it can be attached later, " +
+              "so nothing is lost. Let us know the number above."
+            : "The picture can take a minute to appear on marketplaces."}
         </div>
       </div>`;
     // The mint is done — a live MINT button under a success panel reads as if
