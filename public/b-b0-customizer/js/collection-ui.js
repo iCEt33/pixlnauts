@@ -142,7 +142,7 @@ function drawWallet() {
   if (account) {
     const who = activeWallet?.name ? `${activeWallet.name} · ` : "";
     walletLine.append(el("span", "bb0-ok", `${who}${shortAddr(account)}`));
-    const swap = el("button", "bb0-link", "Switch wallet");
+    const swap = el("button", "bb0-link bb0-swap", "Switch wallet");
     swap.onclick = async () => { await forgetWallet(); showWalletPicker(true); };
     walletLine.append(swap);
 
@@ -155,7 +155,7 @@ function drawWallet() {
       if (!yes || account !== shownFor) return;          // wallet changed mid-check
       if (walletLine.querySelector(".bb0-admin-open")) return;
       const adm = el("button", "bb0-link bb0-admin-open", "Admin panel");
-      adm.onclick = openAdmin;
+      adm.onclick = () => { closePanel(); openAdmin(); };
       walletLine.append(adm);
     }).catch(() => {});
     return;
@@ -319,11 +319,15 @@ async function drawDetail(tokenId) {
           <div class="bb0-col-links">
             <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
           </div>
+          <div class="bb0-warn">
+            OpenSea can take <b>several days</b> to show any
+            changes you make. Your robot is correct on-chain and renders here
+            immediately.
+          </div>
           ${isMine
             ? `<button class="bb0-col-upgrade">UPGRADE THIS B-b0</button>
                <div class="bb0-fineprint">
-                 #${tokenId} stays #${tokenId} forever. You only pay for parts
-                 it has never owned.
+                 You only pay for parts it has never owned.
                </div>`
             : `<div class="bb0-fineprint">Only the owner can change this robot's parts.</div>`}
         </div>
@@ -811,7 +815,7 @@ async function onApply() {
         <a href="${txURL(hash)}" target="_blank" rel="noopener">View the transaction</a>
         <a href="${openSeaURL(tokenId)}" target="_blank" rel="noopener">See it on OpenSea</a>
         <div class="bb0-fineprint">
-          ${cost === 0n ? "A free swap, you only paid the network fee. " : ""}
+          ${cost === 0n ? "A free swap, you only paid the network fee.<br>" : ""}
           The new picture can take a minute to appear on marketplaces.
         </div>
       </div>`;

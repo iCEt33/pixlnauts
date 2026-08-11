@@ -164,7 +164,7 @@ function drawWallet() {
 
     // One action, not two: forgetting and re-picking reopens the wallet's own
     // account chooser as well, so this covers "wrong wallet" AND "wrong account".
-    const swap = el("button", "bb0-link", "Switch wallet");
+    const swap = el("button", "bb0-link bb0-swap", "Switch wallet");
     swap.onclick = async () => {
       await forgetWallet();
       showWalletPicker(true);

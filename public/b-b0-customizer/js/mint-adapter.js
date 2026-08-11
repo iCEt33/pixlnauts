@@ -54,6 +54,38 @@
     });
   }
 
+  // Wait for the camera to ACTUALLY ARRIVE instead of guessing at a duration.
+  // model-viewer interpolates asymptotically toward a new cameraOrbit, so a
+  // fixed setTimeout is a race: a big spin takes longer to settle than a small
+  // one, and the picture could be taken mid-glide. This watches the realtime
+  // orbit and returns once it has stopped moving -- the animation is still
+  // there, we just stop taking the picture during it.
+  async function waitForCameraToSettle(mv, timeoutMs = 3000) {
+    const readFov = () =>
+      (typeof mv.getFieldOfView === "function" ? mv.getFieldOfView() : 0);
+
+    const started = performance.now();
+    let last = mv.getCameraOrbit();
+    let lastFov = readFov();
+    let quiet = 0;
+
+    while (performance.now() - started < timeoutMs) {
+      await new Promise((r) => requestAnimationFrame(r));
+      const now = mv.getCameraOrbit();
+      const fov = readFov();
+      const moved =
+        Math.abs(now.theta  - last.theta)  +
+        Math.abs(now.phi    - last.phi)    +
+        Math.abs(now.radius - last.radius) +
+        Math.abs(fov - lastFov) * 0.01;
+      last = now;
+      lastFov = fov;
+      quiet = moved < 1e-4 ? quiet + 1 : 0;
+      if (quiet >= 3) return true;      // three still frames = it has arrived
+    }
+    return false;                       // timed out -- take the shot anyway
+  }
+
   // 2) The preview picture as a Blob, in the SAME standardized pose as the
   //    Snapshot button (this mirrors takeHighResSnapshot in snapshot.js,
   //    minus the download). Every minted B-b0 gets the same camera angle,
@@ -65,14 +97,27 @@
     const wasAutoRotating = modelViewer.hasAttribute("auto-rotate");
     if (wasAutoRotating) modelViewer.removeAttribute("auto-rotate");
 
-    modelViewer.resetTurntableRotation();
-    modelViewer.cameraOrbit = "-28deg 90deg 6.5m";
-    modelViewer.fieldOfView = "40deg";
+    // The interaction prompt's "wiggle" style ROTATES THE MODEL to hint that
+    // it can be dragged, and it fires after ~3s of no interaction -- exactly
+    // when someone is reading the price panel before minting. Left on, the
+    // snapshot could catch the robot mid-rock, at a slightly different angle
+    // each time. Suppressed here and restored in the finally, so the hand
+    // still appears normally everywhere else.
+    const hadPrompt = modelViewer.getAttribute("interaction-prompt");
 
-    // same settle time snapshot.js uses for the camera to finish moving
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
+    // The try starts HERE rather than at toBlob: if anything below throws,
+    // the finally still puts auto-rotate and the prompt back. Otherwise a
+    // failed snapshot would leave the viewer frozen until a page reload.
     try {
+      modelViewer.setAttribute("interaction-prompt", "none");
+
+      modelViewer.resetTurntableRotation();
+      modelViewer.cameraOrbit = "-28deg 90deg 6.5m";
+      modelViewer.fieldOfView = "40deg";
+
+      // Glides back as it always did -- we just wait for it to land.
+      await waitForCameraToSettle(modelViewer);
+
       return await modelViewer.toBlob({
         idealAspect: true,
         mimeType: "image/png",
@@ -80,6 +125,8 @@
       });
     } finally {
       if (wasAutoRotating) modelViewer.setAttribute("auto-rotate", "");
+      if (hadPrompt === null) modelViewer.removeAttribute("interaction-prompt");
+      else modelViewer.setAttribute("interaction-prompt", hadPrompt);
     }
   }
 

@@ -1,6 +1,38 @@
 // High-resolution snapshot functionality using model-viewer
 // Takes a 2000x2000 screenshot of the current B-b0 configuration
 
+// Wait for the camera to ACTUALLY ARRIVE instead of guessing at a duration.
+// model-viewer interpolates asymptotically toward a new cameraOrbit, so a
+// fixed setTimeout is a race: a big spin takes longer to settle than a small
+// one, and the picture could be taken mid-glide. This watches the realtime
+// orbit and returns once it has stopped moving -- the animation is still
+// there, we just stop taking the picture during it.
+const waitForCameraToSettle = async (mv, timeoutMs = 3000) => {
+  const readFov = () =>
+    (typeof mv.getFieldOfView === 'function' ? mv.getFieldOfView() : 0);
+
+  const started = performance.now();
+  let last = mv.getCameraOrbit();
+  let lastFov = readFov();
+  let quiet = 0;
+
+  while (performance.now() - started < timeoutMs) {
+    await new Promise(r => requestAnimationFrame(r));
+    const now = mv.getCameraOrbit();
+    const fov = readFov();
+    const moved =
+      Math.abs(now.theta  - last.theta)  +
+      Math.abs(now.phi    - last.phi)    +
+      Math.abs(now.radius - last.radius) +
+      Math.abs(fov - lastFov) * 0.01;
+    last = now;
+    lastFov = fov;
+    quiet = moved < 1e-4 ? quiet + 1 : 0;
+    if (quiet >= 3) return true;      // three still frames = it has arrived
+  }
+  return false;                       // timed out -- take the shot anyway
+};
+
 const takeHighResSnapshot = async () => {
   if (!modelViewer || !modelViewer.src) {
     log("No model loaded to snapshot");
@@ -16,13 +48,20 @@ const takeHighResSnapshot = async () => {
     modelViewer.removeAttribute('auto-rotate');
   }
   
+  // The interaction prompt's "wiggle" style ROTATES THE MODEL to hint that it
+  // can be dragged, and it fires after ~3s of no interaction. Left on, it can
+  // catch the robot mid-rock and every snapshot comes out at a slightly
+  // different angle. Restored at the end, so the hand still works normally.
+  const hadPrompt = modelViewer.getAttribute('interaction-prompt');
+  modelViewer.setAttribute('interaction-prompt', 'none');
+  
   // Reset camera EXACTLY like the reset button does
   modelViewer.resetTurntableRotation();
   modelViewer.cameraOrbit = '-28deg 90deg 6.5m';
   modelViewer.fieldOfView = '40deg';
   
-  // Wait for camera to finish moving
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // Glides back as it always did -- we just wait for it to land.
+  await waitForCameraToSettle(modelViewer);
   
   // Show a message that snapshot is being generated
   const snapshotMessage = document.createElement('div');
@@ -79,6 +118,12 @@ const takeHighResSnapshot = async () => {
   // Restore auto-rotate state
   if (wasAutoRotating) {
     modelViewer.setAttribute('auto-rotate', '');
+  }
+  // Put the interaction prompt back exactly as it was
+  if (hadPrompt === null) {
+    modelViewer.removeAttribute('interaction-prompt');
+  } else {
+    modelViewer.setAttribute('interaction-prompt', hadPrompt);
   }
 };
 
