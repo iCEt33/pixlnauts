@@ -22,8 +22,10 @@
 
 .bb0-adm-close {
   position: absolute; top: 8px; right: 10px;
-  background: none; border: 0; color: #0f0;
+  background: none; border: 0; color: #f44;
   font-size: 22px; line-height: 1; cursor: pointer;
+}
+.bb0-adm-close:hover { color: #f88;
 }
 .bb0-adm-title {
   margin: 0 0 4px; color: #0f0; font-size: 17px; letter-spacing: 2px;

@@ -76,7 +76,7 @@ const SystemCheck = ({ onComplete }) => {
   
   // Modified system check messages with just processing indicators
   const systemLines = useMemo(() => [
-    { text: "INITIALIZING PIXLNAUTS SYSTEM v0.0.1", processing: false, status: "" },
+    { text: "INITIALIZING PIXLNAUTS SYSTEM v0.0.2", processing: false, status: "" },
     { text: "CHECKING MEMORY ALLOCATION", processing: true, status: "[OK]" },
     { text: "LOADING CORE MODULES", processing: true, status: "[OK]" },
     { text: "ESTABLISHING CONNECTIONS", processing: true, status: "[OK]" },
@@ -86,13 +86,15 @@ const SystemCheck = ({ onComplete }) => {
     { text: "SCANNING FOR UPDATES", processing: true, status: "[COMPLETE]" }
   ], []);
   
-  const secondSetLines = useMemo(() => [
-    { text: "ALMOST", processing: true, status: "[THERE]" },
-    { text: "INITIALIZING DATABASE CONNECTIONS", processing: true, status: "[OK]" },
-    { text: "ALL SYSTEMS NOMINAL. LAUNCHING INTERFACE", processing: false, status: "" }
-  ], []);
+  // Was the second terminal block, shown after PRESS ANY KEY. Now skipped --
+  // the click goes straight to the loading bar. Kept for reference.
+  // const secondSetLines = useMemo(() => [
+  //   { text: "ALMOST", processing: true, status: "[THERE]" },
+  //   { text: "INITIALIZING DATABASE CONNECTIONS", processing: true, status: "[OK]" },
+  //   { text: "ALL SYSTEMS NOMINAL. LAUNCHING INTERFACE", processing: false, status: "" }
+  // ], []);
     
-  const [lines, setLines] = useState(systemLines);
+  const [lines] = useState(systemLines);
   const [displayedLines, setDisplayedLines] = useState([]);
   
   // Initialize state arrays for tracking line status
@@ -177,15 +179,11 @@ const SystemCheck = ({ onComplete }) => {
     const handleInput = (e) => {
       // If waiting for specific input to continue
       if (waitingForInput) {
+        // Straight to the loading bar. The second terminal block used to run
+        // here; skipping it puts one screen fewer between the click and the site.
         setWaitingForInput(false);
         setShowContinue(false);
-        setCurrentLine(0);
-        setCurrentChar(0);
-        setLines(secondSetLines);
-        setDisplayedLines([]);
-        setLineCompletionStates(Array(secondSetLines.length).fill(false));
-        setLineProcessingStates(Array(secondSetLines.length).fill(false));
-        setLineFinishedStates(Array(secondSetLines.length).fill(false));
+        onComplete();
       } else {
         // Allow skipping with any key or click
         if (e.key === 'Escape' || e.key === ' ' || e.type === 'click') {
@@ -201,7 +199,7 @@ const SystemCheck = ({ onComplete }) => {
       window.removeEventListener('keydown', handleInput);
       window.removeEventListener('click', handleInput);
     };
-  }, [waitingForInput, secondSetLines, skipToEnd]);
+  }, [waitingForInput, skipToEnd, onComplete]);
   
   // MODIFIED: Fast boot sequence for first screen (systemLines)
   useEffect(() => {
@@ -605,6 +603,85 @@ const ScrambleText = ({ text, speed = 50, finalDelay = 1000, intensity = 1.0, co
   );
 };
 
+// ANSI art arriving down a noisy line: a band of garbage sweeps left to right,
+// Every cell it touches starts aging: it CANNOT settle before `minAge` frames,
+// MUST settle by `maxAge`, and in between its chance ramps from 0 to certain --
+// so the trailing edge dissolves raggedly instead of snapping to a straight
+// line. The garbage only re-rolls every `scrambleEvery` frames, so it churns
+// slowly rather than strobing.
+const GARBAGE = '#@%&$*=+-:.^~!?/\\|';
+const rnd = () => GARBAGE[Math.floor(Math.random() * GARBAGE.length)];
+
+const AsciiReveal = ({
+  art,
+  tick = 20,          // ms per frame
+  minAge = 8,         // cooldown: frames as noise before a cell MAY settle
+  maxAge = 150,        // frames after which it MUST settle
+  scrambleEvery = 4,  // re-roll a noise character every N frames
+}) => {
+  const lines = useMemo(() => art.split('\n'), [art]);
+  const width = useMemo(() => Math.max(...lines.map((l) => l.length)), [lines]);
+  const rows = lines.length;
+
+  const [s, setS] = useState(() => ({
+    col: 0,
+    frame: 0,
+    age:  Array.from({ length: rows }, () => new Array(width).fill(-1)), // -1 = not reached
+    done: Array.from({ length: rows }, () => new Array(width).fill(false)),
+    ch:   Array.from({ length: rows }, () => new Array(width).fill(' ')),
+  }));
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setS((p) => {
+        if (p.col > width && p.done.every((r) => r.every(Boolean))) return p; // finished
+
+        const age  = p.age.map((r) => r.slice());
+        const done = p.done.map((r) => r.slice());
+        const ch   = p.ch.map((r) => r.slice());
+
+        // the wave front reaches this column
+        if (p.col < width) {
+          for (let y = 0; y < rows; y++) { age[y][p.col] = 0; ch[y][p.col] = rnd(); }
+        }
+
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < Math.min(p.col, width); x++) {
+            if (done[y][x] || age[y][x] < 0) continue;
+            const a = ++age[y][x];
+            const chance = (a - minAge) / (maxAge - minAge);   // 0 -> 1 with age
+            if (a >= maxAge || (a >= minAge && Math.random() < chance)) done[y][x] = true;
+            else if (p.frame % scrambleEvery === 0) ch[y][x] = rnd();
+          }
+        }
+        return { col: p.col + 1, frame: p.frame + 1, age, done, ch };
+      });
+    }, tick);
+    return () => clearInterval(t);
+  }, [rows, width, tick, minAge, maxAge, scrambleEvery]);
+
+  return (
+    <pre className="ascii-banner">
+      {lines.map((line, y) => {
+        const runs = [];
+        for (let x = 0; x < width; x++) {
+          const a = s.age[y][x];
+          const cls = a < 0 ? 'gone' : s.done[y][x] ? 'settled' : a < minAge ? 'hot' : 'cool';
+          const c   = a < 0 ? ' '   : s.done[y][x] ? (line[x] ?? ' ') : s.ch[y][x];
+          if (runs.length && runs[runs.length - 1].cls === cls) runs[runs.length - 1].t += c;
+          else runs.push({ cls, t: c });
+        }
+        return (
+          <React.Fragment key={y}>
+            {runs.map((r, k) => <span key={k} className={`ascii-${r.cls}`}>{r.t}</span>)}
+            {y < rows - 1 ? '\n' : ''}
+          </React.Fragment>
+        );
+      })}
+    </pre>
+  );
+};
+
 // Loading animation component
 const LoadingAnimation = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
@@ -651,7 +728,10 @@ const LoadingAnimation = ({ onComplete }) => {
   return (
     <div className="loading-screen">
       <div className="loading-logo">
-        <ScrambleText text="PIXLNAUTS" speed={20} intensity={2.0} />
+        <AsciiReveal band={25} art={` _____ _____ __ __  __    _____ _____ _____ _____ _____ 
+|  _  |     |  |  ||  |  |   | |  _  |  |  |_   _|   __|
+|   __|-   -|-   -||  |__| | | |     |  |  | | | |__   |
+|__|  |_____|__|__||_____|_|___|__|__|_____| |_| |_____|`} />
       </div>
       <div className="progress-container">
         <div className="progress-bar" style={{ width: `${progress}%` }}></div>
@@ -1907,15 +1987,15 @@ const CustomizerView = ({ onClose }) => {
         setShowIframe(false);
         setAnimationStage('verticalCollapse');
         
-        const timer1 = setTimeout(() => setAnimationStage('horizontalCollapse'), 800);
-        const timer2 = setTimeout(() => setAnimationStage('fadeOut'), 1600);
+        const timer1 = setTimeout(() => setAnimationStage('horizontalCollapse'), 450);
+        const timer2 = setTimeout(() => setAnimationStage('fadeOut'), 900);
         const timer3 = setTimeout(() => {
           onClose();
-        }, 2400);
+        }, 1300);
         
         timerRef.current = [timer1, timer2, timer3];
-      }, 300);
-    }, 200);
+      }, 150);
+    }, 100);
   };
   
   return (
@@ -2714,6 +2794,21 @@ const styles = `
     text-shadow: 0 0 10px #0f0;
   }
   
+  .ascii-banner {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    white-space: pre;
+    margin: 0;
+    letter-spacing: 0;          /* .loading-logo sets 3px -- it stretches the box-drawing */
+    line-height: 1.1;
+    color: #0f0;
+    font-size: clamp(4px, 1.6vw, 16px);
+  }
+
+  .ascii-gone    { color: transparent; }
+  .ascii-hot     { color: #dfd; text-shadow: 0 0 8px #0f0; }
+  .ascii-cool    { color: #6a6; }
+  .ascii-settled { color: #0f0; }
+
   .progress-container {
     width: 80%;
     max-width: 400px;
@@ -3795,14 +3890,14 @@ const styles = `
     width: 100%;
     height: 4px;
     background-color: #0f0;
-    transition: height 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2);
+    transition: height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .customizer-overlay.horizontalCollapse .customizer-container {
     width: 0;
     height: 4px;
     background-color: #0f0;
-    transition: width 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2), margin-right 0.8s cubic-bezier(0.8, 0.2, 0.8, 0.2);
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .customizer-overlay.fadeOut {

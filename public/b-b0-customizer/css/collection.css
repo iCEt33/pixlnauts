@@ -102,7 +102,8 @@
   line-height: 1;
   cursor: pointer;
 }
-.bb0-col-close:hover { color: #fff; }
+.bb0-col-close { color: #f44; }
+.bb0-col-close:hover { color: #f88; }
 
 .bb0-col-title {
   margin: 0 0 12px;
@@ -211,8 +212,8 @@
 .bb0-col-attrs { border-top: 1px solid #0f0; padding-top: 8px; }
 .bb0-col-owner { margin-top: 10px; font-size: 16px; color: #6c6; }
 .bb0-col-owner a { color: #0f0; }
-.bb0-col-links a { color: #fff; }
-.bb0-col-links a:hover { color: #0f0; }
+.bb0-col-links a { color: #2081e2; }
+.bb0-col-links a:hover { color: #fff; }
 .bb0-col-links { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 16px; }
 .bb0-col-upgrade {
   margin-top: 14px;
