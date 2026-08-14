@@ -1,5 +1,7 @@
-// High-resolution snapshot functionality using model-viewer
-// Takes a 2000x2000 screenshot of the current B-b0 configuration
+// Snapshot functionality using model-viewer
+// Shoots the current B-b0 from fixed base-model framing (see scene.js).
+// NOTE: output size currently follows the viewer element and the display's
+// pixel ratio, so it varies by machine. Tier 2 pins it.
 
 // Wait for the camera to ACTUALLY ARRIVE instead of guessing at a duration.
 // model-viewer interpolates asymptotically toward a new cameraOrbit, so a
@@ -40,27 +42,13 @@ const takeHighResSnapshot = async () => {
     return;
   }
   
-  // Store current auto-rotate state
-  const wasAutoRotating = modelViewer.hasAttribute('auto-rotate');
+  // auto-rotate, the interaction prompt and the camera are now all handled by
+  // applyCaptureFraming (scene.js), shared with the mint path so the two can
+  // never drift apart.
+  const savedFraming = applyCaptureFraming();
   
-  // Disable auto-rotate for snapshot
-  if (wasAutoRotating) {
-    modelViewer.removeAttribute('auto-rotate');
-  }
-  
-  // The interaction prompt's "wiggle" style ROTATES THE MODEL to hint that it
-  // can be dragged, and it fires after ~3s of no interaction. Left on, it can
-  // catch the robot mid-rock and every snapshot comes out at a slightly
-  // different angle. Restored at the end, so the hand still works normally.
-  const hadPrompt = modelViewer.getAttribute('interaction-prompt');
-  modelViewer.setAttribute('interaction-prompt', 'none');
-  
-  // Reset camera EXACTLY like the reset button does
-  modelViewer.resetTurntableRotation();
-  modelViewer.cameraOrbit = '-28deg 90deg 6.5m';
-  modelViewer.fieldOfView = '40deg';
-  
-  // Glides back as it always did -- we just wait for it to land.
+  // jumpCameraToGoal has already put the camera exactly on its mark, so this
+  // returns in a few frames. Kept as a backstop, not as the mechanism.
   await waitForCameraToSettle(modelViewer);
   
   // Show a message that snapshot is being generated
@@ -69,12 +57,15 @@ const takeHighResSnapshot = async () => {
   snapshotMessage.textContent = 'Preparing high-quality snapshot...';
   document.getElementById('model-viewer').appendChild(snapshotMessage);
   
-  log("Taking 2000x2000 high-resolution snapshot...");
+  log("Taking snapshot at base-model framing...");
   
   try {
     // Use model-viewer's built-in screenshot feature
+    // idealAspect:true crops the PNG to the MODEL's proportions, so a hatted
+    // robot came out narrower than a bare one and the grid looked ragged.
+    // false keeps the viewer's own aspect -- same shape for every build.
     const blob = await modelViewer.toBlob({
-      idealAspect: true,
+      idealAspect: false,
       mimeType: 'image/png',
       qualityArgument: 1.0
     });
@@ -115,16 +106,7 @@ const takeHighResSnapshot = async () => {
     }, 3000);
   }
   
-  // Restore auto-rotate state
-  if (wasAutoRotating) {
-    modelViewer.setAttribute('auto-rotate', '');
-  }
-  // Put the interaction prompt back exactly as it was
-  if (hadPrompt === null) {
-    modelViewer.removeAttribute('interaction-prompt');
-  } else {
-    modelViewer.setAttribute('interaction-prompt', hadPrompt);
-  }
+  restoreViewFraming(savedFraming);
 };
 
 // Add snapshot button to the UI

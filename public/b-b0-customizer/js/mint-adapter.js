@@ -94,39 +94,28 @@
     if (!modelViewer || !modelViewer.src) {
       throw new Error("No model loaded to snapshot");
     }
-    const wasAutoRotating = modelViewer.hasAttribute("auto-rotate");
-    if (wasAutoRotating) modelViewer.removeAttribute("auto-rotate");
-
-    // The interaction prompt's "wiggle" style ROTATES THE MODEL to hint that
-    // it can be dragged, and it fires after ~3s of no interaction -- exactly
-    // when someone is reading the price panel before minting. Left on, the
-    // snapshot could catch the robot mid-rock, at a slightly different angle
-    // each time. Suppressed here and restored in the finally, so the hand
-    // still appears normally everywhere else.
-    const hadPrompt = modelViewer.getAttribute("interaction-prompt");
-
-    // The try starts HERE rather than at toBlob: if anything below throws,
-    // the finally still puts auto-rotate and the prompt back. Otherwise a
-    // failed snapshot would leave the viewer frozen until a page reload.
+    // The try starts BEFORE applyCaptureFraming, and savedFraming is declared
+    // outside it, so the finally can restore whether or not framing was ever
+    // applied. Same reasoning as before: a failed snapshot must not leave the
+    // viewer frozen at capture framing until a page reload.
+    let savedFraming = null;
     try {
-      modelViewer.setAttribute("interaction-prompt", "none");
+      savedFraming = applyCaptureFraming();
 
-      modelViewer.resetTurntableRotation();
-      modelViewer.cameraOrbit = "-28deg 90deg 6.5m";
-      modelViewer.fieldOfView = "40deg";
-
-      // Glides back as it always did -- we just wait for it to land.
+      // jumpCameraToGoal has already put the camera on its mark, so this
+      // returns in a few frames. Kept as a backstop, not as the mechanism.
       await waitForCameraToSettle(modelViewer);
 
+      // idealAspect:true cropped the PNG to the MODEL's proportions, so a
+      // hatted robot came out narrower than a bare one and the grid looked
+      // ragged. false keeps the viewer's aspect -- same shape every build.
       return await modelViewer.toBlob({
-        idealAspect: true,
+        idealAspect: false,
         mimeType: "image/png",
         qualityArgument: 1.0,
       });
     } finally {
-      if (wasAutoRotating) modelViewer.setAttribute("auto-rotate", "");
-      if (hadPrompt === null) modelViewer.removeAttribute("interaction-prompt");
-      else modelViewer.setAttribute("interaction-prompt", hadPrompt);
+      restoreViewFraming(savedFraming);
     }
   }
 
