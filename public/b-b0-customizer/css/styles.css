@@ -56,9 +56,32 @@ body {
     padding: 24px 12px;
     font-size: 15px;
   }
-  .container      { padding: 10px; }
-  .model-container { margin-right: 12px; }
-  .controls-panel  { margin-left: 0; }
+  .container { padding: 10px; }
+
+  /* Pin the left column to the renderer's own width (500px + its 2px
+     borders). Without this the column sizes to its widest child — the
+     wrapping button row — so the price panel, MINT bar and buttons all ran
+     ~37px wider than the model box and took that space from the carousels.
+     Change this if .model-viewer's width ever changes. */
+  .model-container {
+    margin-right: 12px;
+    width: 504px;
+    flex: none;
+  }
+
+  /* Let the carousels have everything that's left rather than stopping at
+     the 300px desktop cap. */
+  .controls-panel {
+    margin-left: 0;
+    max-width: none;
+  }
+  /* Visual order down the left column on mobile: renderer, then the whole
+    button block, then price and MINT. Works because .model-container is a
+    flex column. Values are spaced so .bb0-button-stack can sit at 2 (it's
+    set in collection.css) without renumbering everything here. */
+  .buttons-side { order: 1; }
+  .price-panel  { order: 3; }
+  .bb0-mint-bar { order: 4; }
 }
 
 .controls-section {

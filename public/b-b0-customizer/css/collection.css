@@ -338,7 +338,7 @@
     position: static;
     width: 100%;
     margin-top: 10px;
-    order: 1;            /* always last in the model column */
+    order: 2;            /* directly under the five side buttons */
   }
   .bb0-collection-button {
     width: 100%;
