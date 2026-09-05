@@ -2363,6 +2363,15 @@ const App = () => {
   };
   
   const handleOpenCustomizer = () => {
+    // Mobile wallet browsers don't inject their provider into iframes
+    // (MetaMask mobile #1154, Phantom documents it as intentional), so inside
+    // the overlay there is no wallet to connect and minting is dead. Go to the
+    // customizer as a top-level page on mobile instead. That also lets its own
+    // viewport meta tag work, so none of the iframe scaling applies there.
+    if (isMobileDevice()) {
+      window.location.href = '/b-b0-customizer/index.html';
+      return;
+    }
     setShowCustomizer(true);
   };
   

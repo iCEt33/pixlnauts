@@ -291,7 +291,10 @@ const showCollisionProgress = () => {
         display: none;
         justify-content: center;
         align-items: center;
-        z-index: 10000;
+        /* Above .bb0-button-stack (10001) and .bb0-col-overlay (10050), below
+           .bb0-mint-overlay (11000). This is a blocking wait state, so nothing
+           in the customizer should paint over it. */
+        z-index: 10100;
         font-family: monospace;
         opacity: 0;
         transition: all 0.5s ease-in-out;
