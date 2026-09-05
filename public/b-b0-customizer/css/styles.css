@@ -53,7 +53,12 @@ body {
   }
   .buttons-side .toggle-button {
     flex: 1 1 calc(50% - 5px);
+    padding: 24px 12px;
+    font-size: 15px;
   }
+  .container      { padding: 10px; }
+  .model-container { margin-right: 12px; }
+  .controls-panel  { margin-left: 0; }
 }
 
 .controls-section {

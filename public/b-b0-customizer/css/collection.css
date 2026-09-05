@@ -335,9 +335,14 @@
 }
 @media (max-width: 1150px) {
   .bb0-button-stack {
-    top: auto;
-    bottom: 20px;
-    right: 20px;
-    flex-direction: column-reverse;
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+    order: 1;            /* always last in the model column */
+  }
+  .bb0-collection-button {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 24px 30px;
   }
 }

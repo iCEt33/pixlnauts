@@ -1992,7 +1992,7 @@ const CustomizerView = ({ onClose }) => {
       const w = box.clientWidth;
       const h = box.clientHeight;
       if (!w || !h) return;
-      const layoutWidth = Math.max(w, 1000);
+      const layoutWidth = Math.max(w, 880);
       const scale = w / layoutWidth;
       box.style.setProperty('--bb0-iframe-w', `${layoutWidth}px`);
       box.style.setProperty('--bb0-iframe-h', `${h / scale}px`);
@@ -3867,7 +3867,7 @@ const styles = `
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100svh;
     z-index: 10000;
     display: flex;
     justify-content: center;
@@ -4041,7 +4041,7 @@ const styles = `
     }
     
     .customizer-overlay.ready .customizer-container {
-      height: 95vh;
+      height: 95svh;
     }
   }
 

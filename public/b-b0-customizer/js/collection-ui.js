@@ -877,6 +877,14 @@ export function ensureButtonStack() {
     stack.id = "bb0-button-stack";
     document.body.appendChild(stack);
   }
+  // On a narrow layout a corner-pinned button is unreliable — mobile browsers
+  // report a viewport taller than what you can actually see, so it ends up
+  // under the browser chrome. Put the stack in normal flow at the bottom of
+  // the model column instead. CSS gives it order:1 so it lands under the
+  // side buttons no matter which file finishes first.
+  const narrow = window.matchMedia("(max-width: 1150px)").matches;
+  const target = narrow ? document.querySelector(".model-container") : document.body;
+  if (target && stack.parentNode !== target) target.appendChild(stack);
   return stack;
 }
 
