@@ -34,12 +34,26 @@ body {
 /* Position buttons to the right of the renderer */
 .buttons-side {
   position: absolute;
-  right: -110px;
+  left: -110px;
   top: 0;
   width: 100px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+@media (max-width: 1150px) {
+  .buttons-side {
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .buttons-side .toggle-button {
+    flex: 1 1 calc(50% - 5px);
+  }
 }
 
 .controls-section {

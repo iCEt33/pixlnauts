@@ -1331,23 +1331,28 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
   return (
     <div className="beebo-customizer">
       {isMobile ? (
-        // Mobile version - show unavailable message
+        // Mobile version - launch is allowed, with a wallet-browser warning
         <>
           <p>
             <ScrambleText 
-              text="The B-b0 Customizer requires a desktop computer." 
+              text="The B-b0 Customizer was designed for desktop, but it runs on mobile too." 
               speed={10} 
               key={`beebo-1-${focusKey}`}
             />
           </p>
           <p className="mobile-notice">
             <ScrambleText 
-              text="This feature is not available on mobile devices. Please use a computer to access the full 3D customizer experience." 
+              text="On a phone, open this site from inside your wallet app's browser." 
               speed={10}
               color="#ff5" 
               key={`beebo-2-${focusKey}`}
             />
           </p>
+          <div className="beebo-links">
+            <button onClick={onLaunch} className="pixel-button">
+              <span className="whitepaper-button-text">LAUNCH B-b0 CUSTOMIZER</span>
+            </button>
+          </div>
         </>
       ) : (
         // Desktop version - show launch button
@@ -1971,6 +1976,34 @@ const CustomizerView = ({ onClose }) => {
       timerRef.current.forEach(timer => clearTimeout(timer));
     };
   }, []);
+
+  // Mobile browsers ignore a viewport meta tag inside an iframe, so without
+  // this the customizer lays out at the iframe's own width (~440px on a
+  // phone) and its stacked mobile layout kicks in. Give the iframe a
+  // 1000px-wide box and scale it to fit instead.
+  //
+  // On desktop the box is already wider than 1000, so layoutWidth is just the
+  // real width and scale comes out at exactly 1 — no transform, no change.
+  useEffect(() => {
+    const box = iframeRef.current?.parentElement;
+    if (!box) return;
+
+    const fit = () => {
+      const w = box.clientWidth;
+      const h = box.clientHeight;
+      if (!w || !h) return;
+      const layoutWidth = Math.max(w, 1000);
+      const scale = w / layoutWidth;
+      box.style.setProperty('--bb0-iframe-w', `${layoutWidth}px`);
+      box.style.setProperty('--bb0-iframe-h', `${h / scale}px`);
+      box.style.setProperty('--bb0-iframe-scale', scale);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [showIframe]);
   
   // Handle closing animation sequence
   const handleClose = () => {
@@ -2339,11 +2372,6 @@ const App = () => {
   
   // Check if showing customizer
   if (showCustomizer) {
-    // Extra check to prevent mobile devices from accessing
-    if (isMobileDevice()) {
-      setShowCustomizer(false);
-      return null;
-    }
     return <CustomizerView onClose={handleCloseCustomizer} />;
   }
 
@@ -3945,11 +3973,20 @@ const styles = `
     overflow: hidden;
   }
 
-  /* iframe styling */
+  /* iframe styling.
+    A viewport meta tag inside an iframe does nothing — for embedded
+    documents the layout viewport IS the iframe's box. So instead of asking
+    the customizer to lay out at 1000px, we give it a 1000px-wide box and
+    scale that box down, which is what desktop mode does. The three vars are
+    set by the fit effect in CustomizerView; the fallbacks reproduce the old
+    behaviour if that never runs. */
   .customizer-iframe {
-    width: 100%;
-    height: 100%;
+    width: var(--bb0-iframe-w, 100%);
+    height: var(--bb0-iframe-h, 100%);
+    transform: scale(var(--bb0-iframe-scale, 1));
+    transform-origin: top left;
     border: none;
+    display: block;
   }
 
   /* Return button styling */

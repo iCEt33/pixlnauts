@@ -333,3 +333,11 @@
   max-height: none;
   overflow-y: visible;
 }
+@media (max-width: 1150px) {
+  .bb0-button-stack {
+    top: auto;
+    bottom: 20px;
+    right: 20px;
+    flex-direction: column-reverse;
+  }
+}

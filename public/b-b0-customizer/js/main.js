@@ -64,13 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modelContainer) {
     const buttonsContainer = document.createElement('div');
     buttonsContainer.className = 'buttons-side';
-    buttonsContainer.style.position = 'absolute';
-    buttonsContainer.style.left = '-110px';  // LEFT side, not right
-    buttonsContainer.style.top = '0';
-    buttonsContainer.style.width = '100px';
-    buttonsContainer.style.display = 'flex';
-    buttonsContainer.style.flexDirection = 'column';
-    buttonsContainer.style.gap = '10px';
     
     modelContainer.style.position = 'relative';
     modelContainer.appendChild(buttonsContainer);
