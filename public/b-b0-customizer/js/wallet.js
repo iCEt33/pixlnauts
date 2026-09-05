@@ -38,22 +38,63 @@ let activeProvider = null;        // the raw EIP-1193 object we talk to
 // --------------------------------------------------------------------------
 const found = new Map(); // rdns -> { info, provider }
 
+// WHERE THE WALLET ACTUALLY LIVES:
+// Mobile wallet apps refuse to inject their provider into ANY iframe
+// (MetaMask mobile #1154 / #3417; Brave documents window.ethereum as
+// undefined in all iframes on iOS). This customizer runs inside one on
+// pixlnauts.com, so on a phone there is no provider in OUR window. There is
+// one in the parent's.
+//
+// Desktop extensions DO inject into a first-party, non-sandboxed frame, which
+// is why this only ever broke on phones.
+//
+// The frame is same-origin with no sandbox attribute, so we can read the
+// parent window directly. No postMessage bridge — those exist for CROSS-origin
+// embedding, which this is not. If the parent is ever cross-origin, touching
+// its origin throws and we fall back to our own window.
+function resolveHostWindow() {
+  try {
+    if (window.top && window.top !== window) {
+      void window.top.location.origin;   // throws if cross-origin
+      return window.top;
+    }
+  } catch {}
+  return window;
+}
+const hostWindow = resolveHostWindow();
+const windows = [...new Set([window, hostWindow])];
+
 function onAnnounce(event) {
   const detail = event.detail;
   if (detail?.info?.rdns && detail.provider) found.set(detail.info.rdns, detail);
 }
 
+// Ask on both: ours covers the desktop-extension case where the provider IS
+// in the frame, the parent's covers mobile where it is not.
+function requestProviders() {
+  for (const w of windows) {
+    try { w.dispatchEvent(new w.Event("eip6963:requestProvider")); } catch {}
+  }
+}
+
 // Listen from the moment this file loads - wallets announce themselves on
 // their own schedule, and some do it before anything asks.
 if (typeof window !== "undefined") {
-  window.addEventListener("eip6963:announceProvider", onAnnounce);
-  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  for (const w of windows) {
+    try {
+      w.addEventListener("eip6963:announceProvider", onAnnounce);
+      // The mobile provider is injected ASYNCHRONOUSLY and fires this once it
+      // lands, which can be after our first request. Ask again then.
+      w.addEventListener("ethereum#initialized", requestProviders, { once: true });
+    } catch {}
+  }
+  requestProviders();
 }
 
 // Older wallets that predate EIP-6963. Only used if nobody announced.
 // Coinbase historically exposed window.ethereum.providers as an array.
 function legacyWallets() {
-  const eth = window.ethereum;
+  const eth = hostWindow.ethereum || window.ethereum;
   if (!eth) return [];
   const list = Array.isArray(eth.providers) && eth.providers.length ? eth.providers : [eth];
   return list.map((provider, i) => {
@@ -69,9 +110,9 @@ function legacyWallets() {
 }
 
 /** Every wallet we can see, as [{ rdns, name, icon }]. Safe to call repeatedly. */
-export async function listWallets(waitMs = 250) {
+export async function listWallets(waitMs = 600) {
   if (typeof window === "undefined") return [];
-  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  requestProviders();
   await new Promise((r) => setTimeout(r, waitMs));
   const modern = [...found.values()];
   const all = modern.length ? modern : legacyWallets();
