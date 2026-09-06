@@ -437,15 +437,27 @@ const updateCollisionWarning = () => {
     const item = collidingItems[0];
     const otherCategories = subcategories.filter(c => c !== item.subcat && !collidingAccessories[c]);
     
+    // This used to take the FIRST other accessory being worn, which is not the
+    // same question as "what does it collide with" — it named whatever came
+    // first in subcategories order (clothes) regardless of the geometry. Ask
+    // the baked table instead, and fall back to the old guess only when the
+    // table can't answer (an un-baked part).
     let collidingWith = '';
+    let firstWorn = '';
     for (const otherCat of otherCategories) {
       const otherKey = `accessories-${otherCat}`;
       const otherIndex = currentSelections[otherKey];
-      if (otherIndex > 0) {
-        collidingWith = modelDefinitions.accessories[otherCat][otherIndex].displayName;
+      if (otherIndex <= 0) continue;
+
+      const other = modelDefinitions.accessories[otherCat][otherIndex];
+      if (!firstWorn) firstWorn = other.displayName;
+
+      if (lookupCollision(item.model.filename, other.filename) === true) {
+        collidingWith = other.displayName;
         break;
       }
     }
+    if (!collidingWith) collidingWith = firstWorn;
     
     if (collidingWith) {
       showCollisionWarning({

@@ -207,6 +207,10 @@
     </div>
   </div>
 
+  <!-- Must run before model-viewer builds its renderer. Classic script, so it
+       executes ahead of the deferred module below. -->
+  <script src="js/dpr-fix.js"></script>
+
   <!-- Load model-viewer from CDN -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   
