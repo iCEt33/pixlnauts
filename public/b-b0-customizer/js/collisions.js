@@ -412,7 +412,27 @@ const checkAccessoryCollisions = async (newModelData, newCategory) => {
   }
   
   if (accessoriesToCheck.length === 0) return { hasCollision: false };
-  
+
+  // ---- fast path: answer from the baked table --------------------------
+  // Only taken when the table covers EVERY pair in question. If it can't
+  // answer even one of them, fall through and do the whole thing live
+  // exactly as before. Order matches the live path, which breaks on the
+  // first hit, so the reported collidingWith is identical.
+  await collisionTableReady;
+  const tableAnswers = accessoriesToCheck.map(
+    (a) => lookupCollision(newModelData.filename, a.model.filename)
+  );
+  if (tableAnswers.every((answer) => answer !== null)) {
+    const hitIndex = tableAnswers.indexOf(true);
+    if (hitIndex === -1) return { hasCollision: false };
+    return {
+      hasCollision: true,
+      collidingWith: accessoriesToCheck[hitIndex].model.displayName,
+      newItemName: newModelData.displayName
+    };
+  }
+  // ---- otherwise: original live check, untouched ------------------------
+
   const collisionCheckId = Date.now() + Math.random();
   loadedModels.latestRequests[`collision-${newCategory}`] = collisionCheckId;
   

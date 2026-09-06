@@ -1224,7 +1224,7 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
     <div className={`tab ${isOpen ? 'open' : 'closed'}`} ref={tabRef}>
       <div className="tab-header" onClick={toggleTab}>
         <div className={`play-icon ${isOpen ? 'playing' : ''}`}>▶</div>
-        <ScrambleText text={title} speed={30} intensity={0.8} key={`tab-${title}-${focusKey}`} />
+        <ScrambleText text={title} speed={30} intensity={0.8} compact key={`tab-${title}-${focusKey}`} />
       </div>
       <div className="tab-content-wrapper">
         <div className="tab-content-clip" ref={clipRef}>
@@ -1337,6 +1337,7 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
             <ScrambleText 
               text="The B-b0 Customizer was designed for desktop, but it runs on mobile too." 
               speed={10} 
+              compact
               key={`beebo-1-${focusKey}`}
             />
           </p>
@@ -1345,6 +1346,7 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
               text="On a phone, open this site from inside your wallet app's browser." 
               speed={10}
               color="#ff5" 
+              compact
               key={`beebo-2-${focusKey}`}
             />
           </p>
