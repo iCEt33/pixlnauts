@@ -1514,8 +1514,112 @@ const QuirkiestAppTab = ({ focusKey }) => {
         <a href="/downloads/smartclockv5.9.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
-        <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">GET FROM PLAY STORE</span>
+        <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="cyc" aria-label="Get from Play Store">
+          <span className="cyc-stage">
+            <span className="cyc-layer cyc-1" aria-hidden="true">
+              <span className="arc">
+                <span className="arc-glow" />
+                <span className="arc-depth" />
+                <span className="arc-hop">
+                  <span className="arc-face">
+                    <span className="arc-shine" />
+                    <span className="arc-tri" />
+                    <span className="arc-label">GET FROM PLAY STORE</span>
+                  </span>
+                </span>
+                <span className="arc-spark arc-spark-1" />
+                <span className="arc-spark arc-spark-2" />
+                <span className="arc-spark arc-spark-3" />
+                <span className="arc-spark arc-spark-4" />
+              </span>
+            </span>
+            <span className="cyc-layer cyc-2" aria-hidden="true">
+              <span className="crt">
+                <span className="crt-glow" />
+                <span className="crt-frame">
+                  <span className="crt-label" data-text="GET FROM PLAY STORE">GET FROM PLAY STORE</span>
+                  <span className="crt-scan" />
+                  <span className="crt-roll" />
+                </span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-3" aria-hidden="true">
+              <span className="syn">
+                <span className="syn-sky">
+                  <span className="syn-sun" />
+                  <span className="syn-floor"><span className="syn-grid" /></span>
+                </span>
+                <span className="syn-btn"><span className="syn-label">GET FROM PLAY STORE</span></span>
+                <span className="syn-mirror"><span className="syn-btn"><span className="syn-label">GET FROM PLAY STORE</span></span></span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-4" aria-hidden="true">
+              <span className="holo">
+                <span className="holo-glow" />
+                <span className="holo-card">
+                  <span className="holo-plate holo-plate-3" />
+                  <span className="holo-plate holo-plate-2" />
+                  <span className="holo-plate holo-plate-1" />
+                  <span className="holo-face"><span className="holo-foil" /><span className="holo-ghost">GET FROM PLAY STORE</span></span>
+                  <span className="holo-label">GET FROM PLAY STORE</span>
+                </span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-5" aria-hidden="true">
+              <span className="mq">
+                <span className="mq-glow" />
+                <span className="mq-frame">
+                  <span className="mq-bulbs mq-top" />
+                  <span className="mq-bulbs mq-right" />
+                  <span className="mq-bulbs mq-bottom" />
+                  <span className="mq-bulbs mq-left" />
+                  <span className="mq-face"><span className="mq-label">GET FROM PLAY STORE</span></span>
+                </span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-6" aria-hidden="true">
+              <span className="tr">
+                <span className="tr-glow" />
+                <span className="tr-box">
+                  <span className="tr-col tr-c1">7Q1Z0K4X9B2M8S5T</span>
+                  <span className="tr-col tr-c2">A3F9L0P2W8E1R6Y4</span>
+                  <span className="tr-col tr-c3">0101101001011010</span>
+                  <span className="tr-col tr-c4">S5M4R7T2C1L0K9X3</span>
+                  <span className="tr-col tr-c5">SMARTCLOCK59SMAR</span>
+                  <span className="tr-col tr-c6">Z1X2C3V4B5N6M7Q8</span>
+                  <span className="tr-col tr-c7">1100101011100110</span>
+                  <span className="tr-col tr-c8">PIXLNAUTS5909PXL</span>
+                  <span className="tr-line">
+                    <span className="tr-prompt">&gt;</span>
+                    <span className="tr-type"><span className="tr-label">GET FROM PLAY STORE</span><span className="tr-cursor" /></span>
+                  </span>
+                </span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-7" aria-hidden="true">
+              <span className="vhs">
+                <span className="vhs-glow" />
+                <span className="vhs-screen">
+                  <span className="vhs-osd vhs-play"><span className="vhs-tri" />PLAY</span>
+                  <span className="vhs-osd vhs-sp">SP</span>
+                  <span className="vhs-label">GET FROM PLAY STORE</span>
+                  <span className="vhs-osd vhs-time">0:00:<span className="vhs-digit"><span className="vhs-strip vhs-tens">012345</span></span><span className="vhs-digit"><span className="vhs-strip vhs-ones">0123456789</span></span></span>
+                  <span className="vhs-track" />
+                </span>
+              </span>
+            </span>
+            <span className="cyc-layer cyc-8" aria-hidden="true">
+              <span className="orb">
+                <span className="orb-stars" />
+                <span className="orb-stars orb-stars-b" />
+                <span className="orb-scene">
+                  <span className="orb-btn"><span className="orb-label">GET FROM PLAY STORE</span></span>
+                  <span className="orb-path"><span className="orb-moon"><span className="orb-halo" /><span className="orb-px" /></span></span>
+                </span>
+              </span>
+            </span>
+            <span className="cyc-sweep" />
+          </span>
         </a>
       </div>
     </div>
@@ -3002,31 +3106,188 @@ const styles = `
     overflow: hidden;
   }
 
-  .app-download .pixel-button:last-child::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-      45deg, 
-      rgba(0, 255, 0, 0) 0%,
-      rgba(0, 255, 0, 0.6) 50%,
-      rgba(0, 255, 0, 0) 100%
-    );
-    animation: shimmer 2s infinite linear;
-    z-index: 1;
-    pointer-events: none;
-  }
-  
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%) translateY(-100%) rotate(45deg);
-    }
-    100% {
-      transform: translateX(100%) translateY(100%) rotate(45deg);
-    }
+  /* GET FROM PLAY STORE: eight looks, one every 5 s, pure CSS (5.9) */
+  .cyc{position:relative;display:inline-block;text-decoration:none;font-family:'PixelFont',monospace;line-height:1.4;-webkit-tap-highlight-color:transparent}
+  .cyc:focus-visible{outline:3px dashed #ff5;outline-offset:6px}
+  .cyc-stage{position:relative;display:grid;place-items:center}
+  .cyc-layer{grid-area:1/1;display:block;transform-origin:50% 50%;opacity:0;visibility:hidden;animation:cyc-show 40s steps(1,end) infinite}
+  .cyc-1{animation-delay:0s}
+  .cyc-5{animation-delay:-35s}
+  .cyc-2{animation-delay:-30s}
+  .cyc-8{animation-delay:-25s}
+  .cyc-3{animation-delay:-20s}
+  .cyc-6{animation-delay:-15s}
+  .cyc-4{animation-delay:-10s}
+  .cyc-7{animation-delay:-5s}
+  .cyc-sweep{position:absolute;left:50%;top:50%;width:360px;height:100px;margin:-50px 0 0 -180px;overflow:hidden;pointer-events:none}
+  .cyc-sweep::before{content:'';position:absolute;left:0;right:0;top:0;height:28px;background:linear-gradient(rgba(0,255,0,0),rgba(0,255,0,.2),rgba(0,255,0,0));transform:translateY(110px);animation:cyc-sweep 5s linear infinite}
+  @keyframes cyc-show{0%{opacity:.35;visibility:visible;transform:translateX(-2px)}.25%{opacity:.8;transform:translateX(1px)}.5%{opacity:.45;transform:translateX(0)}.75%{opacity:1;transform:translateX(0)}12%{opacity:1;visibility:visible;transform:translateX(0)}12.25%{opacity:.5;transform:translateX(2px)}12.5%{opacity:.8;transform:translateX(-1px)}12.75%{opacity:0;visibility:hidden;transform:translateX(0)}100%{opacity:0;visibility:hidden;transform:translateX(0)}}
+  @keyframes cyc-sweep{0%{transform:translateY(-28px)}8%,100%{transform:translateY(110px)}}
+
+  .arc{position:relative;display:inline-block;padding:0 6px 6px 0}
+  .arc-glow{position:absolute;left:-44px;right:-50px;top:-30px;bottom:-40px;background:radial-gradient(closest-side,rgba(0,255,0,.55),rgba(0,255,0,.15) 60%,rgba(0,255,0,0));pointer-events:none;animation:arc-glow 2.6s ease-in-out infinite}
+  .arc-depth{position:absolute;left:6px;top:6px;right:0;bottom:0;background:#063;clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%)}
+  .arc-hop{position:relative;display:block;animation:arc-hop 2.6s steps(1,end) infinite}
+  .arc-face{position:relative;display:flex;align-items:center;gap:12px;padding:15px 30px;background:#0f0;overflow:hidden;clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%);transition:transform .12s steps(2,end)}
+  .arc-face::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:#cfc}
+  .arc-face::after{content:'';position:absolute;left:0;top:4px;bottom:0;width:4px;background:#8f8}
+  .arc-shine{position:absolute;top:-8px;bottom:-8px;left:0;width:60px;background:linear-gradient(90deg,rgba(255,255,255,0) 0 15%,rgba(255,255,255,.9) 15% 50%,rgba(255,255,255,0) 50% 64%,rgba(255,255,255,.9) 64% 78%,rgba(255,255,255,0) 78%);transform:translateX(-120px) skewX(-20deg);animation:arc-shine 2.6s linear infinite;pointer-events:none}
+  .arc-tri{position:relative;width:10px;height:14px;background:#000;clip-path:polygon(0 0,100% 50%,0 100%);flex-shrink:0}
+  .arc-label{position:relative;color:#000;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap}
+  .arc-spark{position:absolute;width:2px;height:2px;background:#fff;box-shadow:2px 0 #fff,-2px 0 #fff,0 2px #fff,0 -2px #fff,4px 0 #0f0,-4px 0 #0f0,0 4px #0f0,0 -4px #0f0;opacity:0;pointer-events:none;animation:arc-spark 2.6s steps(3,end) infinite}
+  .arc-spark-1{left:-14px;top:-12px}
+  .arc-spark-2{right:-8px;top:-16px;animation-delay:.65s}
+  .arc-spark-3{right:-16px;bottom:-4px;animation-delay:1.3s}
+  .arc-spark-4{left:-10px;bottom:-14px;animation-delay:1.95s}
+  .cyc:hover .arc-face{transform:translate(-2px,-3px)}
+  .cyc:active .arc-face{transform:translate(6px,6px)}
+  @keyframes arc-glow{0%,100%{opacity:.35;transform:scale(.92)}50%{opacity:.9;transform:scale(1.06)}}
+  @keyframes arc-hop{0%{transform:translateY(0)}6%{transform:translateY(-6px)}10%{transform:translateY(-3px)}14%{transform:translateY(0)}100%{transform:translateY(0)}}
+  @keyframes arc-shine{0%,38%{transform:translateX(-120px) skewX(-20deg)}66%,100%{transform:translateX(400px) skewX(-20deg)}}
+  @keyframes arc-spark{0%{opacity:0;transform:scale(0)}8%{opacity:1;transform:scale(1)}18%{opacity:0;transform:scale(0)}100%{opacity:0;transform:scale(0)}}
+
+  .crt{position:relative;display:inline-block}
+  .crt-glow{position:absolute;left:-50px;right:-50px;top:-30px;bottom:-36px;background:radial-gradient(closest-side,rgba(0,255,0,.45),rgba(0,255,0,0));pointer-events:none;animation:crt-pulse 3.2s ease-in-out infinite}
+  .crt-frame{position:relative;display:block;padding:14px 30px;background:#010;border:3px solid #0f0;box-shadow:0 0 0 3px #041,0 0 16px 2px rgba(0,255,0,.75),inset 0 0 18px rgba(0,255,0,.45);overflow:hidden;animation:crt-flicker 4.2s steps(1,end) infinite;transition:transform .12s steps(2,end),background-color .12s steps(2,end)}
+  .crt-label{position:relative;display:block;color:#eaffea;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:0 0 1px #fff,0 0 5px #0f0,0 0 10px #0f0,0 0 20px #0c0}
+  .crt-label::before,.crt-label::after{content:attr(data-text);position:absolute;left:0;top:0;opacity:0;text-shadow:none;animation:crt-glitch-a 3.6s steps(1,end) infinite}
+  .crt-label::before{color:#f0f}
+  .crt-label::after{color:#0ff;animation-name:crt-glitch-b}
+  .crt-scan{position:absolute;left:0;right:0;top:0;bottom:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 1px,rgba(0,0,0,0) 1px 3px);pointer-events:none}
+  .crt-roll{position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(rgba(0,255,0,0),rgba(0,255,0,.25),rgba(0,255,0,0));transform:translateY(-100%);animation:crt-roll 2.8s linear infinite;pointer-events:none}
+  .cyc:hover .crt-frame{background:#031;transform:translate(-1px,-2px)}
+  .cyc:active .crt-frame{transform:translate(2px,2px)}
+  @keyframes crt-pulse{0%,100%{opacity:.45}50%{opacity:.95}}
+  @keyframes crt-flicker{0%{opacity:1}31%{opacity:.55}32%{opacity:1}34%{opacity:.7}35%{opacity:1}78%{opacity:.8}79%{opacity:1}100%{opacity:1}}
+  @keyframes crt-glitch-a{0%{opacity:0;transform:translate(0,0)}86%{opacity:.85;transform:translate(-3px,0)}89%{opacity:.85;transform:translate(2px,-1px)}92%{opacity:0;transform:translate(0,0)}100%{opacity:0;transform:translate(0,0)}}
+  @keyframes crt-glitch-b{0%{opacity:0;transform:translate(0,0)}86%{opacity:.85;transform:translate(3px,0)}89%{opacity:.85;transform:translate(-2px,1px)}92%{opacity:0;transform:translate(0,0)}100%{opacity:0;transform:translate(0,0)}}
+  @keyframes crt-roll{from{transform:translateY(-100%)}to{transform:translateY(260%)}}
+
+  .syn{position:relative;display:inline-flex;flex-direction:column;align-items:center;padding:72px 80px 7px}
+  .syn-sky{position:absolute;left:0;right:0;top:0;bottom:0;overflow:hidden;pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 60% 75% at 50% 58%,#000 55%,rgba(0,0,0,0) 100%);mask-image:radial-gradient(ellipse 60% 75% at 50% 58%,#000 55%,rgba(0,0,0,0) 100%)}
+  .syn-sun{position:absolute;left:50%;top:6px;width:150px;height:150px;margin-left:-75px;border-radius:50%;overflow:hidden;background:linear-gradient(#ff5,#bf5 40%,#0f0 75%);box-shadow:0 0 40px rgba(255,255,85,.45);animation:syn-sun 3s ease-in-out infinite}
+  .syn-sun::after{content:'';position:absolute;left:0;right:0;top:calc(22% - 12px);bottom:0;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 8px,#000 8px 12px);animation:syn-bars 1.2s linear infinite}
+  .syn-floor{position:absolute;left:-30%;right:-30%;top:65%;bottom:0;overflow:hidden;background:#000;perspective:160px;perspective-origin:50% 0}
+  .syn-floor::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:#0f0;box-shadow:0 0 10px #0f0;z-index:1}
+  .syn-grid{position:absolute;left:0;right:0;top:0;height:160px;background-image:linear-gradient(rgba(0,255,0,.85) 2px,rgba(0,255,0,0) 2px),linear-gradient(90deg,rgba(0,255,0,.85) 2px,rgba(0,255,0,0) 2px);background-size:40px 40px;transform-origin:50% 0;transform:rotateX(64deg) translateY(-40px);animation:syn-grid .9s linear infinite}
+  .syn-btn{position:relative;z-index:1;display:block;padding:14px 30px;background:#000;border:3px solid #0f0;box-shadow:0 0 0 3px #000,0 0 18px rgba(0,255,0,.8);transition:transform .15s steps(2,end)}
+  .syn-label{display:block;color:#0f0;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap}
+  @supports ((-webkit-background-clip:text) or (background-clip:text)){.syn-label{background-image:linear-gradient(100deg,rgba(255,255,255,0) 42%,#fff 50%,rgba(255,255,255,0) 58%),linear-gradient(180deg,#fff 0%,#dfffdf 40%,#0f0 52%,#7f7 72%,#0a5 100%);background-size:260% 100%,100% 100%;background-repeat:no-repeat;background-position:160% 0,0 0;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:syn-glint 3s ease-in-out infinite}}
+  .syn-mirror{position:relative;z-index:1;display:block;margin-top:4px;transform:scaleY(-1);opacity:.45;-webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,0) 75%);mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,0) 75%);pointer-events:none}
+  .syn-mirror .syn-btn{box-shadow:none}
+  .cyc:hover .syn>.syn-btn{transform:translateY(-3px)}
+  .cyc:active .syn>.syn-btn{transform:translateY(2px)}
+  @keyframes syn-grid{from{transform:rotateX(64deg) translateY(-40px)}to{transform:rotateX(64deg) translateY(0)}}
+  @keyframes syn-bars{from{transform:translateY(0)}to{transform:translateY(12px)}}
+  @keyframes syn-sun{0%,100%{opacity:.85}50%{opacity:1}}
+  @keyframes syn-glint{0%,50%{background-position:160% 0,0 0}80%,100%{background-position:-60% 0,0 0}}
+
+  .holo{position:relative;display:inline-block;perspective:700px}
+  .holo-glow{position:absolute;left:-50px;right:-50px;top:-30px;bottom:-40px;background:radial-gradient(closest-side,rgba(0,255,0,.5),rgba(0,255,0,0));pointer-events:none;animation:holo-glow 5s ease-in-out infinite}
+  .holo-card{position:relative;display:block;transform-style:preserve-3d;animation:holo-tilt 5s ease-in-out infinite}
+  .holo-plate{position:absolute;left:0;top:0;right:0;bottom:0}
+  .holo-plate-1{background:#0c4;transform:translateZ(-4px)}
+  .holo-plate-2{background:#096;transform:translateZ(-8px)}
+  .holo-plate-3{background:#063;transform:translateZ(-12px)}
+  .holo-face{position:relative;display:block;padding:15px 30px;background:#0f0;overflow:hidden}
+  .holo-ghost{visibility:hidden;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap}
+  .holo-foil{position:absolute;left:-60%;top:0;bottom:0;width:220%;background:linear-gradient(110deg,rgba(255,255,85,0) 30%,rgba(255,255,85,.6) 40%,rgba(255,255,255,.95) 46%,rgba(85,255,255,.45) 52%,rgba(255,255,85,0) 62%);transform:translateX(-30%);animation:holo-foil 5s ease-in-out infinite;pointer-events:none}
+  .holo-label{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#000;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:2px 2px 0 rgba(0,90,40,.55);transform:translateZ(16px);pointer-events:none}
+  .cyc:hover .holo-card,.cyc:hover .holo-foil,.cyc:hover .holo-glow{animation-play-state:paused}
+  .cyc:active .holo-face{background:#0c0}
+  @keyframes holo-tilt{0%,100%{transform:rotateX(16deg) rotateY(-24deg)}50%{transform:rotateX(-12deg) rotateY(24deg)}}
+  @keyframes holo-foil{0%,100%{transform:translateX(-30%)}50%{transform:translateX(18%)}}
+  @keyframes holo-glow{0%,100%{opacity:.4;transform:translateX(-14px)}50%{opacity:.9;transform:translateX(14px)}}
+
+  .mq{position:relative;display:inline-block}
+  .mq-glow{position:absolute;left:-46px;right:-46px;top:-32px;bottom:-38px;background:radial-gradient(closest-side,rgba(255,255,85,.35),rgba(255,200,0,.12) 60%,rgba(255,255,85,0));pointer-events:none;animation:mq-glow 1.8s ease-in-out infinite}
+  .mq-frame{position:relative;display:block;padding:12px;background:#1c1400;box-shadow:0 0 0 2px #ff5,0 0 0 5px #1c1400,0 0 0 7px #a80}
+  .mq-bulbs{position:absolute;pointer-events:none;background-image:radial-gradient(circle,#fffbe0 0 1.5px,#ff5 2px 3px,rgba(255,255,85,.35) 3.5px 5px,rgba(255,255,85,0) 5.5px);background-size:12px 12px}
+  .mq-top{left:0;right:0;top:0;height:12px;background-repeat:repeat-x;animation:mq-right .45s steps(3,end) infinite}
+  .mq-bottom{left:0;right:0;bottom:0;height:12px;background-repeat:repeat-x;animation:mq-left .45s steps(3,end) infinite}
+  .mq-left{left:0;top:12px;bottom:12px;width:12px;background-repeat:repeat-y;animation:mq-up .45s steps(3,end) infinite}
+  .mq-right{right:0;top:12px;bottom:12px;width:12px;background-repeat:repeat-y;animation:mq-down .45s steps(3,end) infinite}
+  .mq-face{position:relative;display:block;padding:12px 26px;background:#0a0700;border:2px solid #a80;transition:transform .12s steps(2,end)}
+  .mq-label{display:block;color:#fff6b0;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:0 0 4px #ff5,0 0 10px #fa0,0 0 18px rgba(255,170,0,.6);animation:mq-flash 2.5s steps(1,end) infinite}
+  .cyc:hover .mq-face{transform:translate(-1px,-2px)}
+  .cyc:active .mq-face{transform:translate(1px,1px)}
+  @keyframes mq-right{from{background-position:0 0}to{background-position:12px 0}}
+  @keyframes mq-left{from{background-position:0 0}to{background-position:-12px 0}}
+  @keyframes mq-down{from{background-position:0 0}to{background-position:0 12px}}
+  @keyframes mq-up{from{background-position:0 0}to{background-position:0 -12px}}
+  @keyframes mq-glow{0%,100%{opacity:.5}50%{opacity:1}}
+  @keyframes mq-flash{0%{opacity:1}80%{opacity:.55}84%{opacity:1}88%{opacity:.55}92%{opacity:1}100%{opacity:1}}
+
+  .tr{position:relative;display:inline-block}
+  .tr-glow{position:absolute;left:-44px;right:-44px;top:-30px;bottom:-36px;background:radial-gradient(closest-side,rgba(0,255,0,.4),rgba(0,255,0,0));pointer-events:none;animation:tr-glow 2.5s ease-in-out infinite}
+  .tr-box{position:relative;display:block;padding:14px 22px;background:#010;border:2px solid #0f0;box-shadow:0 0 12px rgba(0,255,0,.55),inset 0 0 12px rgba(0,255,0,.25);overflow:hidden;transition:transform .12s steps(2,end)}
+  .tr-col{position:absolute;top:0;width:1ch;font-family:monospace;font-weight:bold;font-size:11px;line-height:11px;letter-spacing:0;color:#0f0;word-break:break-all;white-space:normal;opacity:.55;-webkit-mask-image:linear-gradient(rgba(0,0,0,0),#000);mask-image:linear-gradient(rgba(0,0,0,0),#000);transform:translateY(-100%);animation:tr-fall 2.4s linear infinite;pointer-events:none}
+  .tr-c1{left:4%;animation-duration:2.1s;animation-delay:-.4s}
+  .tr-c2{left:15%;animation-duration:2.9s;animation-delay:-1.7s}
+  .tr-c3{left:27%;animation-duration:1.8s;animation-delay:-.9s}
+  .tr-c4{left:40%;animation-duration:2.6s;animation-delay:-2.2s}
+  .tr-c5{left:53%;animation-duration:2.2s;animation-delay:-1.1s}
+  .tr-c6{left:66%;animation-duration:3s;animation-delay:-.2s}
+  .tr-c7{left:78%;animation-duration:2s;animation-delay:-1.5s}
+  .tr-c8{left:90%;animation-duration:2.7s;animation-delay:-2.5s}
+  .tr-line{position:relative;display:flex;align-items:center;gap:8px;padding:2px 6px;background:rgba(0,0,0,.75)}
+  .tr-prompt{color:#5f5;font-weight:bold;font-size:18px}
+  .tr-type{position:relative;display:block}
+  .tr-label{display:block;color:#0f0;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:0 0 6px rgba(0,255,0,.7);clip-path:inset(0 100% 0 0);animation:tr-type 5s linear infinite}
+  .tr-cursor{position:absolute;left:0;top:3px;bottom:3px;width:10px;background:#0f0;box-shadow:0 0 6px #0f0;font-family:'PixelFont',monospace;font-weight:bold;font-size:18px;letter-spacing:1px;animation:tr-move 5s linear infinite,tr-blink .5s steps(1,end) infinite}
+  .cyc:hover .tr-box{transform:translate(-1px,-2px)}
+  .cyc:active .tr-box{transform:translate(1px,1px)}
+  @keyframes tr-fall{from{transform:translateY(-100%)}to{transform:translateY(90px)}}
+  @keyframes tr-glow{0%,100%{opacity:.45}50%{opacity:.9}}
+  @keyframes tr-type{0%{clip-path:inset(0 100% 0 0);animation-timing-function:steps(19,end)}32%,100%{clip-path:inset(0 0 0 0)}}
+  @keyframes tr-move{0%{transform:translateX(0);animation-timing-function:steps(19,end)}32%,100%{transform:translateX(calc(19ch + 19px))}}
+  @keyframes tr-blink{0%{opacity:1}50%{opacity:0}100%{opacity:0}}
+
+  .vhs{position:relative;display:inline-block}
+  .vhs-glow{position:absolute;left:-46px;right:-46px;top:-30px;bottom:-36px;background:radial-gradient(closest-side,rgba(0,255,0,.35),rgba(0,255,0,0));pointer-events:none;animation:vhs-glow 3s ease-in-out infinite}
+  .vhs-screen{position:relative;display:block;padding:26px 36px 24px;background:#020a02;border:3px solid #0f0;box-shadow:0 0 0 3px #041,0 0 14px rgba(0,255,0,.5),inset 0 0 22px rgba(0,255,0,.22);overflow:hidden;animation:vhs-jitter 3.2s steps(1,end) infinite;transition:background-color .12s steps(2,end)}
+  .vhs-osd{position:absolute;display:flex;align-items:center;gap:4px;color:#5f5;font-weight:bold;font-size:11px;line-height:1;letter-spacing:1px;text-shadow:0 0 4px rgba(0,255,0,.6);white-space:nowrap}
+  .vhs-play{left:10px;top:7px}
+  .vhs-sp{right:10px;top:7px}
+  .vhs-time{left:10px;bottom:6px;gap:0}
+  .vhs-tri{width:7px;height:9px;background:#5f5;clip-path:polygon(0 0,100% 50%,0 100%);animation:vhs-blink 1s steps(1,end) infinite}
+  .vhs-digit{display:inline-block;width:1ch;height:1em;overflow:hidden;vertical-align:top}
+  .vhs-strip{display:block;width:1ch;line-height:1em;word-break:break-all;white-space:normal}
+  .vhs-ones{animation:vhs-ones 10s steps(10,end) infinite}
+  .vhs-tens{animation:vhs-tens 60s steps(6,end) infinite}
+  .vhs-label{position:relative;display:block;color:#eaffea;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:-2px 0 rgba(255,40,120,.7),2px 0 rgba(40,200,255,.7),0 0 8px rgba(0,255,0,.6)}
+  .vhs-track{position:absolute;left:0;right:0;top:0;height:12px;background:repeating-linear-gradient(90deg,rgba(190,255,190,.22) 0 2px,rgba(0,0,0,0) 2px 5px,rgba(0,255,0,.25) 5px 6px,rgba(0,0,0,0) 6px 11px);transform:translateY(-16px);animation:vhs-track 2.5s linear infinite;pointer-events:none}
+  .cyc:hover .vhs-screen{background:#041204}
+  @keyframes vhs-glow{0%,100%{opacity:.45}50%{opacity:.9}}
+  @keyframes vhs-jitter{0%{transform:translateX(0)}40%{transform:translateX(2px)}41%{transform:translateX(-1px)}42%{transform:translateX(0)}86%{transform:translateX(-2px)}87%{transform:translateX(0)}100%{transform:translateX(0)}}
+  @keyframes vhs-blink{0%{opacity:1}50%{opacity:.25}100%{opacity:.25}}
+  @keyframes vhs-ones{from{transform:translateY(0)}to{transform:translateY(-10em)}}
+  @keyframes vhs-tens{from{transform:translateY(0)}to{transform:translateY(-6em)}}
+  @keyframes vhs-track{from{transform:translateY(-16px)}to{transform:translateY(110px)}}
+
+  .orb{position:relative;display:inline-block}
+  .orb-stars{position:absolute;left:-90px;right:-90px;top:-36px;bottom:-36px;pointer-events:none;background-image:radial-gradient(circle,#ff5 0 1px,rgba(255,255,85,0) 1.5px),radial-gradient(circle,#cfc 0 1px,rgba(204,255,204,0) 1.5px);background-size:53px 41px,37px 29px;background-position:7px 11px,23px 3px;animation:orb-twinkle 1.6s steps(1,end) infinite;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 30%,rgba(0,0,0,0) 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 30%,rgba(0,0,0,0) 100%)}
+  .orb-stars-b{background-size:47px 37px,31px 43px;background-position:19px 5px,3px 17px;animation-delay:-.8s}
+  .orb-scene{position:relative;display:block;perspective:600px;transform-style:preserve-3d}
+  .orb-btn{position:relative;display:block;padding:14px 30px;background:#000;border:3px solid #0f0;box-shadow:0 0 14px rgba(0,255,0,.6),inset 0 0 12px rgba(0,255,0,.25);transition:transform .12s steps(2,end)}
+  .orb-label{display:block;color:#0f0;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:0 0 6px rgba(0,255,0,.7)}
+  .orb-path{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;transform:rotateX(84deg) rotateZ(0deg);animation:orb-spin 6s linear infinite}
+  .orb-moon{position:absolute;left:-15px;top:-15px;width:30px;height:30px;transform:translateX(190px) rotateZ(0deg) rotateX(-84deg);animation:orb-counter 6s linear infinite}
+  .orb-halo{position:absolute;left:-12px;top:-12px;right:-12px;bottom:-12px;background:radial-gradient(closest-side,rgba(255,255,150,.45),rgba(255,255,150,0))}
+  .orb-px{position:absolute;left:3px;top:3px;width:24px;height:24px;background:linear-gradient(#b8ae55,#b8ae55) 9px 6px/3px 3px no-repeat,linear-gradient(#b8ae55,#b8ae55) 15px 12px/6px 3px no-repeat,linear-gradient(#b8ae55,#b8ae55) 6px 15px/3px 3px no-repeat,linear-gradient(#b8ae55,#b8ae55) 15px 18px/3px 3px no-repeat,linear-gradient(#d8cf78,#d8cf78) 18px 3px/6px 21px no-repeat,#fff6b8;clip-path:polygon(25% 0,75% 0,75% 12.5%,87.5% 12.5%,87.5% 25%,100% 25%,100% 75%,87.5% 75%,87.5% 87.5%,75% 87.5%,75% 100%,25% 100%,25% 87.5%,12.5% 87.5%,12.5% 75%,0 75%,0 25%,12.5% 25%,12.5% 12.5%,25% 12.5%)}
+  .cyc:hover .orb-btn{transform:translateY(-2px)}
+  .cyc:active .orb-btn{transform:translateY(1px)}
+  @keyframes orb-spin{from{transform:rotateX(84deg) rotateZ(0deg)}to{transform:rotateX(84deg) rotateZ(360deg)}}
+  @keyframes orb-counter{from{transform:translateX(190px) rotateZ(0deg) rotateX(-84deg)}to{transform:translateX(190px) rotateZ(-360deg) rotateX(-84deg)}}
+  @keyframes orb-twinkle{0%{opacity:1}50%{opacity:.35}100%{opacity:.35}}
+
+  @media (max-width:360px){.cyc-stage{transform:scale(.88)}}
+
+  @media (prefers-reduced-motion:reduce){
+  .cyc-layer,.cyc-sweep::before,.arc-glow,.arc-hop,.arc-shine,.arc-spark,.crt-glow,.crt-frame,.crt-label::before,.crt-label::after,.crt-roll,.syn-sun,.syn-sun::after,.syn-grid,.syn-label,.holo-card,.holo-foil,.holo-glow,.mq-glow,.mq-bulbs,.mq-label,.tr-glow,.tr-col,.tr-cursor,.vhs-glow,.vhs-screen,.vhs-tri,.vhs-ones,.vhs-tens,.vhs-track,.orb-stars,.orb-path,.orb-moon{animation:none}
+  .tr-label{animation:none;clip-path:none}
+  .tr-cursor{transform:translateX(calc(19ch + 19px))}
+  .cyc-1{opacity:1;visibility:visible}
   }
   
   /* Footer styles */
