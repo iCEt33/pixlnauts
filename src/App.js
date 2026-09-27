@@ -3193,7 +3193,6 @@ const styles = `
   .holo-ghost{visibility:hidden;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap}
   .holo-foil{position:absolute;left:-60%;top:0;bottom:0;width:220%;background:linear-gradient(110deg,rgba(255,255,85,0) 30%,rgba(255,255,85,.6) 40%,rgba(255,255,255,.95) 46%,rgba(85,255,255,.45) 52%,rgba(255,255,85,0) 62%);transform:translateX(-30%);animation:holo-foil 5s ease-in-out infinite;pointer-events:none}
   .holo-label{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#000;font-weight:bold;font-size:18px;letter-spacing:1px;white-space:nowrap;text-shadow:2px 2px 0 rgba(0,90,40,.55);transform:translateZ(16px);pointer-events:none}
-  .cyc:hover .holo-card,.cyc:hover .holo-foil,.cyc:hover .holo-glow{animation-play-state:paused}
   .cyc:active .holo-face{background:#0c0}
   @keyframes holo-tilt{0%,100%{transform:rotateX(16deg) rotateY(-24deg)}50%{transform:rotateX(-12deg) rotateY(24deg)}}
   @keyframes holo-foil{0%,100%{transform:translateX(-30%)}50%{transform:translateX(18%)}}
