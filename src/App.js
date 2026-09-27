@@ -3110,19 +3110,19 @@ const styles = `
   .cyc{position:relative;display:inline-block;text-decoration:none;font-family:'PixelFont',monospace;line-height:1.4;-webkit-tap-highlight-color:transparent}
   .cyc:focus-visible{outline:3px dashed #ff5;outline-offset:6px}
   .cyc-stage{position:relative;display:grid;place-items:center}
-  .cyc-layer{grid-area:1/1;display:block;transform-origin:50% 50%;opacity:0;visibility:hidden;animation:cyc-show 40s steps(1,end) infinite}
+  .cyc-layer{grid-area:1/1;display:block;transform-origin:50% 50%;opacity:0;visibility:hidden;animation:cyc-show 80s steps(1,end) infinite}
   .cyc-1{animation-delay:0s}
-  .cyc-5{animation-delay:-35s}
-  .cyc-2{animation-delay:-30s}
-  .cyc-8{animation-delay:-25s}
-  .cyc-3{animation-delay:-20s}
-  .cyc-6{animation-delay:-15s}
-  .cyc-4{animation-delay:-10s}
-  .cyc-7{animation-delay:-5s}
+  .cyc-5{animation-delay:-70s}
+  .cyc-2{animation-delay:-60s}
+  .cyc-8{animation-delay:-50s}
+  .cyc-3{animation-delay:-40s}
+  .cyc-6{animation-delay:-30s}
+  .cyc-4{animation-delay:-20s}
+  .cyc-7{animation-delay:-10s}
   .cyc-sweep{position:absolute;left:50%;top:50%;width:360px;height:100px;margin:-50px 0 0 -180px;overflow:hidden;pointer-events:none}
-  .cyc-sweep::before{content:'';position:absolute;left:0;right:0;top:0;height:28px;background:linear-gradient(rgba(0,255,0,0),rgba(0,255,0,.2),rgba(0,255,0,0));transform:translateY(110px);animation:cyc-sweep 5s linear infinite}
-  @keyframes cyc-show{0%{opacity:.35;visibility:visible;transform:translateX(-2px)}.25%{opacity:.8;transform:translateX(1px)}.5%{opacity:.45;transform:translateX(0)}.75%{opacity:1;transform:translateX(0)}12%{opacity:1;visibility:visible;transform:translateX(0)}12.25%{opacity:.5;transform:translateX(2px)}12.5%{opacity:.8;transform:translateX(-1px)}12.75%{opacity:0;visibility:hidden;transform:translateX(0)}100%{opacity:0;visibility:hidden;transform:translateX(0)}}
-  @keyframes cyc-sweep{0%{transform:translateY(-28px)}8%,100%{transform:translateY(110px)}}
+  .cyc-sweep::before{content:'';position:absolute;left:0;right:0;top:0;height:28px;background:linear-gradient(rgba(0,255,0,0),rgba(0,255,0,.2),rgba(0,255,0,0));transform:translateY(110px);animation:cyc-sweep 10s linear infinite}
+  @keyframes cyc-show{0%{opacity:.35;visibility:visible;transform:translateX(-2px)}.125%{opacity:.8;transform:translateX(1px)}.25%{opacity:.45;transform:translateX(0)}.375%{opacity:1;transform:translateX(0)}12.25%{opacity:1;visibility:visible;transform:translateX(0)}12.375%{opacity:.5;transform:translateX(2px)}12.5%{opacity:.8;transform:translateX(-1px)}12.625%{opacity:0;visibility:hidden;transform:translateX(0)}100%{opacity:0;visibility:hidden;transform:translateX(0)}}
+  @keyframes cyc-sweep{0%{transform:translateY(-28px)}4%,100%{transform:translateY(110px)}}
 
   .arc{position:relative;display:inline-block;padding:0 6px 6px 0}
   .arc-glow{position:absolute;left:-44px;right:-50px;top:-30px;bottom:-40px;background:radial-gradient(closest-side,rgba(0,255,0,.55),rgba(0,255,0,.15) 60%,rgba(0,255,0,0));pointer-events:none;animation:arc-glow 2.6s ease-in-out infinite}
