@@ -1017,10 +1017,22 @@ const WalletDonation = () => {
                     if (!connected) {
                       return (
                         <button 
+                          type="button"
                           onClick={openConnectModal} 
-                          className="pixel-button wallet-connect-btn"
+                          className="fx fx-link wallet-connect-btn"
                         >
-                          <span className="whitepaper-button-text">CONNECT WALLET</span>
+                          <span className="fx-depth" aria-hidden="true" />
+                          <span className="fx-face">
+                            <span className="link-spin" aria-hidden="true" />
+                            <span className="link-panel">
+                              <span className="link-chain" aria-hidden="true">
+                                <span className="link-a" />
+                                <span className="link-b" />
+                                <span className="link-spark" />
+                              </span>
+                              <span className="fx-label">CONNECT WALLET</span>
+                            </span>
+                          </span>
                         </button>
                       );
                     }
@@ -1236,19 +1248,43 @@ const Tab = ({ title, children, isOpen, toggleTab, focusKey }) => {
 };
 
 // Introduction tab content
+// The YouTube player is heavy and was loading while the first tab opened,
+// which made the opening stutter on phones. Now we show the video's thumbnail
+// with our own play button, and only load the real player when it's pressed.
+const INTRO_VIDEO_ID = 'WF31W8mmDFw';
+
 const IntroductionTab = ({ focusKey }) => {
+  const [playVideo, setPlayVideo] = useState(false);
+
   return (
     <div className="introduction">
       <div className="video-container">
-        <iframe 
-          width="100%" 
-          height="315" 
-          src="https://www.youtube.com/embed/WF31W8mmDFw" 
-          title="PIXLNAUTS Introduction Video"
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          allowFullScreen
-        ></iframe>
+        {playVideo ? (
+          <iframe 
+            width="100%" 
+            height="315" 
+            src={`https://www.youtube.com/embed/${INTRO_VIDEO_ID}?autoplay=1`} 
+            title="PIXLNAUTS Introduction Video"
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <button
+            type="button"
+            className="video-facade"
+            onClick={() => setPlayVideo(true)}
+            aria-label="Play the PIXLNAUTS introduction video"
+          >
+            <img
+              className="video-facade-img"
+              src={`https://i.ytimg.com/vi/${INTRO_VIDEO_ID}/hqdefault.jpg`}
+              alt=""
+              decoding="async"
+            />
+            <span className="video-facade-play" aria-hidden="true" />
+          </button>
+        )}
       </div>
       <p>
         <ScrambleText 
@@ -1265,8 +1301,12 @@ const IntroductionTab = ({ focusKey }) => {
         />
       </p>
       <div className="whitepaper-link">
-        <a href="https://pixelnauts.gitbook.io/pixel-cryptonauts-whitepaper" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">READ WHITEPAPER</span>
+        <a href="https://pixelnauts.gitbook.io/pixel-cryptonauts-whitepaper" target="_blank" rel="noopener noreferrer" className="fx fx-paper">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="paper-feed" aria-hidden="true" />
+            <span className="fx-label">READ WHITEPAPER</span>
+          </span>
         </a>
       </div>
     </div>
@@ -1285,14 +1325,29 @@ const SocialsTab = ({ focusKey }) => {
         />
       </p>
       <div className="social-links">
-        <a href="https://discord.gg/W73cvPDcgK" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">DISCORD</span>
+        <a href="https://discord.gg/W73cvPDcgK" target="_blank" rel="noopener noreferrer" className="fx fx-chat">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="fx-label">DISCORD</span>
+            <span className="chat-dots" aria-hidden="true"><span /><span /><span /></span>
+            <span className="chat-tail" aria-hidden="true" />
+          </span>
+          <span className="chat-ping" aria-hidden="true">1</span>
         </a>
-        <a href="https://twitter.com/PixlCryptonauts" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">TWITTER</span>
+        <a href="https://twitter.com/PixlCryptonauts" target="_blank" rel="noopener noreferrer" className="fx fx-feed">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="feed-roll" aria-hidden="true" />
+            <span className="fx-label">TWITTER</span>
+          </span>
         </a>
-        <a href="https://t.me/projectcosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">TELEGRAM</span>
+        <a href="https://t.me/projectcosmos" target="_blank" rel="noopener noreferrer" className="fx fx-morse">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="morse-lamp" aria-hidden="true" />
+            <span className="morse-tape" aria-hidden="true"><span className="morse-strip" /></span>
+            <span className="fx-label">TELEGRAM</span>
+          </span>
         </a>
       </div>
     </div>
@@ -1312,11 +1367,27 @@ const GamesTab = ({ focusKey }) => {
         />
       </p>
       <div className="games-links">
-        <a href="https://icet33.itch.io/project-cosmos" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">PROJECT: COSMOS - SPACESHIP SHOOTER</span>
+        <a href="https://icet33.itch.io/project-cosmos" target="_blank" rel="noopener noreferrer" className="fx fx-shmup">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="shmup-stars" aria-hidden="true" />
+            <span className="shmup-stars shmup-stars-b" aria-hidden="true" />
+            <span className="shmup-shot" aria-hidden="true" />
+            <span className="shmup-ship" aria-hidden="true" />
+            <span className="shmup-boom" aria-hidden="true" />
+            <span className="fx-label">PROJECT: COSMOS</span>
+          </span>
         </a>
-        <a href="https://icet33.itch.io/pixelnaut" target="_blank" rel="noopener noreferrer" className="pixel-button">
-          <span className="whitepaper-button-text">PIXELNAUT AIM TRAINER</span>
+        <a href="https://icet33.itch.io/pixelnaut" target="_blank" rel="noopener noreferrer" className="fx fx-aim">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="aim-target aim-t1" aria-hidden="true" />
+            <span className="aim-target aim-t2" aria-hidden="true" />
+            <span className="aim-target aim-t3" aria-hidden="true" />
+            <span className="aim-cross" aria-hidden="true"><span className="aim-reticle" /></span>
+            <span className="aim-lock" aria-hidden="true" />
+            <span className="fx-label">PIXELNAUT AIM TRAINER</span>
+          </span>
         </a>
       </div>
     </div>
@@ -1351,8 +1422,15 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
             />
           </p>
           <div className="beebo-links">
-            <button onClick={onLaunch} className="pixel-button">
-              <span className="whitepaper-button-text">LAUNCH B-b0 CUSTOMIZER</span>
+            <button type="button" onClick={onLaunch} className="fx fx-gear">
+              <span className="fx-depth" aria-hidden="true" />
+              <span className="fx-face">
+                <span className="gear-belt gear-belt-top" aria-hidden="true" />
+                <span className="gear-belt gear-belt-bottom" aria-hidden="true" />
+                <span className="gear gear-l" aria-hidden="true" />
+                <span className="gear gear-r" aria-hidden="true" />
+                <span className="fx-label">LAUNCH B-b0 CUSTOMIZER</span>
+              </span>
             </button>
           </div>
         </>
@@ -1367,16 +1445,33 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
             />
           </p>
           <div className="beebo-links">
-            <button onClick={onLaunch} className="pixel-button">
-              <span className="whitepaper-button-text">LAUNCH B-b0 CUSTOMIZER</span>
+            <button type="button" onClick={onLaunch} className="fx fx-gear">
+              <span className="fx-depth" aria-hidden="true" />
+              <span className="fx-face">
+                <span className="gear-belt gear-belt-top" aria-hidden="true" />
+                <span className="gear-belt gear-belt-bottom" aria-hidden="true" />
+                <span className="gear gear-l" aria-hidden="true" />
+                <span className="gear gear-r" aria-hidden="true" />
+                <span className="fx-label">LAUNCH B-b0 CUSTOMIZER</span>
+              </span>
             </button>
           </div>
         </>
       )}
       {/* Keep the Discord invite button for all devices */}
       <div className={`beebo-links ${isMobile ? 'mobile-only-links' : 'secondary-links'}`}>
-        <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="pixel-button discord-button">
-          <span className="whitepaper-button-text">INVITE B-b0 TO YOUR DISCORD SERVER!</span>
+        <a href="https://discord.com/oauth2/authorize?client_id=1284849644345626664" target="_blank" rel="noopener noreferrer" className="fx fx-beam">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="beam-lines" aria-hidden="true" />
+            <span className="beam-sweep" aria-hidden="true" />
+            <span className="beam-mote beam-m1" aria-hidden="true" />
+            <span className="beam-mote beam-m2" aria-hidden="true" />
+            <span className="beam-mote beam-m3" aria-hidden="true" />
+            <span className="beam-mote beam-m4" aria-hidden="true" />
+            <span className="beam-mote beam-m5" aria-hidden="true" />
+            <span className="fx-label">INVITE B-b0 TO YOUR DISCORD SERVER!</span>
+          </span>
         </a>
       </div>
       
@@ -1396,8 +1491,12 @@ const BeeboCustomizerTab = ({ onLaunch, focusKey }) => {
           />
         </p>
         <div className="beebo-links">
-          <a href="https://github.com/iCEt33/beebo-robot" target="_blank" rel="noopener noreferrer" className="pixel-button mango-button">
-            <span className="whitepaper-button-text">PROJECT: MANGO (OPEN SOURCE)</span>
+          <a href="https://github.com/iCEt33/beebo-robot" target="_blank" rel="noopener noreferrer" className="fx fx-peel">
+            <span className="fx-depth" aria-hidden="true" />
+            <span className="fx-face">
+              <span className="fx-label">PROJECT: MANGO (OPEN SOURCE)</span>
+              <span className="peel" aria-hidden="true" />
+            </span>
           </a>
         </div>
       </div>
@@ -1785,11 +1884,20 @@ const PxPFlipTab = ({ focusKey }) => {
             />
             <button 
               type="submit" 
-              className="pixel-button pxp-submit-btn"
+              className="fx fx-lcd"
               disabled={isSubmitting}
             >
-              <span className="whitepaper-button-text">
-                {status === 'loading' ? 'JOINING...' : 'JOIN WAITLIST'}
+              <span className="fx-depth" aria-hidden="true" />
+              <span className="fx-face">
+                <span className="lcd-screen">
+                  <span className="lcd-status" aria-hidden="true">
+                    <span className="lcd-bars"><span /><span /><span /><span /></span>
+                    <span className="lcd-batt" />
+                  </span>
+                  <span className="fx-label">
+                    {status === 'loading' ? 'JOINING...' : 'JOIN WAITLIST'}
+                  </span>
+                </span>
               </span>
             </button>
           </div>
@@ -1935,10 +2043,35 @@ const DonationMilestonesTab = ({ currentUsdValue, focusKey }) => {
 const TabsManager = ({ openCustomizer, currentUsdValue, focusKey }) => {
   const [openTab, setOpenTab] = useState(null);
 
-  // Open the Introduction tab with a short delay so the animation plays visibly
+  // Open the Introduction tab once the page has settled, so the opening
+  // animation isn't fighting the page load for the phone's processor.
+  // Waits at least 400 ms, then for the browser's first idle moment, and
+  // never longer than 1.1 s in total. The plain timer is the guaranteed
+  // fallback, because Safari's idle support is unreliable.
+  // Never overrides a tab the visitor already opened themselves.
   useEffect(() => {
-    const t = setTimeout(() => setOpenTab(0), 400);
-    return () => clearTimeout(t);
+    let done = false;
+    let idleId = null;
+    let capTimer = null;
+    const open = () => {
+      if (done) return;
+      done = true;
+      setOpenTab(prev => (prev === null ? 0 : prev));
+    };
+    const startTimer = setTimeout(() => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(open);
+      }
+      capTimer = setTimeout(open, 700);
+    }, 400);
+    return () => {
+      done = true;
+      clearTimeout(startTimer);
+      clearTimeout(capTimer);
+      if (idleId !== null && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+    };
   }, []);
   
   const toggleTab = (index) => {
@@ -2217,10 +2350,11 @@ const GlobalDashboard = ({ onUsdValueChange, focusKey }) => {
     const myRows = data.donations.filter(d => d.from === me);
     const userAmount = myRows.reduce((s, r) => s + r.amountPOL, 0);
     const userUsd = myRows.reduce((s, r) => s + r.usdAtTime, 0);
-    // CO2 is computed from the unrounded USD (1 USD worth = 1 tree-equivalent),
-    // not the floored tree count, so sub-dollar donations still show CO2 instead
-    // of rounding to zero. Keep 10 in sync with CO2_KG_PER_TREE on the server.
-    const userCo2 = (userUsd * 10) / 1000;
+    // CO2 comes from the server: every donation carries its own co2Kg
+    // (10 kg per tree per YEAR, stacked annually; see api/donations.js).
+    // Community CO2 = sum over ALL donations, yours = sum over YOUR donations,
+    // so the two always use the same logic.
+    const userCo2 = myRows.reduce((s, r) => s + (r.co2Kg || 0), 0) / 1000;
 
     const byDonor = new Map();
     for (const d of data.donations) byDonor.set(d.from, (byDonor.get(d.from) || 0) + d.amountPOL);
@@ -2536,6 +2670,7 @@ const styles = `
   /* System Check Terminal Styling */
   .system-check {
     height: 100vh;
+    height: 100svh; /* = the screen you can actually see, even with a phone's address bar showing */
     width: 100%;
     display: flex;
     justify-content: center;
@@ -2547,6 +2682,7 @@ const styles = `
     width: 90%;
     max-width: 700px;
     height: 80vh;
+    height: 80svh;
     background-color: #000;
     border: 2px solid #0f0;
     padding: 20px;
@@ -2913,6 +3049,7 @@ const styles = `
     align-items: center;
     justify-content: center;
     height: 100vh;
+    height: 100svh;
     width: 100%;
     background-color: #000;
     position: fixed;
@@ -3289,6 +3426,224 @@ const styles = `
   .cyc-1{opacity:1;visibility:visible}
   }
   
+  /* Intro video: a thumbnail with our play button; the real YouTube player loads on tap */
+  .video-facade{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;border:0;background:#000;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .video-facade-img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;image-rendering:auto;opacity:.75;transition:opacity .2s steps(2,end)}
+  .video-facade::after{content:'';position:absolute;left:0;top:0;right:0;bottom:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(rgba(0,0,0,.28) 0 1px,rgba(0,0,0,0) 1px 3px)}
+  .video-facade-play{position:absolute;left:50%;top:50%;z-index:2;width:76px;height:52px;margin:-26px 0 0 -38px;background:#0f0;box-shadow:5px 5px 0 #063;transition:transform .12s steps(2,end)}
+  .video-facade-play::before{content:'';position:absolute;left:29px;top:14px;width:22px;height:24px;background:#000;clip-path:polygon(0 0,100% 50%,0 100%)}
+  .video-facade:focus-visible{outline:3px dashed #ff5;outline-offset:-7px}
+  .video-facade:focus-visible .video-facade-img{opacity:1}
+  @media (hover:hover){.video-facade:hover .video-facade-img{opacity:1}.video-facade:hover .video-facade-play{transform:translate(-2px,-2px)}}
+  .video-facade:active .video-facade-play{transform:translate(5px,5px);box-shadow:none}
+
+  /* A closed tab is invisible, so freeze the Play Store button's animations
+     instead of letting them run in the background (keeps phones smooth) */
+  .tab.closed .cyc *,.tab.closed .cyc *::before,.tab.closed .cyc *::after{animation-play-state:paused !important}
+
+  /* ===== FX BUTTONS: one unique look per button, pure CSS (6.0) ===== */
+  .fx{position:relative;display:inline-block;max-width:100%;margin:0;padding:0 5px 5px 0;border:0;background:none;font-family:'PixelFont',monospace;line-height:1.35;text-align:center;text-decoration:none;vertical-align:middle;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .fx:focus-visible{outline:3px dashed #ff5;outline-offset:6px}
+  .fx-depth{position:absolute;left:5px;top:5px;right:0;bottom:0;pointer-events:none}
+  .fx-face{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;overflow:hidden;transition:transform .12s steps(2,end)}
+  .fx-label{position:relative;z-index:2;display:block;font-weight:bold;font-size:18px;letter-spacing:1px}
+  @media (hover:hover){.fx:hover .fx-face{transform:translate(-2px,-2px)}}
+  .fx:active .fx-face{transform:translate(5px,5px)}
+  .fx:disabled{cursor:not-allowed}
+  .fx:disabled .fx-face{transform:none}
+
+  /* READ WHITEPAPER: tractor-feed printer paper */
+  .fx-paper .fx-depth{background:#063}
+  .fx-paper .fx-face{padding:15px 52px;background:#f3fbec}
+  .paper-feed{position:absolute;left:0;right:0;top:0;height:calc(100% + 144px);pointer-events:none;background:radial-gradient(circle at 50% 50%,#111 0 3px,rgba(17,17,17,0) 3.6px) 8px 0/12px 16px repeat-y,radial-gradient(circle at 50% 50%,#111 0 3px,rgba(17,17,17,0) 3.6px) right 8px top 0/12px 16px repeat-y,repeating-linear-gradient(#9fc790 0 4px,rgba(159,199,144,0) 4px 8px) 28px 0/2px 100% no-repeat,repeating-linear-gradient(#9fc790 0 4px,rgba(159,199,144,0) 4px 8px) right 28px top 0/2px 100% no-repeat,repeating-linear-gradient(#f3fbec 0 24px,#d2efc6 24px 48px);animation:paper-feed 3.6s steps(36,end) infinite}
+  .paper-feed::before,.paper-feed::after{content:'';position:absolute;left:0;right:0;top:0;border-top:2px dashed #86b277}
+  .paper-feed::after{top:144px}
+  .fx-paper .fx-label{color:#000;text-shadow:1px 0 0 rgba(0,0,0,.3)}
+  @media (hover:hover){.fx-paper:hover .paper-feed{animation-duration:1.2s}}
+  @keyframes paper-feed{from{transform:translateY(0)}to{transform:translateY(-144px)}}
+
+  /* DISCORD: chat bubble, someone is typing, new-message ping */
+  .fx-chat .fx-depth{background:#2b2f8f}
+  .fx-chat .fx-face{overflow:visible;padding:17px 26px;background:#5865f2}
+  .chat-tail{position:absolute;left:16px;top:100%;width:15px;height:12px;background:#5865f2;clip-path:polygon(0 0,100% 0,100% 33%,67% 33%,67% 67%,33% 67%,33% 100%,0 100%)}
+  .chat-dots{position:relative;z-index:2;display:flex;gap:4px;padding-top:6px}
+  .chat-dots span{width:5px;height:5px;background:#fff;animation:chat-dot 1.2s steps(1,end) infinite}
+  .chat-dots span:nth-child(2){animation-delay:.15s}
+  .chat-dots span:nth-child(3){animation-delay:.3s}
+  .chat-ping{position:absolute;right:-3px;top:-8px;z-index:3;min-width:18px;height:18px;padding:0 4px;background:#ed4245;color:#fff;font-weight:bold;font-size:11px;line-height:18px;box-shadow:0 0 0 2px #111;transform:scale(0);animation:chat-ping 4.8s steps(1,end) infinite;pointer-events:none}
+  .fx-chat .fx-label{color:#fff}
+  @keyframes chat-dot{0%{transform:translateY(0)}20%{transform:translateY(-4px)}40%,100%{transform:translateY(0)}}
+  @keyframes chat-ping{0%,55%{transform:scale(0)}56%{transform:scale(1.4)}58%,92%{transform:scale(1)}93%,100%{transform:scale(0)}}
+
+  /* TWITTER: a timeline you flick through (doomscroll on hover) */
+  .fx-feed .fx-depth{background:#0b5f91}
+  .fx-feed .fx-face{padding:17px 30px;background:#1da1f2}
+  .feed-roll{position:absolute;left:0;right:0;top:0;height:calc(100% + 56px);pointer-events:none;opacity:.55;background:linear-gradient(rgba(255,255,255,0) 0 5px,#fff 5px 13px,rgba(255,255,255,0) 13px) 8px 0/8px 28px repeat-y,linear-gradient(rgba(255,255,255,0) 0 6px,#fff 6px 9px,rgba(255,255,255,0) 9px) 22px 0/58% 28px repeat-y,linear-gradient(rgba(255,255,255,0) 0 12px,#fff 12px 15px,rgba(255,255,255,0) 15px) 22px 0/34% 28px repeat-y,linear-gradient(rgba(0,40,80,0) 0 26px,rgba(0,40,80,.45) 26px 28px) 0 0/100% 28px repeat-y;animation:feed-flick 2.6s infinite}
+  .fx-feed .fx-label{color:#000;text-shadow:2px 0 #1da1f2,-2px 0 #1da1f2,0 2px #1da1f2,0 -2px #1da1f2,2px 2px #1da1f2,-2px -2px #1da1f2,2px -2px #1da1f2,-2px 2px #1da1f2}
+  @media (hover:hover){.fx-feed:hover .feed-roll{animation:feed-doom .45s linear infinite}}
+  @keyframes feed-flick{0%{transform:translateY(0);animation-timing-function:cubic-bezier(.2,.9,.3,1)}30%,100%{transform:translateY(-56px)}}
+  @keyframes feed-doom{from{transform:translateY(0)}to{transform:translateY(-56px)}}
+
+  /* TELEGRAM: a telegraph that taps out T-E-L-E-G-R-A-M in real Morse code */
+  .fx-morse .fx-depth{background:#0b4f72}
+  .fx-morse .fx-face{padding:11px 26px 17px 42px;background:#071722;border:3px solid #2aabee}
+  .morse-lamp{position:absolute;left:14px;top:50%;width:12px;height:12px;margin-top:-10px;background:#123447;box-shadow:0 0 0 2px #0b2433}
+  .morse-lamp::after{content:'';position:absolute;left:0;top:0;right:0;bottom:0;background:#9fe3ff;box-shadow:0 0 10px 3px rgba(42,171,238,.85);opacity:0;animation:morse-blink 7s steps(1,end) infinite}
+  .morse-tape{position:absolute;left:0;right:0;bottom:3px;height:8px;overflow:hidden;background:#0c2535}
+  .morse-tape::after{content:'';position:absolute;left:19px;top:0;bottom:0;width:2px;background:rgba(159,227,255,.55)}
+  .morse-strip{position:absolute;left:0;top:0;bottom:0;width:calc(100% + 280px);background:linear-gradient(90deg,#2aabee 0px 12px,rgba(42,171,238,0) 12px 24px,#2aabee 24px 28px,rgba(42,171,238,0) 28px 40px,#2aabee 40px 44px,rgba(42,171,238,0) 44px 48px,#2aabee 48px 60px,rgba(42,171,238,0) 60px 64px,#2aabee 64px 68px,rgba(42,171,238,0) 68px 72px,#2aabee 72px 76px,rgba(42,171,238,0) 76px 88px,#2aabee 88px 92px,rgba(42,171,238,0) 92px 104px,#2aabee 104px 116px,rgba(42,171,238,0) 116px 120px,#2aabee 120px 132px,rgba(42,171,238,0) 132px 136px,#2aabee 136px 140px,rgba(42,171,238,0) 140px 152px,#2aabee 152px 156px,rgba(42,171,238,0) 156px 160px,#2aabee 160px 172px,rgba(42,171,238,0) 172px 176px,#2aabee 176px 180px,rgba(42,171,238,0) 180px 192px,#2aabee 192px 196px,rgba(42,171,238,0) 196px 200px,#2aabee 200px 212px,rgba(42,171,238,0) 212px 224px,#2aabee 224px 236px,rgba(42,171,238,0) 236px 240px,#2aabee 240px 252px,rgba(42,171,238,0) 252px 280px) 0 50%/280px 4px repeat-x;animation:morse-tape 7s linear infinite}
+  .fx-morse .fx-label{color:#e8f8ff;text-shadow:0 0 6px rgba(42,171,238,.8)}
+  @media (hover:hover){.fx-morse:hover .fx-face{border-color:#9fe3ff}}
+  @keyframes morse-tape{from{transform:translateX(0)}to{transform:translateX(-280px)}}
+  @keyframes morse-blink{0%{opacity:0}1.429%{opacity:1}2.857%{opacity:0}7.143%{opacity:1}8.571%{opacity:0}10%{opacity:1}14.286%{opacity:0}15.714%{opacity:1}17.143%{opacity:0}18.571%{opacity:1}20%{opacity:0}24.286%{opacity:1}25.714%{opacity:0}30%{opacity:1}34.286%{opacity:0}35.714%{opacity:1}40%{opacity:0}41.429%{opacity:1}42.857%{opacity:0}47.143%{opacity:1}48.571%{opacity:0}50%{opacity:1}54.286%{opacity:0}55.714%{opacity:1}57.143%{opacity:0}61.429%{opacity:1}62.857%{opacity:0}64.286%{opacity:1}68.571%{opacity:0}72.857%{opacity:1}77.143%{opacity:0}78.571%{opacity:1}82.857%{opacity:0}92.857%{opacity:1}97.143%{opacity:0}100%{opacity:0}}
+
+  /* PROJECT: COSMOS: side-scrolling space shooter */
+  .fx-shmup .fx-depth{background:#063}
+  .fx-shmup .fx-face{padding:15px 46px;background:#02030a;border:3px solid #0f0}
+  .shmup-stars{position:absolute;left:0;top:0;bottom:0;width:calc(100% + 64px);pointer-events:none;background:radial-gradient(circle,#fff 0 1px,rgba(255,255,255,0) 1.5px) 5px 7px/64px 36px,radial-gradient(circle,#9f9 0 1px,rgba(153,255,153,0) 1.5px) 37px 25px/64px 36px;animation:shmup-stars 1.6s linear infinite}
+  .shmup-stars-b{width:calc(100% + 48px);opacity:.55;background:radial-gradient(circle,#ff5 0 1px,rgba(255,255,85,0) 1.5px) 13px 3px/48px 30px,radial-gradient(circle,#fff 0 1px,rgba(255,255,255,0) 1.5px) 31px 19px/48px 30px;animation:shmup-stars-b 3.2s linear infinite}
+  .shmup-ship{position:absolute;z-index:1;left:10px;top:50%;width:2px;height:2px;margin-top:-7px;box-shadow:4px 0 #0f0,6px 0 #0f0,6px 2px #0f0,8px 2px #0f0,10px 2px #0f0,6px 4px #0f0,8px 4px #eaffea,10px 4px #eaffea,12px 4px #0f0,14px 4px #0f0,4px 6px #0f0,6px 6px #0f0,8px 6px #eaffea,10px 6px #eaffea,12px 6px #eaffea,14px 6px #0f0,16px 6px #0f0,18px 6px #0f0,6px 8px #0f0,8px 8px #eaffea,10px 8px #eaffea,12px 8px #0f0,14px 8px #0f0,6px 10px #0f0,8px 10px #0f0,10px 10px #0f0,4px 12px #0f0,6px 12px #0f0;animation:shmup-bob 1.2s steps(1,end) infinite}
+  .shmup-ship::after{content:'';position:absolute;left:2px;top:6px;width:2px;height:2px;background:#ff5;box-shadow:-2px 0 #f80;animation:shmup-flame .2s steps(1,end) infinite}
+  .shmup-shot{position:absolute;left:30px;right:6px;top:50%;height:2px;margin-top:-1px;pointer-events:none;animation:shmup-shot 1.4s linear infinite}
+  .shmup-shot::before{content:'';position:absolute;left:0;top:0;width:10px;height:2px;background:#fff;box-shadow:0 0 4px #5f5}
+  .shmup-boom{position:absolute;z-index:1;right:12px;top:50%;width:2px;height:2px;margin-top:-1px;background:#fff;box-shadow:0 -4px #ff5,0 4px #ff5,-4px 0 #ff5,4px 0 #ff5,-3px -3px #f80,3px 3px #f80,3px -3px #f80,-3px 3px #f80,0 -8px #f80,0 8px #f80,-8px 0 #f80,8px 0 #f80;opacity:0;animation:shmup-boom 1.4s steps(1,end) infinite}
+  .fx-shmup .fx-label{padding:2px 8px;color:#ff5;background:#02030a;box-shadow:0 0 0 1px #063}
+  @media (hover:hover){.fx-shmup:hover .shmup-shot,.fx-shmup:hover .shmup-boom{animation-duration:.7s}}
+  @keyframes shmup-stars{to{transform:translateX(-64px)}}
+  @keyframes shmup-stars-b{to{transform:translateX(-48px)}}
+  @keyframes shmup-bob{0%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+  @keyframes shmup-flame{0%{opacity:1}50%{opacity:.3}}
+  @keyframes shmup-shot{from{transform:translateX(0)}to{transform:translateX(100%)}}
+  @keyframes shmup-boom{0%{opacity:1;transform:scale(1.2)}8%{opacity:1;transform:scale(1.6)}14%,88%{opacity:0;transform:scale(.4)}94%{opacity:1;transform:scale(.8)}}
+
+  /* AIM TRAINER: targets pop up, the crosshair flicks to them; hover locks on */
+  .fx-aim .fx-depth{background:#086}
+  .fx-aim .fx-face{padding:17px 52px;background-color:#0f0;background-image:linear-gradient(rgba(0,90,0,.16) 1px,rgba(0,90,0,0) 1px),linear-gradient(90deg,rgba(0,90,0,.16) 1px,rgba(0,90,0,0) 1px);background-size:12px 12px}
+  .aim-target{position:absolute;z-index:1;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}
+  .aim-target::before{content:'';position:absolute;left:0;top:0;width:18px;height:18px;background:#f33;box-shadow:inset 0 0 0 3px #f33,inset 0 0 0 6px #fff;transform:scale(0);animation:aim-pop 4.5s steps(1,end) infinite}
+  .aim-target::after{content:'+100';position:absolute;left:50%;bottom:100%;width:30px;margin-left:-15px;color:#000;font-size:10px;font-weight:bold;line-height:1;text-align:center;opacity:0;animation:aim-score 4.5s steps(1,end) infinite}
+  .aim-t1{left:9%;top:32%}
+  .aim-t2{left:91%;top:68%}
+  .aim-t3{left:90%;top:30%}
+  .aim-t1::before{transform:scale(1)}
+  .aim-t2::before,.aim-t2::after{animation-delay:-3s}
+  .aim-t3::before,.aim-t3::after{animation-delay:-1.5s}
+  .aim-cross{position:absolute;z-index:3;left:0;top:0;width:100%;height:100%;pointer-events:none;transform:translate(9%,32%);animation:aim-move 4.5s ease-in-out infinite}
+  .aim-reticle{position:absolute;left:-11px;top:-11px;width:22px;height:22px;background:linear-gradient(#000,#000) 0 10px/7px 2px no-repeat,linear-gradient(#000,#000) 15px 10px/7px 2px no-repeat,linear-gradient(#000,#000) 10px 0/2px 7px no-repeat,linear-gradient(#000,#000) 10px 15px/2px 7px no-repeat,linear-gradient(#000,#000) 10px 10px/2px 2px no-repeat}
+  .aim-lock{position:absolute;z-index:3;left:8px;right:8px;top:6px;bottom:6px;pointer-events:none;opacity:0;transform:scale(1.2);transition:transform .2s steps(3,end),opacity .2s steps(2,end);background:linear-gradient(#000,#000) 0 0/12px 3px no-repeat,linear-gradient(#000,#000) 0 0/3px 12px no-repeat,linear-gradient(#000,#000) 100% 0/12px 3px no-repeat,linear-gradient(#000,#000) 100% 0/3px 12px no-repeat,linear-gradient(#000,#000) 0 100%/12px 3px no-repeat,linear-gradient(#000,#000) 0 100%/3px 12px no-repeat,linear-gradient(#000,#000) 100% 100%/12px 3px no-repeat,linear-gradient(#000,#000) 100% 100%/3px 12px no-repeat}
+  .fx-aim .fx-label{color:#000}
+  @media (hover:hover){
+  .fx-aim:hover .aim-lock{opacity:1;transform:scale(1)}
+  .fx-aim:hover .aim-cross,.fx-aim:hover .aim-target{visibility:hidden}
+  }
+  .fx-aim:focus-visible .aim-lock{opacity:1;transform:scale(1)}
+  @keyframes aim-pop{0%{transform:scale(0)}2%{transform:scale(.5)}4%{transform:scale(1)}16%{transform:scale(1.35);background:#fff}19%,100%{transform:scale(0)}}
+  @keyframes aim-score{0%,16%{opacity:0;transform:translateY(0)}17%{opacity:1;transform:translateY(0)}20%{opacity:1;transform:translateY(-4px)}23%{opacity:1;transform:translateY(-8px)}26%,100%{opacity:0;transform:translateY(-10px)}}
+  @keyframes aim-move{0%{transform:translate(12%,64%)}6%{transform:translate(15%,56%);animation-timing-function:cubic-bezier(.2,.9,.3,1)}13%,19%{transform:translate(9%,32%)}39.33%{transform:translate(14%,52%);animation-timing-function:cubic-bezier(.2,.9,.3,1)}46.33%,52.33%{transform:translate(91%,68%)}72.67%{transform:translate(87%,50%);animation-timing-function:cubic-bezier(.2,.9,.3,1)}79.67%,85.67%{transform:translate(90%,30%)}92%{transform:translate(88%,36%);animation-timing-function:cubic-bezier(.2,.9,.3,1)}96%,100%{transform:translate(12%,64%)}}
+
+  /* LAUNCH B-b0 CUSTOMIZER: robot assembly line (conveyor + gears) */
+  .fx-gear .fx-depth{background:#7a6a00}
+  .fx-gear .fx-face{padding:21px 52px;background:#ff5}
+  .gear-belt{position:absolute;left:0;right:0;height:7px;overflow:hidden;pointer-events:none}
+  .gear-belt-top{top:0}
+  .gear-belt-bottom{bottom:0}
+  .gear-belt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:calc(100% + 16px);background:linear-gradient(45deg,#111 25%,rgba(17,17,17,0) 25%,rgba(17,17,17,0) 50%,#111 50%,#111 75%,rgba(17,17,17,0) 75%) 0 0/16px 16px;animation:gear-belt .8s steps(4,end) infinite}
+  .gear-belt-bottom::before{animation-direction:reverse}
+  .gear{position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;background:#222;animation:gear-spin 1.2s steps(6,end) infinite}
+  .gear::before{content:'';position:absolute;left:0;top:0;width:18px;height:18px;background:#222;transform:rotate(45deg)}
+  .gear::after{content:'';position:absolute;left:6px;top:6px;width:6px;height:6px;background:#ff5}
+  .gear-l{left:16px}
+  .gear-r{right:16px;animation-direction:reverse}
+  .fx-gear .fx-label{color:#000}
+  @media (hover:hover){.fx-gear:hover .gear{animation-duration:.4s}.fx-gear:hover .gear-belt::before{animation-duration:.3s}}
+  @keyframes gear-belt{to{transform:translateX(-16px)}}
+  @keyframes gear-spin{to{transform:rotate(90deg)}}
+
+  /* INVITE B-b0: teleport beam, beaming the bot into your server */
+  .fx-beam .fx-depth{background:#2b2f8f}
+  .fx-beam .fx-face{padding:17px 30px;background:#5865f2}
+  .beam-lines{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;background:repeating-linear-gradient(rgba(0,0,40,.18) 0 1px,rgba(0,0,40,0) 1px 3px)}
+  .beam-sweep{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform:translateX(-40px);animation:beam-sweep 3.6s infinite}
+  .beam-sweep::before{content:'';position:absolute;left:0;top:0;bottom:0;width:16px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.45) 35%,rgba(255,255,255,.85) 50%,rgba(255,255,255,.45) 65%,rgba(255,255,255,0))}
+  .beam-mote{position:absolute;bottom:3px;width:3px;height:3px;background:#fff;opacity:0;pointer-events:none;animation:beam-mote 2.4s steps(8,end) infinite}
+  .beam-m1{left:12%;animation-delay:-.2s}
+  .beam-m2{left:31%;animation-delay:-1.4s}
+  .beam-m3{left:52%;animation-delay:-.7s}
+  .beam-m4{left:71%;animation-delay:-1.9s}
+  .beam-m5{left:88%;animation-delay:-1s}
+  .fx-beam .fx-label{color:#fff;text-shadow:0 0 6px rgba(255,255,255,.45)}
+  @media (hover:hover){.fx-beam:hover .beam-sweep{animation-duration:1.2s}}
+  @keyframes beam-sweep{0%{transform:translateX(-40px)}45%,100%{transform:translateX(100%)}}
+  @keyframes beam-mote{0%{opacity:0;transform:translateY(0)}10%{opacity:.9}100%{opacity:0;transform:translateY(-34px)}}
+
+  /* PROJECT: MANGO: fruit sticker whose corner peels to show the source code */
+  .fx-peel .fx-depth{background:#a85a00}
+  .fx-peel .fx-face{padding:17px 36px;background:#ff8c00;box-shadow:inset 0 4px 0 #ffb04a,inset 0 -4px 0 #d97500}
+  .peel{position:absolute;right:0;bottom:0;z-index:3;width:36px;height:36px;pointer-events:none;transform-origin:100% 100%;transform:scale(.3);transition:transform .25s steps(4,end);animation:peel-lift 5s steps(1,end) infinite}
+  .peel::before{content:'</>';position:absolute;left:0;top:0;width:100%;height:100%;box-sizing:border-box;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 3px 3px 0;background:#111;color:#0f0;font-family:monospace;font-size:10px;font-weight:bold;line-height:1;clip-path:polygon(100% 0,100% 100%,0 100%)}
+  .peel::after{content:'';position:absolute;left:0;top:0;width:100%;height:100%;background:linear-gradient(135deg,#fff6e4 0%,#ffd596 55%,#e8a04a 100%);clip-path:polygon(0 0,100% 0,0 100%)}
+  .fx-peel .fx-label{color:#000}
+  @media (hover:hover){.fx-peel:hover .peel{animation:none;transform:scale(1)}}
+  .fx-peel:focus-visible .peel{animation:none;transform:scale(1)}
+  @keyframes peel-lift{0%,70%{transform:scale(.3)}72%{transform:scale(.42)}74%{transform:scale(.55)}86%{transform:scale(.42)}88%,100%{transform:scale(.3)}}
+
+  /* JOIN WAITLIST: flip-phone screen (signal bars, battery, snap on press) */
+  .fx-lcd{width:100%;max-width:300px}
+  .fx-lcd .fx-depth{background:#1a1a1a}
+  .fx-lcd .fx-face{padding:7px;background:#3a3a3a;box-shadow:inset 0 0 0 2px #555,inset 0 0 0 4px #2a2a2a}
+  .lcd-screen{position:relative;display:block;width:100%;padding:18px 12px 12px;background:#b6d293;box-shadow:inset 3px 3px 0 rgba(0,0,0,.18);transition:background-color .12s steps(2,end)}
+  .lcd-status{position:absolute;left:7px;right:9px;top:5px;height:8px;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
+  .lcd-bars{display:flex;align-items:flex-end;gap:2px;height:8px}
+  .lcd-bars span{width:3px;background:#24331a;opacity:1}
+  .lcd-bars span:nth-child(1){height:2px;animation:lcd-b1 2.4s steps(1,end) infinite}
+  .lcd-bars span:nth-child(2){height:4px;animation:lcd-b2 2.4s steps(1,end) infinite}
+  .lcd-bars span:nth-child(3){height:6px;animation:lcd-b3 2.4s steps(1,end) infinite}
+  .lcd-bars span:nth-child(4){height:8px;animation:lcd-b4 2.4s steps(1,end) infinite}
+  .lcd-batt{position:relative;width:15px;height:8px;border:1px solid #24331a;background:linear-gradient(90deg,#24331a 0 70%,rgba(36,51,26,0) 70%) 1px 1px/calc(100% - 2px) calc(100% - 2px) no-repeat}
+  .lcd-batt::after{content:'';position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#24331a}
+  .fx-lcd .fx-label{color:#24331a;text-shadow:1px 1px 0 rgba(36,51,26,.2)}
+  @media (hover:hover){.fx-lcd:hover:not(:disabled) .lcd-screen{background-color:#d3eeaa}}
+  .fx-lcd:active:not(:disabled) .fx-face{transform:translate(5px,5px) scaleY(.92)}
+  .fx-lcd:disabled .lcd-screen{background-color:#8fa37a}
+  .fx-lcd:disabled .lcd-bars span{animation-duration:.8s}
+  @keyframes lcd-b1{0%{opacity:.15}10%{opacity:1}85%,100%{opacity:.15}}
+  @keyframes lcd-b2{0%{opacity:.15}25%{opacity:1}85%,100%{opacity:.15}}
+  @keyframes lcd-b3{0%{opacity:.15}40%{opacity:1}85%,100%{opacity:.15}}
+  @keyframes lcd-b4{0%{opacity:.15}55%{opacity:1}85%,100%{opacity:.15}}
+
+  /* CONNECT WALLET: two chain links snap together, current runs round the frame */
+  .fx-link .fx-depth{background:#3d3600}
+  .fx-link .fx-face{padding:3px;background:#1f1c00}
+  .link-spin{position:absolute;left:50%;top:50%;width:160%;height:0;padding-bottom:160%;pointer-events:none;background:conic-gradient(rgba(255,255,85,0) 0deg,rgba(255,255,85,0) 110deg,#ff5 160deg,#fff 175deg,rgba(255,255,85,0) 180deg,rgba(0,255,0,0) 290deg,#0f0 340deg,#cfc 355deg,rgba(0,255,0,0) 360deg);transform:translate(-50%,-50%) rotate(0deg);animation:link-spin 3s steps(36,end) infinite}
+  .link-panel{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px 26px;background:#000;transition:background-color .12s steps(2,end)}
+  .link-chain{position:relative;flex-shrink:0;width:30px;height:12px}
+  .link-a,.link-b{position:absolute;top:0;width:18px;height:12px;border:3px solid #ff5;box-sizing:border-box}
+  .link-a{left:0;animation:link-a 3.2s steps(1,end) infinite}
+  .link-b{right:0;border-color:#0f0;animation:link-b 3.2s steps(1,end) infinite}
+  .link-spark{position:absolute;left:50%;top:50%;width:2px;height:2px;margin:-1px 0 0 -1px;background:#fff;box-shadow:0 -5px #fff,0 5px #fff,-5px 0 #fff,5px 0 #fff,-3px -3px #ff5,3px 3px #ff5,3px -3px #ff5,-3px 3px #ff5;opacity:0;animation:link-spark 3.2s steps(1,end) infinite}
+  .fx-link .fx-label{color:#ff5;text-shadow:0 0 6px rgba(255,255,85,.55)}
+  @media (hover:hover){.fx-link:hover .link-panel{background-color:#141200}.fx-link:hover .link-a,.fx-link:hover .link-b{animation:none;transform:translateX(0)}}
+  @keyframes link-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  @keyframes link-a{0%{transform:translateX(-5px)}12%{transform:translateX(-3px)}22%,78%{transform:translateX(0)}86%{transform:translateX(-3px)}94%,100%{transform:translateX(-5px)}}
+  @keyframes link-b{0%{transform:translateX(5px)}12%{transform:translateX(3px)}22%,78%{transform:translateX(0)}86%{transform:translateX(3px)}94%,100%{transform:translateX(5px)}}
+  @keyframes link-spark{0%,21%{opacity:0;transform:scale(.5)}22%{opacity:1;transform:scale(1)}26%{opacity:1;transform:scale(1.6)}30%,100%{opacity:0;transform:scale(.5)}}
+
+  /* RainbowKit's wrapper restyles every button inside it; let the FX button be itself */
+  .rainbow-connect-wrapper button.fx{padding:0 5px 5px 0 !important;background:none !important;border:0 !important;box-shadow:none !important;clip-path:none !important;transform:none !important;transition:none !important}
+  .rainbow-connect-wrapper button.fx:hover,.rainbow-connect-wrapper button.fx:active{background:none !important;box-shadow:none !important;transform:none !important}
+
+  /* On phones, these buttons fill 80% of the row like the old ones did */
+  @media (max-width:600px){.social-links .fx,.games-links .fx,.beebo-links .fx{width:80%}}
+
+  /* A closed tab is invisible, so freeze its button animations instead of
+     letting them run in the background (keeps phones smooth) */
+  .tab.closed .fx *,.tab.closed .fx *::before,.tab.closed .fx *::after{animation-play-state:paused !important}
+
+  @media (prefers-reduced-motion:reduce){
+  .fx *,.fx *::before,.fx *::after{animation:none !important}
+  .fx-face,.peel,.aim-lock{transition:none}
+  }
+
   /* Footer styles */
   .footer {
     margin-top: 80px;
@@ -4461,12 +4816,14 @@ const styles = `
     .terminal {
       width: 95%;
       height: 90vh;
+      height: 90svh;
       padding: 10px 8px;
       font-size: 12px;
     }
     
     .terminal-line {
       font-size: 12px;
+      font-size: min(12px, calc(3.22vw - 0.68px)); /* narrow phones: the longest boot line still fits */
       margin-bottom: 8px;
     }
     

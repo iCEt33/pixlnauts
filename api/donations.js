@@ -15,7 +15,10 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 // Must stay LONGER than the client's poll interval (60s), or every poll lands
 // exactly on expiry and triggers a full Etherscan + Drive rebuild.
 const TTL_MS = 180_000;
-const CO2_KG_PER_TREE = 10; // TODO: set your real figure (trees -> CO2)
+const CO2_KG_PER_TREE = 10; // kg of CO2 per tree, PER YEAR (locked in CANON)
+// Bump this whenever the shape of the saved data changes, so the server ignores
+// numbers saved by older code instead of serving them. 2 = per-donation co2Kg.
+const CACHE_VERSION = 2;
 
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
@@ -46,7 +49,9 @@ async function readDriveCache() {
   try {
     const res = await driveApi.files.get({ fileId, alt: 'media' });
     const parsed = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-    return parsed && parsed.data && parsed.ts ? parsed : null; // { data, ts }
+    // Ignore anything saved by older code (no version stamp, or an old one)
+    if (!parsed || !parsed.data || !parsed.ts || parsed.data.version !== CACHE_VERSION) return null;
+    return parsed; // { data, ts }
   } catch (e) {
     console.error('Drive read failed:', e.message);
     return null;
@@ -154,7 +159,19 @@ function computePayload(rows, polPriceNow) {
   // CO2 from the unrounded USD (1 USD worth = 1 tree-equivalent), so totals under
   // a whole dollar still produce CO2 instead of flooring to zero. trees stays
   // floored for the (currently unused) display count.
-  const co2MetricTons = (totalUsd * CO2_KG_PER_TREE) / 1000;
+  // CO2 is per tree, per YEAR. The year of the donation counts as year 1,
+  // then +10 kg for every whole year since. Same method as the projections doc.
+  // Worked out ONCE per donation and saved on it (co2Kg). The community total
+  // below and each wallet's "YOUR CO2" on the site are both just sums of these
+  // same numbers, so they always agree.
+  const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  for (const r of rows) {
+    // never less than 1 year, even if a clock is a few seconds off
+    const yearsCounted = Math.max(1, Math.floor((nowMs - new Date(r.date).getTime()) / YEAR_MS) + 1);
+    r.co2Kg = r.usdAtTime * CO2_KG_PER_TREE * yearsCounted;
+  }
+  const co2MetricTons = rows.reduce((sum, r) => sum + r.co2Kg, 0) / 1000;
 
   const byDonor = new Map();
   for (const r of rows) byDonor.set(r.from, (byDonor.get(r.from) || 0) + r.amountPOL);
@@ -164,6 +181,7 @@ function computePayload(rows, polPriceNow) {
     .slice(0, 3);
 
   return {
+    version: CACHE_VERSION,
     updatedAt: Date.now(),
     polPriceNow,
     totals: { count: rows.length, totalPOL, totalUsd, trees, co2MetricTons },

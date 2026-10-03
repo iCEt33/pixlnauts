@@ -1,7 +1,7 @@
 // Snapshot functionality using model-viewer
 // Shoots the current B-b0 from fixed base-model framing (see scene.js).
-// NOTE: output size currently follows the viewer element and the display's
-// pixel ratio, so it varies by machine. Tier 2 pins it.
+// Output is exactly SNAPSHOT_SIZE x SNAPSHOT_SIZE (500) on every device --
+// captureSnapshotBlob in scene.js, shared with the mint and upgrade path.
 
 // Wait for the camera to ACTUALLY ARRIVE instead of guessing at a duration.
 // model-viewer interpolates asymptotically toward a new cameraOrbit, so a
@@ -60,15 +60,8 @@ const takeHighResSnapshot = async () => {
   log("Taking snapshot at base-model framing...");
   
   try {
-    // Use model-viewer's built-in screenshot feature
-    // idealAspect:true crops the PNG to the MODEL's proportions, so a hatted
-    // robot came out narrower than a bare one and the grid looked ragged.
-    // false keeps the viewer's own aspect -- same shape for every build.
-    const blob = await modelViewer.toBlob({
-      idealAspect: false,
-      mimeType: 'image/png',
-      qualityArgument: 1.0
-    });
+    // Exactly SNAPSHOT_SIZE square on every device -- see scene.js.
+    const blob = await captureSnapshotBlob();
     
     // Create download link
     const url = URL.createObjectURL(blob);

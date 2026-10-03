@@ -89,6 +89,141 @@ const restoreViewFraming = (saved) => {
   else modelViewer.setAttribute('interaction-prompt', saved.prompt);
 };
 
+// ---- SNAPSHOT SIZE ----------------------------------------------------
+// Every snapshot, mint picture and upgrade picture comes out exactly this
+// many pixels square, on every device. 500 because that is what a 1x laptop
+// shoots natively and tokens #1-#4 were made that way -- change it and old
+// and new tokens stop matching.
+const SNAPSHOT_SIZE = 500;
+
+// model-viewer's own default. Its getter is broken in 3.5.0 (returns
+// undefined), so the value is put back by hand after each shot. Nothing else
+// in the project changes it; if anything ever does, this has to follow.
+const DEFAULT_MIN_RENDER_SCALE = 0.5;
+
+// Before this, a picture was (viewer CSS size x screen pixel ratio x
+// model-viewer's quality dial): 500 on a 1x laptop, ~637 on a phone through
+// dpr-fix.js, 1000 on a Mac, as little as ~375 on a budget phone. Three steps
+// make it the same everywhere, all verified against model-viewer 3.5.0:
+//
+//   1. QUALITY TO FULL. model-viewer drops its internal resolution when a
+//      device is busy (to 50% by default). Worse, toBlob() sizes its copy
+//      from the RENDERER's scale while a still scene is redrawn at FULL scale
+//      (Renderer.js shouldRender) -- on a busy device that mismatch cuts the
+//      picture down to its top-left corner. A floor of 1 removes both.
+//   2. ENOUGH PIXELS. If this device would shoot under SNAPSHOT_SIZE (a
+//      budget phone where dpr-fix.js reports under 1x, or a tiny window),
+//      report a higher pixel ratio for this one shot. model-viewer re-reads
+//      devicePixelRatio every frame, so nothing is resized and nothing moves.
+//   3. EXACT SIZE. Shrink whatever came out to SNAPSHOT_SIZE square. A 1x
+//      laptop already shoots exactly that, so its picture passes through
+//      untouched.
+
+const waitSnapshotFrames = async (n) => {
+  for (let i = 0; i < n; i++) await new Promise(r => requestAnimationFrame(r));
+};
+
+const snapshotBlobToImage = (blob) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read the snapshot back')); };
+  img.src = url;
+});
+
+// Step 3. Scales by HEIGHT on purpose: field-of-view is vertical, so the
+// frame's height is what fixes the robot's size and position. A wider shot
+// loses equal slivers off each side, a narrower one gets clear side margins.
+// The viewer is square today, so that only matters if the layout changes.
+const fitToSnapshotSize = async (blob) => {
+  const img = await snapshotBlobToImage(blob);
+  let src = img;
+  let w = img.naturalWidth;
+  let h = img.naturalHeight;
+  if (w === SNAPSHOT_SIZE && h === SNAPSHOT_SIZE) return blob;   // untouched
+
+  // Halve first while more than twice too big -- one big jump looks grainy
+  // in browsers that only offer basic smoothing.
+  while (h >= SNAPSHOT_SIZE * 2) {
+    const half = document.createElement('canvas');
+    half.width  = Math.round(w / 2);
+    half.height = Math.round(h / 2);
+    const hctx = half.getContext('2d');
+    hctx.imageSmoothingQuality = 'high';
+    hctx.drawImage(src, 0, 0, half.width, half.height);
+    src = half;
+    w = half.width;
+    h = half.height;
+  }
+
+  const out = document.createElement('canvas');
+  out.width  = SNAPSHOT_SIZE;
+  out.height = SNAPSHOT_SIZE;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  const drawW = w * SNAPSHOT_SIZE / h;
+  ctx.drawImage(src, (SNAPSHOT_SIZE - drawW) / 2, 0, drawW, SNAPSHOT_SIZE);
+
+  return await new Promise((resolve, reject) => out.toBlob(
+    (b) => (b ? resolve(b) : reject(new Error('Could not resize the snapshot'))),
+    'image/png'
+  ));
+};
+
+// The one place a picture gets taken. Call it AFTER applyCaptureFraming and
+// waitForCameraToSettle, BEFORE restoreViewFraming -- exactly where both
+// files used to call modelViewer.toBlob() themselves.
+const captureSnapshotBlob = async () => {
+  const MV = customElements.get('model-viewer');
+  const cssWidth = modelViewer.clientWidth;             // 500 unless a tiny window
+  const neededDpr = cssWidth > 0 ? SNAPSHOT_SIZE / cssWidth : 0;
+
+  let savedDpr;              // whoever owned devicePixelRatio before (dpr-fix.js in the iframe)
+  let dprRaised = false;
+  let raw;
+
+  try {
+    if (MV) MV.minimumRenderScale = 1;                                     // step 1
+
+    if (window.devicePixelRatio < neededDpr) {                             // step 2
+      savedDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+      try {
+        Object.defineProperty(window, 'devicePixelRatio', {
+          configurable: true,
+          get: () => neededDpr,
+        });
+        dprRaised = true;
+        log(`Snapshot: pixel ratio raised to ${neededDpr.toFixed(2)} for this shot`);
+      } catch (e) {
+        log(`Snapshot: could not raise pixel ratio (${e.message}) -- resizing instead`);
+      }
+    }
+
+    // A still scene is not redrawn on its own. jumpCameraToGoal() always
+    // queues one redraw, even with the camera already in place (controls.js
+    // $onChange), and the frames let model-viewer apply both changes and
+    // finish its full-scale redraw before the picture is read.
+    modelViewer.jumpCameraToGoal();
+    await waitSnapshotFrames(4);
+
+    // idealAspect:false keeps the viewer's own square for every build; true
+    // cropped to each model's proportions and made the grid look ragged.
+    raw = await modelViewer.toBlob({
+      idealAspect: false,
+      mimeType: 'image/png',
+      qualityArgument: 1.0,
+    });
+  } finally {
+    if (dprRaised) {
+      if (savedDpr) Object.defineProperty(window, 'devicePixelRatio', savedDpr);
+      else delete window.devicePixelRatio;
+    }
+    if (MV) MV.minimumRenderScale = DEFAULT_MIN_RENDER_SCALE;
+  }
+
+  return await fitToSnapshotSize(raw);                                     // step 3
+};
+
 // Initialize model-viewer
 const initScene = () => {
   log("Initializing model-viewer...");

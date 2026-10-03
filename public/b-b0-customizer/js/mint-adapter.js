@@ -106,14 +106,9 @@
       // returns in a few frames. Kept as a backstop, not as the mechanism.
       await waitForCameraToSettle(modelViewer);
 
-      // idealAspect:true cropped the PNG to the MODEL's proportions, so a
-      // hatted robot came out narrower than a bare one and the grid looked
-      // ragged. false keeps the viewer's aspect -- same shape every build.
-      return await modelViewer.toBlob({
-        idealAspect: false,
-        mimeType: "image/png",
-        qualityArgument: 1.0,
-      });
+      // Exactly SNAPSHOT_SIZE square on every device, same code as the
+      // Snapshot button -- captureSnapshotBlob in scene.js.
+      return await captureSnapshotBlob();
     } finally {
       restoreViewFraming(savedFraming);
     }
