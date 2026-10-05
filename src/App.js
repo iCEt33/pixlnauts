@@ -1604,13 +1604,13 @@ const QuirkiestAppTab = ({ focusKey }) => {
       <div className="app-description">
         <p>Need a reliable way to track your thoughts, schedule reminders, and stay in sync across global time zones?</p>
         <p>Want precise, up-to-the-minute lunar phase information at your fingertips?</p>
-        <p>Introducing our all-in-one Smart Clock app for Android – your digital companion that combines elegant time management with powerful productivity tools.</p>
+        <p>Introducing our all-in-one Smart Clock app for Android! Your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v5.9 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v6.0 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv5.9.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv6.0.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
         <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="cyc" aria-label="Get from Play Store">
@@ -4608,7 +4608,7 @@ const styles = `
 
   /* Return button styling */
   .customizer-return-button {
-    position: fixed;
+    position: absolute; /* pinned to the customizer box, not the screen, so Chrome's address bar can't push it out of view */
     bottom: 20px;
     left: 20px;
     z-index: 10001;
