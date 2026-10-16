@@ -1607,10 +1607,10 @@ const QuirkiestAppTab = ({ focusKey }) => {
         <p>Introducing our all-in-one Smart Clock app for Android! Your digital companion that combines elegant time management with powerful productivity tools.</p>
         <p>Stay organized, connected, and informed with our pixel-perfect interface.</p>
         <p>Download now and transform how you experience time!</p>
-        <p>GET THE LATEST VERSION SmartClock v6.0 NOW!!!</p>
+        <p>GET THE LATEST VERSION SmartClock v6.1 NOW!!!</p>
       </div>
       <div className="app-download">
-        <a href="/downloads/smartclockv6.0.apk" download className="pixel-button">
+        <a href="/downloads/smartclockv6.1.apk" download className="pixel-button">
           <span className="whitepaper-button-text">DOWNLOAD APK</span>
         </a>
         <a href="https://play.google.com/store/apps/details?id=com.pixelnauts.smartclock" target="_blank" rel="noopener noreferrer" className="cyc" aria-label="Get from Play Store">
@@ -1917,6 +1917,17 @@ const PxPFlipTab = ({ focusKey }) => {
           className="pixel-button"
         >
           <span className="whitepaper-button-text">LEARN MORE</span>
+        </a>
+        <a href="https://icet33.github.io/pxp-flip-emulator/" target="_blank" rel="noopener noreferrer" className="fx fx-emu">
+          <span className="fx-depth" aria-hidden="true" />
+          <span className="fx-face">
+            <span className="emu-phone" aria-hidden="true">
+              <span className="emu-lid"><span className="emu-screen" /></span>
+              <span className="emu-base" />
+              <span className="emu-cover" />
+            </span>
+            <span className="fx-label">EMULATOR</span>
+          </span>
         </a>
       </div>
     </div>
@@ -3611,6 +3622,25 @@ const styles = `
   @keyframes lcd-b3{0%{opacity:.15}40%{opacity:1}85%,100%{opacity:.15}}
   @keyframes lcd-b4{0%{opacity:.15}55%{opacity:1}85%,100%{opacity:.15}}
 
+  /* EMULATOR: a tiny PxP Flip snaps open, lights up, and snaps shut again */
+  .fx-emu .fx-depth{background:#063}
+  .fx-emu .fx-face{padding:12px 28px 12px 52px;background:#000 radial-gradient(circle,rgba(0,255,0,.22) 1px,rgba(0,255,0,0) 1.5px) 0 0/8px 8px;border:3px solid #0f0}
+  .emu-phone{position:absolute;left:18px;top:50%;z-index:1;width:16px;height:32px;margin-top:-16px;pointer-events:none}
+  .emu-lid{position:absolute;left:0;top:0;width:16px;height:15px;background:#555;box-shadow:inset 0 0 0 2px #777;transform-origin:50% 100%;animation:emu-lid 4.8s steps(1,end) infinite}
+  .emu-screen{position:absolute;left:3px;top:3px;width:10px;height:8px;background:#0f0;box-shadow:0 0 6px rgba(0,255,0,.8);animation:emu-screen 4.8s steps(1,end) infinite}
+  .emu-base{position:absolute;left:0;bottom:0;width:16px;height:15px;background:#555;box-shadow:inset 0 0 0 2px #777}
+  .emu-base::before{content:'';position:absolute;left:3px;top:4px;width:2px;height:2px;background:#0f0;box-shadow:4px 0 #0f0,8px 0 #0f0,0 3px #0f0,4px 3px #0f0,8px 3px #0f0,0 6px #0f0,4px 6px #0f0,8px 6px #0f0;animation:emu-keys 4.8s steps(1,end) infinite}
+  .emu-cover{position:absolute;left:0;bottom:0;width:16px;height:15px;background:#3a3a3a;box-shadow:inset 0 0 0 2px #666;transform-origin:50% 0;transform:scaleY(0);animation:emu-cover 4.8s steps(1,end) infinite}
+  .emu-cover::before{content:'';position:absolute;left:5px;top:4px;width:6px;height:5px;background:#063}
+  .fx-emu .fx-label{color:#0f0;text-shadow:0 0 6px rgba(0,255,0,.6);animation:emu-label 4.8s steps(1,end) infinite}
+  @media (hover:hover){.fx-emu:hover .emu-lid,.fx-emu:hover .emu-screen,.fx-emu:hover .emu-cover,.fx-emu:hover .emu-base::before,.fx-emu:hover .fx-label{animation:none}}
+  .fx-emu:focus-visible .emu-lid,.fx-emu:focus-visible .emu-screen,.fx-emu:focus-visible .emu-cover,.fx-emu:focus-visible .emu-base::before,.fx-emu:focus-visible .fx-label{animation:none}
+  @keyframes emu-cover{0%{transform:scaleY(1)}6%{transform:scaleY(.5)}9%{transform:scaleY(0)}87%{transform:scaleY(.5)}90%,100%{transform:scaleY(1)}}
+  @keyframes emu-lid{0%{transform:scaleY(0)}9%{transform:scaleY(.5)}12%{transform:scaleY(1)}84%{transform:scaleY(.5)}87%,100%{transform:scaleY(0)}}
+  @keyframes emu-screen{0%{background:#041;box-shadow:none}15%{background:#cfc;box-shadow:0 0 10px #0f0}17%{background:#0f0;box-shadow:0 0 6px rgba(0,255,0,.8)}81%,100%{background:#041;box-shadow:none}}
+  @keyframes emu-keys{0%{opacity:.25}15%{opacity:1}81%,100%{opacity:.25}}
+  @keyframes emu-label{0%{text-shadow:0 0 6px rgba(0,255,0,.6)}15%{text-shadow:0 0 2px #fff,0 0 10px #0f0,0 0 22px #0f0}20%,100%{text-shadow:0 0 6px rgba(0,255,0,.6)}}
+
   /* CONNECT WALLET: two chain links snap together, current runs round the frame */
   .fx-link .fx-depth{background:#3d3600}
   .fx-link .fx-face{padding:3px;background:#1f1c00}
@@ -4427,7 +4457,23 @@ const styles = `
   .pxp-learn-more {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
     margin-top: 30px;
+  }
+
+  /* On phones, LEARN MORE and EMULATOR stack, each 80% wide like the other tabs */
+  @media (max-width: 600px) {
+    .pxp-learn-more {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .pxp-learn-more .pixel-button,
+    .pxp-learn-more .fx {
+      width: 80%;
+    }
   }
 
   .pxp-system-health {
