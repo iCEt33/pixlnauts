@@ -20,7 +20,7 @@
 // or a re-deploy. That is tidiness, not security: every write below is
 // onlyOwner on-chain, so the panel is a convenience and nothing more.
 
-import { formatEther, parseEther, keccak256, toHex } from "https://esm.sh/viem@2.37.5";
+import { formatEther, parseEther, keccak256, toHex } from "./vendor/viem-2.37.5.js";
 import { publicClient, walletClient, account, contract, chainOk, ensureChain } from "./wallet.js";
 import {
   CONTRACT_ADDRESS, DEPLOY_BLOCK, CHAIN, txURL, addressURL, toViewableURL,

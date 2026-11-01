@@ -17,7 +17,7 @@
 //
 // This file holds NO user interface. mint-ui.js draws the picker.
 
-import { createPublicClient, createWalletClient, custom } from "https://esm.sh/viem@2.37.5";
+import { createPublicClient, createWalletClient, custom } from "./vendor/viem-2.37.5.js";
 import { CONTRACT_ADDRESS, CHAIN, ABI, TRANSPORT, HAS_RPC } from "./chain-config.js";
 
 // Reading the chain needs no wallet at all.

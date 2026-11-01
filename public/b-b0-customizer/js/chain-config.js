@@ -2,8 +2,8 @@
 // ONE place for every environment fact. Nothing else in the site holds an
 // address, a chain, or an ABI. Flip the marked lines between testing and launch.
 
-import { parseAbi, http, fallback } from "https://esm.sh/viem@2.37.5";
-import { polygonAmoy, polygon } from "https://esm.sh/viem@2.37.5/chains";
+import { parseAbi, http, fallback } from "./vendor/viem-2.37.5.js";
+import { polygonAmoy, polygon } from "./vendor/viem-2.37.5.js";
 
 // ===========================================================================
 //  THE FOUR LINES YOU EDIT  (everything else in this file stays as-is)

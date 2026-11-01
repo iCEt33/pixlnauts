@@ -3,6 +3,13 @@
 
 let gltfTransform;
 let gltfFunctions;
+
+// Where this file lives (.../b-b0-customizer/js/). Read NOW: the browser only
+// says which script is running while it first runs it. initLoader() runs
+// later and uses this to find js/vendor/.
+const BB0_LOADER_DIR = (document.currentScript && document.currentScript.src)
+  ? new URL('./', document.currentScript.src).href
+  : new URL('js/', document.baseURI).href;
 let isCurrentlyLoading = false; // Prevent multiple simultaneous loads
 let reloadQueued = false;       // A load was asked for while one was already running
 
@@ -21,12 +28,12 @@ const finishLoading = () => {
 // Initialize loader and gltf-transform
 const initLoader = async () => {
   try {
-    // Import both core and functions packages
-    gltfTransform = await import('https://esm.sh/@gltf-transform/core@4.2.1');
-    gltfFunctions = await import('https://esm.sh/@gltf-transform/functions@4.2.1');
-    
-    // Import extensions package for KHR_materials_transmission
-    const gltfExtensions = await import('https://esm.sh/@gltf-transform/extensions@4.2.1');
+    // All three parts come from ONE saved file on our own server (js/vendor/),
+    // not from esm.sh. One file = one shared copy of "core", as before.
+    const gt = await import(BB0_LOADER_DIR + 'vendor/gltf-transform-4.2.1.js');
+    gltfTransform = gt.core;
+    gltfFunctions = gt.functions;
+    const gltfExtensions = gt.extensions;
     
     // Store extensions for later use
     window.gltfExtensions = gltfExtensions;

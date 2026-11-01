@@ -16,7 +16,7 @@
 // The price is never computed here. Decision #9: the contract is the only
 // thing allowed to say what a build costs.
 
-import { parseEventLogs, formatEther } from "https://esm.sh/viem@2.37.5";
+import { parseEventLogs, formatEther } from "./vendor/viem-2.37.5.js";
 import { API, IS_DEPLOYED } from "./chain-config.js";
 import { publicClient, walletClient, account, contract, connectWallet, ensureChain } from "./wallet.js";
 

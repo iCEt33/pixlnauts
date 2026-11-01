@@ -20,7 +20,7 @@
 // As in mint.js, the price is never computed here. The contract is the only
 // thing allowed to say what something costs (Decision #9).
 
-import { parseEventLogs } from "https://esm.sh/viem@2.37.5";
+import { parseEventLogs } from "./vendor/viem-2.37.5.js";
 import { API, IS_DEPLOYED } from "./chain-config.js";
 import {
   publicClient, walletClient, account, contract, connectWallet, ensureChain,
