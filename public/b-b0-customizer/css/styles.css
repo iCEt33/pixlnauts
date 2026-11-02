@@ -70,10 +70,12 @@ body {
   }
 
   /* Let the carousels have everything that's left rather than stopping at
-     the 300px desktop cap. */
+     the 300px desktop cap. The box ends where the carousels end instead of
+     being stretched to the bottom of the page. */
   .controls-panel {
     margin-left: 0;
     max-width: none;
+    align-self: flex-start;
   }
   /* Visual order down the left column on mobile: renderer, then the whole
     button block, then price and MINT. Works because .model-container is a

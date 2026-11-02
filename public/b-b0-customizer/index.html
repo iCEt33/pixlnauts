@@ -207,17 +207,22 @@
     </div>
   </div>
 
+  <!-- Safety net for the 3D robot. Must be the FIRST script, so it is already
+       listening when any file below fails to download. See js/robot-guard.js. -->
+  <script src="js/robot-guard.js"></script>
+
   <!-- Must run before model-viewer builds its renderer. Classic script, so it
        executes ahead of the deferred module below. -->
   <script src="js/dpr-fix.js"></script>
 
-  <!-- Load model-viewer from CDN -->
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <!-- model-viewer 3.5.0: our own saved copy (was ajax.googleapis.com) -->
+  <script type="module" src="js/vendor/model-viewer-3.5.0.min.js"></script>
   
-  <!-- Load Three.js for GLTFLoader and GLTFExporter (used in loader.js and export.js) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+  <!-- three.js 0.128.0 for GLTFLoader and GLTFExporter (used in loader.js and
+       export.js): our own saved copies (were cdn.jsdelivr.net) -->
+  <script src="js/vendor/three-0.128.0.min.js"></script>
+  <script src="js/vendor/three-0.128.0-GLTFLoader.js"></script>
+  <script src="js/vendor/three-0.128.0-GLTFExporter.js"></script>
   
   <!-- Import our custom JavaScript modules -->
   <script src="js/utils.js"></script>
