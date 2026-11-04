@@ -1,4 +1,5 @@
 User-agent: *
+Disallow: /api/trap
 Allow: /
 
 Sitemap: https://pixlnauts.com/sitemap.xml

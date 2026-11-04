@@ -10,5 +10,14 @@
         { "key": "Access-Control-Allow-Origin", "value": "*" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/(.*)\\.php", "destination": "/api/trap" },
+    { "source": "/(.*)wp-(admin|includes|content|json)(.*)", "destination": "/api/trap" },
+    { "source": "/(.*)\\.env(.*)", "destination": "/api/trap" },
+    { "source": "/(.*)\\.git/(.*)", "destination": "/api/trap" },
+    { "source": "/(.*)\\.aws/(.*)", "destination": "/api/trap" },
+    { "source": "/(.*)phpmyadmin(.*)", "destination": "/api/trap" },
+    { "source": "/cgi-bin/(.*)", "destination": "/api/trap" }
   ]
 }

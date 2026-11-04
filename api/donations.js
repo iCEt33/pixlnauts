@@ -49,6 +49,12 @@ async function readDriveCache() {
   try {
     const res = await driveApi.files.get({ fileId, alt: 'media' });
     const parsed = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+    // Load the saved historical prices first. They never change, so they stay
+    // good even when the rest of the saved copy is too old to serve. This is
+    // what stops a deploy from asking DefiLlama for every old price again.
+    for (const [ts, price] of Object.entries(parsed?.prices || {})) {
+      if (price > 0) priceAtTime.set(Number(ts), price);
+    }
     // Ignore anything saved by older code (no version stamp, or an old one)
     if (!parsed || !parsed.data || !parsed.ts || parsed.data.version !== CACHE_VERSION) return null;
     return parsed; // { data, ts }
@@ -223,7 +229,8 @@ module.exports = async (req, res) => {
     try {
       const data = await buildFresh();
       memory = { data, ts: Date.now() };
-      await writeDriveCache(memory);
+      // Save the price list too, so the next deploy or cold start can reuse it
+      await writeDriveCache({ ...memory, prices: Object.fromEntries(priceAtTime) });
     } catch (e) {
       console.error('donations build failed:', e);
     } finally {

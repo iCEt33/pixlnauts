@@ -51,18 +51,17 @@ export const RPC_URL_BACKUP = "https://polygon.drpc.org";
 //    launch, restrict it to your own domains in the Alchemy dashboard.
 export const ALCHEMY_KEY = "";
 
-// 6. The gateway used to SHOW stored pictures and models. Same lesson as the
-//    RPC above: this is a public shared service, and public shared services
-//    get rate-limited or retired. ipfs.io works but throttles, and every
-//    robot picture in My Collection loads through it.
-//    Once you have a Pinata account you get a dedicated gateway that is yours:
-//      https://YOUR-SUBDOMAIN.mypinata.cloud/ipfs/
-//    Put it here and the collection stops depending on a shared queue.
-//    MUST end with a slash.
+// 6. HISTORY, NOT A TO-DO (noted 2 Nov 2026). Pinata/IPFS was the storage
+//    during testing only. Every token on the live contract was minted through
+//    Arweave, so no picture on it has an ipfs:// address and NO Pinata account
+//    or gateway is needed. This setting stays so the code can still show an
+//    ipfs:// address if one ever appears. MUST end with a slash.
 export const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
 
-// 7. Same again for Arweave, which is only used after the launch switch to
-//    Turbo storage. arweave.net is the reference gateway.
+// 7. THE ONE THAT MATTERS. Every picture in My Collection, and (since Session H)
+//    the 3D view on marketplaces, is served through this Arweave gateway. It is a
+//    public shared service: if it ever throttles, this is the one-line change.
+//    MUST end with a slash.
 export const ARWEAVE_GATEWAY = "https://arweave.net/";
 
 // ===========================================================================
