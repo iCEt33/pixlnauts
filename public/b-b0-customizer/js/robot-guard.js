@@ -41,7 +41,7 @@
   // Files whose absence does NOT blank the robot. They are still reported.
   const NOT_CRITICAL = new Set([
     "mint-ui.js", "collection-ui.js", "mint-adapter.js", "mint-guard.js",
-    "diag.js", "dpr-fix.js", "GLTFExporter.js",
+    "diag.js", "dpr-fix.js", "three-0.128.0-GLTFExporter.js", "shuffle.js",
   ]);
   // What loader.js / scene.js write to the log when the robot cannot be built.
   const FATAL_LOG = [
